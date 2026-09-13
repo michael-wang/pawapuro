@@ -1,7 +1,7 @@
 # M1 Step 0 — 開發環境
 
 核對日期：2026-09-14。本文件記錄本機觀察結果與準備缺項；scope 與驗收標準由
-[milestone](../milestones/01-batting-feel.md) 定義。Step 1 **尚未開始**。
+[milestone](../milestones/01-batting-feel.md) 定義。已完成 **Step 1 交付 1 的靜態場景驗證**；Step 1 整體尚未完成，結果與建置方式見末節。
 
 以下至「Step 0 辨識出的後續 sample 需求」保留 Step 0 當時的核對結果：當時未安裝任何工具或依賴，也未建立 source、build 設定、shader 或資產。本次 SDL3 準備與驗證另記於末節，不改寫 Step 0 的範圍或結果。
 
@@ -48,6 +48,8 @@ Step 0 的盤點已完成；當時的下一步是解決 SDL3 可用性，並取�
 
 ## SDL3 依賴準備（2026-09-14）
 
+本節保留依賴準備當時的結果與限制；後續 app 實作及新增驗證見末節。
+
 ### 固定版本與來源
 
 採用官方穩定版 **SDL3 3.4.16**，release 日期為 2026-09-02，官方 release metadata 的 `prerelease` 為 `false`。
@@ -87,3 +89,52 @@ x64 build 使用套件的 `lib/x64/SDL3.lib`，執行時需將對應的 `lib/x64
 SDL3 的開發套件缺項已解決。首次準備仍需要連線取得官方 archive；本機快取不屬於 Git，另一台機器需執行準備命令。本次只驗證上述工具鏈與動態連結方式，未驗證其他平台、static linking 或無開發工具的乾淨 Windows 部署。
 
 `SDL_Init(0)` 不啟用 video/audio 子系統；未建立視窗、處理真實輸入、建立 D3D12 device 或測試呈現。官方套件提供 PDB，但尚未驗證 debugger 載入 symbols／對應原始碼；預編譯 SDL 不代表能完整逐步追蹤其最佳化後的內部程式。這些未驗證項目不算 Step 1 已完成，後續仍須取得 implementation 授權。
+
+## M1 Step 1／交付 1：靜態參考場景（2026-09-14）
+
+本次僅實作 native window 與靜態 3D 場景。沒有球的運動、simulation tick、pause／single-step、重投、動畫、Lua、Data reload、audio 或 asset import；不代表 Step 1 整體或 M1 已完成。
+
+### 建置與啟動
+
+在 **x64 Native Tools Command Prompt for VS 2022** 切換到 repository 根目錄，執行下列命令。`chcp 65001` 只設定此 console 的字碼頁；本機繁中 MSVC 的 `/showIncludes` 曾被 CMake/Ninja 錯誤解碼，造成 header dependencies 為零。以 UTF-8 configure／build 後已修正，無需安裝語言套件或增加 compiler wrapper。若曾在其他字碼頁 configure，第一次改用 UTF-8 時以 `cmake --fresh` 重新 configure。
+
+```bat
+chcp 65001
+cmake -P cmake/PrepareSDL3.cmake
+cmake -S . -B build/debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/debug
+build\debug\pawapuro.exe
+cmake -S . -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release
+build\release\pawapuro.exe
+```
+
+CMake 會使用已固定的 SDL3 3.4.16，透過 developer environment 尋找 SDK 的 `dxc`，編譯 HLSL 為內嵌 bytecode，並在 link 後複製 `SDL3.dll` 與 `SDL3-LICENSE.txt` 到 executable 旁。可直接啟動 build 目錄的 executable，不依賴目前工作目錄尋找 shader。沒有新增外部依賴；所有 build 產物與本機紀錄由 `/build/` 忽略。
+
+Debug build 要求可用的 D3D12 debug layer，初始化時啟用 GPU-based validation。診斷寫入 `stderr`；需要保存時，可在 repository 根目錄的 PowerShell 執行：
+
+```powershell
+Start-Process -FilePath (Resolve-Path build/debug/pawapuro.exe) -RedirectStandardError build/debug/run.log -PassThru
+```
+
+關閉 app 後讀取 `build/debug/run.log`。一般啟動不會自動在 repository 建立 log；錯誤也會以 SDL message box 顯示。
+
+### 場景與程式邊界
+
+- `pawapuro/main.cpp`：SDL video/window 與事件迴圈，依 pixel size 處理 resize；minimize 時暫停提交畫面，正常 close 退出。沒有 gameplay input 或 simulation。
+- `pawapuro/batting/reference_scene.cpp/.hpp`：唯一的棒球尺度、camera 與靜態 geometry fixture。單位為公尺，+Y 向上、+Z 朝投手；本壘寬 0.4318 m，投手板參考 z=18.44 m，release marker 位於 `(0.25, 1.8, 16.8)`。球 marker 半徑 **0.10 m，刻意放大以便辨識，並非實際球體物理尺寸**。Camera 從本壘後方稍偏打者側看向投手，vertical FOV 65°。
+- `engine/rendering/d3d12_view.cpp/.hpp` 與 `scene.hlsl`：D3D12 直接初始化、單一 triangle buffer／pipeline、depth test、resize、frame submission 與 shutdown。Engine 不辨識本壘或棒球。
+
+目前唯一的資源 owner `D3D12View` 集中管理同一視窗的 COM resources 與 fence event，解決 resize／exception／shutdown 時必須先等 GPU 再釋放資源的問題。`ComPtr` 與 SDL window 的 `unique_ptr` 處理既有 API 的釋放責任；`Vertex` 是這次 CPU geometry 與 shader 共用的 position/color layout。局部 `check`／`transition` 與 fixture 的 triangle／quad helper 只消除眼前重複的錯誤檢查、barrier 與頂點展開；沒有 RHI、scene graph、mesh framework 或其他預先泛化。
+
+此切片刻意僅保留一個 frame in flight：每次 Present 後等待 fence，才重用 allocator／depth。1053 個靜態頂點保留在小型 upload buffer，一次 draw；尚未為這個數量加入 staging/default-heap 搬移路徑。這些是本次可追蹤 lifetime 的取捨，不是未來效能目標或已驗證的最佳實作。
+
+### 已驗證結果與限制
+
+- 使用前述 Windows 11、MSVC 19.44.35214、SDK 10.0.26100.0、CMake 3.31.6-msvc6、Ninja 1.12.1 與 DXC。Debug／Release 均以 C++20、`/W4 /WX` 成功編譯與連結。
+- 兩個組態都在 NVIDIA GeForce RTX 5070 Ti 建立硬體 D3D12 device 並持續呈現。視窗擷取確認五角本壘、地面距離參考、青色 release marker 與中央米白色球 marker 可見；resize 後仍保留此關係。
+- 暫存、指定 process 的檢查使用 Windows API resize、minimize、restore，再送正常 `WM_CLOSE`。Debug／Release 均通過，觀察到 client pixel size 1901×1266 與 2251×1441；最終兩次執行分別完成 1348／620 frames，皆以 exit code `0` 結束。這不是手動拖曳視窗邊框或點擊 X 按鈕的實測。
+- 最終 Debug run 的 debug layer 與 GPU-based validation 均啟用；`ID3D12InfoQueue1` callback 記錄的 error/corruption 為 **0**。釋放所有 app-owned rendering resources 後，live-object report 只列出當時為了回報而保留的 `ID3D12Device`（id 274、Refcount 3，包含報告／info queue 介面）；未列出 live child resources，隨後釋放剩餘 device 介面。未見本次程式造成的明顯 resource leak；不宣稱做過通用記憶體 leak 分析。
+- 已確認 Ninja 記錄 project/shader header dependencies；touch 共用 header 會排入三個 `.cpp` 重編，沒有修改時 Debug／Release 都顯示 `no work to do`。
+- 原生 computer-use helper 在 sandbox 啟動失敗；改用暫存的 process-targeted Windows API 檢查與 `PrintWindow` 擷取，實際檢視擷取結果。檢查腳本未納入版本控制；本機 build/run logs 與擷取圖留在忽略的 `build/`。
+- 未測 AMD adapter、多螢幕／DPI 切換、極端視窗比例、device removal recovery 或乾淨機器部署。球的大小只是可視 placeholder；無球路或打擊手感驗收。Present 使用同步間隔 1，未量測 frame-time 分位數或端到端 latency，不能據此宣告 T10／T11 通過。

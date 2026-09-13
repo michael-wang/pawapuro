@@ -7,3 +7,6 @@
 
 # Repository-local SDL development package and download cache.
 /.deps/
+
+# CMake/Ninja outputs, shader headers and local run logs.
+/build/

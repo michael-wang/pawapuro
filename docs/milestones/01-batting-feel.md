@@ -1,6 +1,6 @@
 # M1：Batting Feel
 
-更新：2026-09-14。狀態：計畫提案，等待 review；沒有實作或驗收結果。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
+更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；交付 2／3 尚未開始，Step 1 整體與 M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
 
 ## 完成的定義
 
@@ -76,7 +76,7 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 ## 小步 implementation plan
 
-下列順序是實際開發的提案，不是本輪執行指令。每一步先做最小可見行為、展示與檢查，再決定下一步；任何一步太大，就拆成表內的小交付。新增 Engine capability 必須說得出它服務的是該步哪個 caller。
+下列順序是逐步開發計畫；目前僅 Step 0 與 Step 1 交付 1 已完成，各後續交付仍須另行授權。每一步先做最小可見行為、展示與檢查，再決定下一步；任何一步太大，就拆成表內的小交付。新增 Engine capability 必須說得出它服務的是該步哪個 caller。
 
 | 步驟 | 玩家／Pawapuro 的真實需求與最小交付 | 留在 Pawapuro 的內容 | 因而需要的最小 Engine capability | 當步檢查／刻意延後 |
 |---|---|---|---|---|
@@ -108,4 +108,4 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 當步接受準則：能在目標 Windows 環境啟動與退出；球可見地飛向本壘；暫停不推進 tick、single-step 恰進一 tick；重投不留上一球狀態；能展示可重現的 20 次紀錄。過程不需要 Lua、完整 asset pipeline、球棒碰撞、ECS 或 editor。若 D3D12 啟動工作已大，第一小交付就停在可見靜態場景 review，不順手建立 renderer framework。
 
-依賴、source、build 設定以及這三個交付都要在本輪文件獲 review、開始 coding 被授權後才進行。本輪到文件交付為止。
+2026-09-14：使用者已授權並完成交付 1；Debug／Release 均成功建置、呈現靜態場景、resize／minimize／restore 並正常退出。Debug validation error 為 0；live-object report 未列出未釋放的 child resources。實測方式、限制與建置命令見 [開發環境／交付 1 紀錄](../development/environment.md)。交付 2 的球運動與交付 3 的重投／紀錄尚未開始；未驗收球飛行、固定 tick 或 20 次重投。
