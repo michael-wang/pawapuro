@@ -14,6 +14,14 @@ trade-offs; it is not a mandate to implement every discussed feature.
 - Never force push or rewrite Git history.
 - Never inspect, print, export, recover, expose or modify stored credentials. Use the configured Git credential helper for authorized normal Git operations.
 
+## Documentation language
+
+- Write design, architecture, research, milestone and development documents under `docs/` in Traditional Chinese using Taiwan usage, unless explicitly requested otherwise.
+- Keep technical proper nouns and established terms in English when clearer or more natural (for example Direct3D 12, C++, fixed timestep, hot reload, replay, allocator, Lua and SDL3).
+- Source-code identifiers, APIs, filenames/directories, commit messages and code comments should normally use English. Keep `AGENTS.md` itself in English.
+- Maintain one source of truth; do not duplicate internal documents in Chinese and English without a real user/contributor need.
+- A future top-level public README may be bilingual; this convention does not request its creation.
+
 ## Engineering rules
 
 - Real Pawapuro requirements drive Engine capabilities. Baseball semantics remain in Pawapuro until an operation has demonstrated general value; mathematical code is not automatically Engine code.

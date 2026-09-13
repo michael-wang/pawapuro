@@ -4,3 +4,6 @@
 
 # Local Codex state, caches, and logs.
 /.codex/
+
+# Repository-local SDL development package and download cache.
+/.deps/
