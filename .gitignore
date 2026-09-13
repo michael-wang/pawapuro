@@ -1,0 +1,6 @@
+# Local environment secrets.
+.env
+.env.*
+
+# Local Codex state, caches, and logs.
+/.codex/
