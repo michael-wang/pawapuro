@@ -24,14 +24,18 @@ std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging
         quad({-extent, 0.001f, z}, {-extent, 0.001f, end}, {extent, 0.001f, end},
             {extent, 0.001f, z}, {0.08f, 0.215f, 0.16f});
     }
-    quad({-1.6f, 0.002f, -1}, {-1.6f, 0.002f, 20}, {1.6f, 0.002f, 20}, {1.6f, 0.002f, -1},
-        {0.33f, 0.23f, 0.17f});
-    // Sparse metre-scale references make the long pitching distance readable.
-    for (int z = 2; z <= 20; z += 2) {
-        const float distance = static_cast<float>(z);
-        quad({-1.6f, 0.004f, distance}, {-1.6f, 0.004f, distance + 0.025f},
-            {1.6f, 0.004f, distance + 0.025f}, {1.6f, 0.004f, distance}, {0.43f, 0.33f, 0.24f});
-    }
+    // Two flat dirt patches supply staging context; only the mound below is raised.
+    const auto dirt_disk = [&](float center_z, float radius) {
+        for (int i = 0; i < 64; ++i) {
+            const float a = XM_2PI * static_cast<float>(i) / 64;
+            const float b = XM_2PI * static_cast<float>(i + 1) / 64;
+            triangle({0, 0.003f, center_z},
+                {radius * std::cos(a), 0.003f, center_z + radius * std::sin(a)},
+                {radius * std::cos(b), 0.003f, center_z + radius * std::sin(b)}, {0.33f, 0.23f, 0.17f});
+        }
+    };
+    dirt_disk(0, staging.home_dirt_radius_m);
+    dirt_disk(mound_center_z_m, staging.mound_visual_dirt_radius_m);
     // Five-sided plate: point toward catcher, full-width edge toward pitcher.
     constexpr float half_width = 0.2159f;
     const XMFLOAT3 point{0, 0.012f, 0};
@@ -61,14 +65,15 @@ std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging
     quad({-0.3048f, rubber_y, rubber_distance_m}, {-0.3048f, rubber_y, rubber_distance_m + 0.1524f},
         {0.3048f, rubber_y, rubber_distance_m + 0.1524f}, {0.3048f, rubber_y, rubber_distance_m}, white);
 
-    // Fixed metric ruler beside the rubber: 0.5 m marks, not a pitcher silhouette.
+    // The ruler is tied to the rubber centre, not a free staging offset.
+    constexpr float ruler_z = rubber_distance_m + 0.1524f / 2;
     const XMFLOAT3 gold{0.90f, 0.69f, 0.25f};
-    quad({-0.56f, rubber_y, rubber_distance_m}, {-0.56f, rubber_y + 2, rubber_distance_m},
-        {-0.54f, rubber_y + 2, rubber_distance_m}, {-0.54f, rubber_y, rubber_distance_m}, gold);
+    quad({-0.01f, rubber_y, ruler_z}, {-0.01f, rubber_y + 2, ruler_z},
+        {0.01f, rubber_y + 2, ruler_z}, {0.01f, rubber_y, ruler_z}, gold);
     for (int step = 0; step <= 4; ++step) {
         const float y = rubber_y + static_cast<float>(step) * 0.5f;
-        quad({-0.64f, y, rubber_distance_m}, {-0.64f, y + 0.02f, rubber_distance_m},
-            {-0.46f, y + 0.02f, rubber_distance_m}, {-0.46f, y, rubber_distance_m}, gold);
+        quad({-0.09f, y, ruler_z}, {-0.09f, y + 0.02f, ruler_z},
+            {0.09f, y + 0.02f, ruler_z}, {0.09f, y, ruler_z}, gold);
     }
 
     const XMFLOAT3 release = staging.release_position_m;
@@ -108,7 +113,7 @@ std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging
 
 XMFLOAT4X4 batting_view_projection(const BattingStaging& staging, float aspect)
 {
-    // Right-handed framing; camera orientation changes presentation, not field geometry.
+    // Left-handed batter framing; camera orientation does not move the rubber or mound.
     const auto view = XMMatrixLookAtLH(XMLoadFloat3(&staging.camera_position_m),
         XMLoadFloat3(&staging.camera_target_m), XMVectorSet(0, 1, 0, 0));
     XMFLOAT4X4 result;

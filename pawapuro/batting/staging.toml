@@ -1,23 +1,28 @@
 # Static development staging. Metres; +Y up, +Z toward the pitcher.
 # Defaults for omitted keys are defined in staging.hpp; invalid values reject startup.
 [camera]
-preset = "right_handed"
-# Negative X is the third-base/right-handed batter side. This is a framing camera,
+preset = "right_handed_pitcher_vs_left_handed_batter"
+# Positive X is the first-base/left-handed batter side (catcher-view right). This is a framing camera,
 # placed behind the plate, not a player-eye position inside a batter model.
-position_m = [-0.75, 1.45, -5.2]
-target_m = [0.0, 1.20, 16.8]
+position_m = [0.75, 1.25, -5.0]
+target_m = [0.0, 1.30, 16.8]
 vertical_fov_degrees = 36.0
 
 [release]
-position_m = [0.25, 2.05, 16.8]
+# Right-handed pitcher releases to catcher-view left of the centre axis.
+position_m = [-0.65, 2.05, 16.8]
 # Intentionally enlarged visual marker, not a physical baseball radius.
 ball_marker_radius_m = 0.10
 
 [field]
 grass_half_width_m = 85.0
 grass_end_z_m = 140.0
+# Flat presentation dirt around home plate, not a raised surface.
+home_dirt_radius_m = 2.8
 
 [mound]
+# Flat visual apron; independent of the smaller raised mound below.
+visual_dirt_radius_m = 5.5
 # Silhouette tuning only; rubber distance and mound height remain Native references.
 radius_m = 2.75
 top_radius_m = 0.9

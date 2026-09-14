@@ -25,7 +25,7 @@ int main(int argc, char** argv)
         else if (argc != 1) throw std::runtime_error("Usage: pawapuro [--staging path/to/staging.toml]");
         const auto staging = pawapuro::load_batting_staging(staging_path);
         std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> window(
-            SDL_CreateWindow("Pawapuro | Right-handed staging", 1280, 720, 0), SDL_DestroyWindow);
+            SDL_CreateWindow("Pawapuro | Right-handed pitcher vs left-handed batter", 1920, 1080, 0), SDL_DestroyWindow);
         if (!window) throw std::runtime_error(SDL_GetError());
         const auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(window.get()),
             SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));

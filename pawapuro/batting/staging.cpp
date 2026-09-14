@@ -67,30 +67,32 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 const std::string prefix = std::string(section) + ".";
                 if (prefix == "camera.") only_keys(fields, {"preset", "position_m", "target_m", "vertical_fov_degrees"}, prefix);
                 if (prefix == "release.") only_keys(fields, {"position_m", "ball_marker_radius_m"}, prefix);
-                if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m"}, prefix);
-                if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m"}, prefix);
+                if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m", "home_dirt_radius_m"}, prefix);
+                if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m", "visual_dirt_radius_m"}, prefix);
             }
         }
         if (const auto preset = table.at_path("camera.preset")) {
-            if (preset.value<std::string>() != "right_handed")
-                throw std::runtime_error("camera.preset must be 'right_handed'; other presets are not implemented.");
+            if (preset.value<std::string>() != "right_handed_pitcher_vs_left_handed_batter")
+                throw std::runtime_error("camera.preset must be 'right_handed_pitcher_vs_left_handed_batter'; other presets are not implemented.");
         } else {
-            std::fprintf(stderr, "Staging default: camera.preset = right_handed\n");
+            std::fprintf(stderr, "Staging default: camera.preset = right_handed_pitcher_vs_left_handed_batter\n");
         }
         BattingStaging candidate;
         candidate.camera_position_m = vector(table, "camera.position_m", candidate.camera_position_m,
-            {-1.5f, 0.8f, -10}, {-0.1f, 2.2f, -2});
+            {0.1f, 0.8f, -10}, {1.5f, 2.2f, -2});
         candidate.camera_target_m = vector(table, "camera.target_m", candidate.camera_target_m,
             {-3, 0.4f, 10}, {3, 2.8f, 25});
         candidate.vertical_fov_degrees = number(table, "camera.vertical_fov_degrees", candidate.vertical_fov_degrees, 30, 70);
         candidate.release_position_m = vector(table, "release.position_m", candidate.release_position_m,
-            {-1.5f, 1.4f, 15}, {1.5f, 3, rubber_distance_m});
+            {-1.5f, 1.4f, 15}, {-0.1f, 3, rubber_distance_m});
         candidate.ball_marker_radius_m = number(table, "release.ball_marker_radius_m", candidate.ball_marker_radius_m, 0.03f, 0.15f);
         candidate.grass_half_width_m = number(table, "field.grass_half_width_m", candidate.grass_half_width_m, 40, 120);
         candidate.grass_end_z_m = number(table, "field.grass_end_z_m", candidate.grass_end_z_m, 90, 180);
+        candidate.home_dirt_radius_m = number(table, "field.home_dirt_radius_m", candidate.home_dirt_radius_m, 1.5f, 4);
+        candidate.mound_visual_dirt_radius_m = number(table, "mound.visual_dirt_radius_m", candidate.mound_visual_dirt_radius_m, 3.5f, 7);
         candidate.mound_radius_m = number(table, "mound.radius_m", candidate.mound_radius_m, 2.2f, 3.5f);
         candidate.mound_top_radius_m = number(table, "mound.top_radius_m", candidate.mound_top_radius_m, 0.7f, 1.1f);
-        std::fprintf(stderr, "Staging loaded: %s | owner: pawapuro/batting/staging.cpp | right_handed\n",
+        std::fprintf(stderr, "Staging loaded: %s | owner: pawapuro/batting/staging.cpp | right_handed_pitcher_vs_left_handed_batter\n",
             source.c_str());
         std::fprintf(stderr, "Camera: [%g, %g, %g] -> [%g, %g, %g], vertical FOV %g degrees\n",
             candidate.camera_position_m.x, candidate.camera_position_m.y, candidate.camera_position_m.z,

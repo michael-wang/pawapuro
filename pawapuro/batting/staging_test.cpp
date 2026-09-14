@@ -6,12 +6,12 @@
 #include <string>
 
 namespace {
-std::array<float, 15> values(const pawapuro::BattingStaging& s)
+std::array<float, 17> values(const pawapuro::BattingStaging& s)
 {
     return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
-        s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m};
+        s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m};
 }
 }
 int main(int argc, char** argv)
@@ -31,6 +31,10 @@ int main(int argc, char** argv)
         write("[camera]\nvertical_fov_degrees = 42\n");
         if (pawapuro::load_batting_staging(fixture).vertical_fov_degrees != 42)
             throw std::runtime_error("Valid integer override was not applied.");
+        write("[field]\nhome_dirt_radius_m = 3.1\n[mound]\nvisual_dirt_radius_m = 6.2\n");
+        const auto dirt = pawapuro::load_batting_staging(fixture);
+        if (dirt.home_dirt_radius_m != 3.1f || dirt.mound_visual_dirt_radius_m != 6.2f)
+            throw std::runtime_error("Visual dirt overrides were not applied.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -51,21 +55,26 @@ int main(int argc, char** argv)
             {"[camera]\nvertical_fov_degrees = '40'\n", "camera.vertical_fov_degrees"},
             {"[camera]\nvertical_fov_degrees = true\n", "camera.vertical_fov_degrees"},
             {"[camera]\nposition_m = [0, 1]\n", "camera.position_m"},
-            {"[camera]\nposition_m = [-0.7, nan, -5]\n", "camera.position_m[1]"},
-            {"[camera]\nposition_m = [0.7, 1.4, -5]\n", "camera.position_m[0]"},
-            {"[camera]\npreset = 'left_handed'\n", "camera.preset"},
+            {"[camera]\nposition_m = [0.7, nan, -5]\n", "camera.position_m[1]"},
+            {"[camera]\nposition_m = [-0.7, 1.4, -5]\n", "camera.position_m[0]"},
+            {"[camera]\npreset = 'right_handed'\n", "camera.preset"},
             {"[camera]\nfvo = 40\n", "camera.fvo"},
             {"camera = 3\n", "camera must be a table"},
             {"[unknown]\n", "Unknown staging key"},
             {"[release]\nball_marker_radius_m = -1\n", "release.ball_marker_radius_m"},
-            {"[release]\nposition_m = [0, 0, 16.8]\n", "release.position_m[1]"},
+            {"[release]\nposition_m = [-0.65, 0, 16.8]\n", "release.position_m[1]"},
             {"[field]\ngrass_end_z_m = 35\n", "field.grass_end_z_m"},
             {"[field]\ngrass_half_width_m = 1000\n", "field.grass_half_width_m"},
-            {"[mound]\ntop_radius_m = 4\n", "mound.top_radius_m"}
+            {"[mound]\ntop_radius_m = 4\n", "mound.top_radius_m"},
+            {"[field]\nhome_dirt_radius_m = -1\n", "field.home_dirt_radius_m"},
+            {"[field]\nhome_dirt_radius_m = 10\n", "field.home_dirt_radius_m"},
+            {"[mound]\nvisual_dirt_radius_m = 2\n", "mound.visual_dirt_radius_m"},
+            {"[mound]\nvisual_dirt_radius_m = 8\n", "mound.visual_dirt_radius_m"},
+            {"[release]\nposition_m = [0.65, 2.05, 16.8]\n", "release.position_m[0]"}
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 18 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 23 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

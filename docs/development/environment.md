@@ -162,7 +162,9 @@ build\debug\pawapuro.exe --staging pawapuro/batting/staging.toml
 
 修改 TOML 後關閉並重開即可，不需要編譯、link 或 CMake refresh。`--staging` 只指定本次啟動資料來源。未提供參數時讀取 executable 旁的 `staging.toml`；那是 CMake `configure_file(COPYONLY)` 產生的 launch copy，更新 authored TOML 後 build 會更新它，不應把它當成另一份維護來源。已從不同工作目錄啟動 Debug／Release，確認 default path 不依賴 CWD。
 
-### 實際比較與驗證
+### 首輪 calibration 的比較與驗證（歷史紀錄）
+
+以下是前一輪 1280×720／右打側的結果；目前基準已由下一節取代，保留這些數字作比較證據。
 
 - 固定 1280×720 後比較了 40° 與 36° 兩個 camera candidate；比較只修改 TOML 並重開同一 executable。採用 36°，本壘仍完整且更扁平，release／球 marker 較醒目。與 delivery 1 的擷取圖相比，投手後方不再緊接短草地邊界，而可見延伸草地與漸密的距離色帶。這是靜態構圖檢視，不宣稱完成玩家手感驗收。
 - 選定的右打構圖、Data／Native 分工與固定視窗政策見 [設計契約](../design/batting-feel.md)；當前所有 tuning 值只維護在 authored TOML。視窗標題與啟動 log 都明示 `right_handed`，log 也列出 Data path、Native owner、camera position／target／FOV。
@@ -178,3 +180,30 @@ ctest --test-dir build/release --output-on-failure
 ```
 
 原生 computer-use helper 仍在 sandbox 啟動失敗，因此沿用 process-targeted 檢查及 `PrintWindow` 擷取並實際檢視。暫存檢查腳本已移除；run logs／擷取圖保留於忽略的 `build/`。尚未測跨螢幕／DPI 變更、其他 GPU 或全部合法參數組合的構圖品質。仍沒有 runtime reload、左右打切換、投手模型／動畫、球移動或 simulation；delivery 2 未開始。
+
+
+### 右投 vs 左打 staging 校正（2026-09-14）
+
+沿用上述依賴、建置命令與啟動 Data 路徑，未新增 library／build 設定。固定顯示與左右側定義由 [設計契約](../design/batting-feel.md) 維護；以下是本次實測的 [authored TOML](../../pawapuro/batting/staging.toml) 快照，未來 tuning 仍以該檔為唯一來源。
+
+| 項目 | 本次實測設定 |
+|---|---|
+| Preset | `right_handed_pitcher_vs_left_handed_batter`；視窗標題與 log 明示右投手 vs 左打者 |
+| 視窗 | 固定 windowed 1920×1080、16:9；不能任意 resize／maximize |
+| Camera | position `(0.75, 1.25, -5.0)` m；target `(0, 1.30, 16.8)` m；vertical FOV **36° 未變** |
+| Release reference | `(-0.65, 2.05, 16.8)` m；X 改到捕手視角左側，與右投手基準相符並與中央標尺分開；球 marker radius 0.10 m 未變 |
+| 平面紅土 | 本壘中心 `(X,Z)=(0,0)`、radius 2.8 m；投手丘外圍中心 `(0,17.9832)`、visual radius 5.5 m |
+| Raised mound | 底部 radius 2.75 m、平頂 radius 0.9 m、高度 0.254 m 均未變；投手板距離仍為 18.4404 m |
+| 中央標尺 | X=0、Z=18.5166 m（投手板長度中點），底端 Y=0.259 m（丘高加原有 0.005 m render offset）；高 2 m、每 0.5 m 一刻度 |
+| 外野草地 | X=−85～85 m、Z=−12～140 m 與既有距離色帶未變 |
+
+本輪只新增 `field.home_dirt_radius_m`（1.5～4 m）及 `mound.visual_dirt_radius_m`（3.5～7 m）兩個 Data 數值，沿用現有 defaults／finite number／範圍檢查。Camera、preset、release 是既有 Data 的修改。標尺位置是「投手板中心」的固定關係，留在 Native 推導；圓盤 tessellation／顏色／微小 depth offset 也留 Native，沒有新的編輯需求。局部 `dirt_disk` lambda 只共用本壘與丘外圍兩個當前 caller 的頂點展開，沒有建立 primitive／terrain API。
+
+實際執行與檢視：
+
+- Debug／Release 均以既有 MSVC x64、C++20、`/W4 /WX` 成功 build；兩組態 CTest 皆通過。測試涵蓋新紅土值確實覆寫、defaults、authored 檔、缺檔及 23 組不合法 Data，包含新增紅土範圍與錯側 release。
+- 兩組態皆在 RTX 5070 Ti 開啟並持續呈現；實測 client area 為 **1920×1080**，沒有 `WS_THICKFRAME`／`WS_MAXIMIZEBOX`，minimize／restore 後尺寸仍相同。正常 `WM_CLOSE` 均 exit code 0，Debug／Release 分別完成 291／302 frames；靜態 buffer 為 1875 vertices。
+- 實際擷取畫面確認本壘完整且更扁平，中央標尺與其左側 release／球 marker 分開可辨；較大的平面紅土包圍較小的隆起丘面，與本壘紅土之間是大片草地。外野色帶仍延伸至遠處。這是靜態視覺檢查，壓迫感與打擊體驗仍待使用者 review，不宣稱通過玩法驗收。
+- Debug 的 debug layer／GPU-based validation 保持啟用，error/corruption **0**；shutdown 僅列出仍為報告保留的 device，沒有 live child resource。Engine rendering source／HLSL 未變。
+
+本輪 computer-use helper 在 sandbox 初始化失敗，沿用只針對本次 app process 的 Windows API／`PrintWindow` 檢查；不是手動拖曳或點擊 X 的測試。暫存檢查腳本移除，畫面與 logs 保留於忽略的 `build/left-staging-debug.*`、`build/left-staging-release.*`。尚未測其他 GPU／DPI 情境與全部合法 Data 組合的構圖；沒有人物、animation、hot reload、runtime 左右打切換或球運動，delivery 2 仍未開始。

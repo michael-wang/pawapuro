@@ -111,3 +111,5 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 2026-09-14：使用者已授權並完成交付 1；Debug／Release 均成功建置、呈現靜態場景、resize／minimize／restore 並正常退出。Debug validation error 為 0；live-object report 未列出未釋放的 child resources。實測方式、限制與建置命令見 [開發環境／交付 1 紀錄](../development/environment.md)。交付 2 的球運動與交付 3 的重投／紀錄尚未開始；未驗收球飛行、固定 tick 或 20 次重投。
 
 2026-09-14 staging calibration：固定 1280×720 windowed，校正 camera／外野深度／投手丘 reference，加入 batting 專屬的啟動 TOML 載入。這是交付 1 的延伸，不是新增 simulation 交付；決策見設計文件，建置與驗證證據見開發環境文件。
+
+2026-09-14 後續 staging 校正：已完成右投 vs 左打構圖、1080p 固定視窗、獨立紅土分區與中央標尺；仍是交付 1 延伸，沒有開始交付 2。當前契約與實測設定分別由設計／開發環境文件維護。
