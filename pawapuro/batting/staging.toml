@@ -34,10 +34,10 @@ radius_m = 2.75
 top_radius_m = 0.9
 
 # Authoritative Pawapuro gameplay strike zone, not a separate visual guide.
-# First tuning candidate: twice the physical plate width for gameplay readability.
+# Shared gameplay width also scales the home plate pentagon; depth equals width.
 # Revisit dimensions with the stylized batter model, stance and playtesting.
-# Width and heights above ground in metres; centred on home plate at the arrival plane.
+# Width and heights above ground in metres; evaluation plane crosses the plate depth centre.
 [strike_zone]
 width_m = 0.8636
 bottom_m = 0.5
-top_m = 1.3
+top_m = 1.45

@@ -35,17 +35,37 @@ int main(int argc, char** argv)
         int width = 0, height = 0;
         if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
         std::fprintf(stderr, "Window: %d x %d pixels, fixed windowed 16:9\n", width, height);
-        const auto scene = pawapuro::make_batting_reference(staging);
-        pawapuro::ReferencePitch pitch(staging.release_position_m, staging.reference_velocity_mps);
+        pawapuro::ReferencePitch pitch(staging.release_position_m, staging.reference_velocity_mps, staging.strike_zone_plane_z());
+        const auto prediction = pawapuro::predict_arrival(pitch);
+        const float aspect = static_cast<float>(width) / static_cast<float>(height);
+        const auto scene = pawapuro::make_batting_reference(staging, prediction.state.position_m, aspect);
+        const auto screen_point = [&](DirectX::XMFLOAT2 ndc) {
+            return DirectX::XMFLOAT2{(ndc.x + 1) * width / 2, (1 - ndc.y) * height / 2};
+        };
+        const auto predicted_screen = screen_point(scene.prediction_ndc);
+        const auto zone_left_top = screen_point({scene.zone_min_ndc.x, scene.zone_max_ndc.y});
+        const auto zone_right_bottom = screen_point({scene.zone_max_ndc.x, scene.zone_min_ndc.y});
+        std::fprintf(stderr, "Overlay bounds: left=%.6f top=%.6f right=%.6f bottom=%.6f; predicted pixel=[%.6f, %.6f]\n",
+            zone_left_top.x, zone_left_top.y, zone_right_bottom.x, zone_right_bottom.y, predicted_screen.x, predicted_screen.y);
         engine::D3D12View view;
-        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start);
+        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start);
         const auto report_arrival = [&] {
             const auto& p = pitch.current.position_m;
             const auto& v = pitch.current.velocity_mps;
             std::fprintf(stderr, "Reference arrival: Complete tick=%llu time=%.9f s position=[%.6f, %.6f, %.6f] m "
                 "velocity=[%.6f, %.6f, %.6f] m/s previous_z=%.6f plane_z=%.6f\n",
                 pitch.tick, static_cast<double>(pitch.tick) / pawapuro::pitch_hz,
-                p.x, p.y, p.z, v.x, v.y, v.z, pitch.previous.position_m.z, pawapuro::plate_front_z_m);
+                p.x, p.y, p.z, v.x, v.y, v.z, pitch.previous.position_m.z, pitch.evaluation_plane_z);
+            const auto arrival = pitch.arrival_at_plane();
+            const auto& evaluated = arrival.state.position_m;
+            const auto actual_screen = screen_point(pawapuro::project_batting_point(staging, evaluated, aspect));
+            const auto ball_screen = screen_point(pawapuro::project_batting_point(staging, p, aspect));
+            std::fprintf(stderr, "Plane evaluation: t=%.9f position=[%.6f, %.6f, %.6f] velocity=[%.6f, %.6f, %.6f] "
+                "pixel=[%.6f, %.6f] prediction_delta=[%.6f, %.6f]; rendered tick ball pixel=[%.6f, %.6f]\n",
+                arrival.time_s, evaluated.x, evaluated.y, evaluated.z,
+                arrival.state.velocity_mps.x, arrival.state.velocity_mps.y, arrival.state.velocity_mps.z,
+                actual_screen.x, actual_screen.y, actual_screen.x-predicted_screen.x, actual_screen.y-predicted_screen.y,
+                ball_screen.x, ball_screen.y);
         };
         auto last_time = SDL_GetTicksNS();
         std::string last_title;

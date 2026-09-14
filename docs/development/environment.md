@@ -282,3 +282,32 @@ Native UI helper 仍無法啟動；上述是真正 app 的 SDL 按鍵路徑與 P
 - 原生 UI helper 仍因 sandbox setup 失敗，沿用 process-targeted Windows key messages 經 SDL event loop 與 PrintWindow 擷取；這是實際 app 自動操作，不是人類手動試玩。暫存腳本已移除，擷取與 logs 留在忽略的 `build/gameplay-zone-*`。最終遊戲性與模型遮擋仍待人類 review。
 
 本輪沒有新增 dependency、abstraction、判定、aiming、模型或動畫；camera／FOV／window、release／velocity／gravity／240 Hz、arrival plane、重投邏輯皆未改。
+
+
+## 本壘／evaluation plane／overlay 一致性驗證（2026-09-15）
+
+本次規則取代前節「本壘維持真實寬度」的歷史決策；唯一 gameplay width 同時驅動本壘與好球帶，設計契約見 [Batting Feel](../design/batting-feel.md)。
+
+| 本次設定 | 實際值 |
+|---|---|
+| Strike-zone Data | width=0.8636、bottom=0.5、top=1.45 m；只改 top，為首個稍高 candidate |
+| Home plate | width=depth=0.8636 m；X=±0.4318、tip Z=0、肩點 Z=0.4318、front Z=0.8636；保留原五角形等比例放大 |
+| Evaluation plane | depth/2=0.4318 m，穿過本壘前後中央。與舊 Z 相等是本次尺寸巧合，不再使用舊前緣常數 |
+| Camera／window | position=(-0.75,1.25,-5)、target=(2.260052,1.30,16.8)、FOV=36°、1920×1080，皆未改 |
+| 其他保留值 | TOML 逐項比較除 top 外均相同；release／velocity、gravity／240 Hz／積分、場地與 marker size 未變 |
+
+畫面與 prediction：
+
+- Debug／Release 實際 client 均為 1920×1080。藍框外緣 **left=828、right=1088、top=481、bottom=774 px**（含 stroke）；含兩端尺寸 **261×294 px**、center X=**958**、寬／高 **0.888**，高／寬 **1.126**。幾何中心線的 projected bounds 為 left=828.902、right=1088.303、top=482.503、bottom=773.643。Screenshot 可見四邊完全水平／垂直，無 depth 遮蔽；本壘明顯加寬且五角形仍可辨，投手偏左、右側空間保留。
+- Prediction 跑相同固定 tick 積分，再對 crossing tick 作相同線性 evaluation。預測 world sample 與 actual evaluation 皆為 **(0.000140, 1.057610, 0.431800)** m、time **0.392833450 s**、velocity **(1.655000, −4.452385, −41.667000)** m/s。兩者 screen **(960.041992, 602.092529)** px；**ΔX=0、ΔY=0、Euclidean error=0 px**（同 build/platform）。
+- 橘色空心環的 screenshot 外緣為 X=913～1006、Y=555～648，外框中心 (959.5,601.5)；stroke／rasterization 的 bbox 中心不是 world sample 的精確投影。環中央不填色，Complete 球仍清楚可見。
+- 完整 tick 的 authoritative current state 仍在 **tick 95、0.395833333 s**：position **(0.005105,1.044226,0.306804)** m、velocity **(1.655000,−4.481804,−41.667000)** m/s，與前版相同。Rendering 保留此 state，不吸附 plane；球心 screen **(966.869324,607.582703)**，相對預測環中心 **Δ=(6.827332,5.490174) px**，距離約 **8.761 px**。這是完整 tick 與 crossing sample 的差異，不是 prediction 跑另一套物理。沒有宣稱 CCD 已解決。
+- Overlay 隨啟動 camera 投影；本輪無 runtime camera 調整。視覺驗證只涵蓋當前 candidate，正式遊戲是否顯示 prediction／如何顯示與人物遮擋仍待 review。
+
+建置與回歸：
+
+- 沿既有 x64 developer environment 執行 Debug／Release build 成功，CTest 各 **2/2**。既有 Data validation、20 次 deterministic rethrow、30／60／120 FPS chunking、pause／single-step、arrival once 保留。
+- 新測試檢查實際場景 plate vertices 的 width／depth 與 Data 一致；width=1.5 時 plane=0.75，arrival 改為 tick 93，證明 crossing 不再依賴舊常數。Baseline 與改寬案例的 prediction／actual evaluation 相同，baseline projected screen coordinate 也相同。
+- 實際兩種 app 均 Space → P → . → P，pause tick 19→20；等待暫停時 client 畫面逐像素相同。各完成初投加 20 次重投，每球 raw arrival／plane evaluation log 一致，正常 exit 0。Debug GPU-based validation **0 errors／corruption**，shutdown 沒有 live child resource；只保留供報告的 device。
+- 原生 UI helper 再次啟動失敗，沿用只針對 Pawapuro process 的 Windows key messages／SDL event loop 與 PrintWindow；這是實際 app 自動操作，不是人類手動試玩。暫存驗證腳本移除，擷取與 logs 保留於忽略的 `build/overlay-*`。
+- Renderer 只增加 depth-disabled PSO 與第三段 NDC draw，共用原 vertex buffer、shader 與 fence ownership；沒有新增 dependency、UI／camera／physics framework 或新 HLSL。Prediction 與 geometry 推導均留在 Pawapuro。

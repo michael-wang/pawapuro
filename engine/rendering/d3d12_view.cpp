@@ -28,10 +28,13 @@ D3D12_RESOURCE_BARRIER transition(ID3D12Resource* resource,
 }
 
 void D3D12View::initialize(HWND window, UINT initial_width, UINT initial_height,
-    std::span<const Vertex> vertices, UINT translated_start)
+    std::span<const Vertex> vertices, UINT translated_start, UINT overlay_start)
 {
     if (translated_start > vertices.size() || translated_start % 3 != 0)
         throw std::runtime_error("Invalid translated triangle range.");
+    if (overlay_start < translated_start || overlay_start > vertices.size() || overlay_start % 3 != 0)
+        throw std::runtime_error("Invalid overlay triangle range.");
+    overlay_vertex_start = overlay_start;
     translated_vertex_start = translated_start;
     width = initial_width;
     height = initial_height;
@@ -139,6 +142,10 @@ void D3D12View::initialize(HWND window, UINT initial_width, UINT initial_height,
     pso.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     pso.SampleDesc.Count = 1;
     check(device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipeline)), "CreateGraphicsPipelineState");
+
+    pso.DepthStencilState.DepthEnable = FALSE;
+    pso.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+    check(device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&overlay_pipeline)), "Create overlay pipeline");
 
     // This tiny immutable fixture can be read from an upload heap. A staging/default
     // heap path is not justified by its size; its owner still outlives every GPU use.
@@ -248,7 +255,14 @@ void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOA
     commands->DrawInstanced(translated_vertex_start, 1, 0, 0);
     // Root constants are captured per draw; the immutable GPU buffer is never rewritten.
     commands->SetGraphicsRoot32BitConstants(0, 4, offset, 16);
-    commands->DrawInstanced(vertex_count - translated_vertex_start, 1, translated_vertex_start, 0);
+    commands->DrawInstanced(overlay_vertex_start - translated_vertex_start, 1, translated_vertex_start, 0);
+    // NDC triangles use the same shader/buffer; only overlay depth policy differs.
+    DirectX::XMFLOAT4X4 identity;
+    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
+    commands->SetPipelineState(overlay_pipeline.Get());
+    commands->SetGraphicsRoot32BitConstants(0, 16, &identity, 0);
+    commands->SetGraphicsRoot32BitConstants(0, 4, zero_offset, 16);
+    commands->DrawInstanced(vertex_count - overlay_vertex_start, 1, overlay_vertex_start, 0);
     barrier = transition(back_buffers[index].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     commands->ResourceBarrier(1, &barrier);
     check(commands->Close(), "Close commands");
@@ -268,6 +282,7 @@ D3D12View::~D3D12View()
     commands.Reset();
     allocator.Reset();
     pipeline.Reset();
+    overlay_pipeline.Reset();
     root_signature.Reset();
     vertex_buffer.Reset();
     depth.Reset();

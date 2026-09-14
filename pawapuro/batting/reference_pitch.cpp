@@ -1,4 +1,5 @@
 #include "reference_pitch.hpp"
+#include <stdexcept>
 
 namespace pawapuro {
 bool ReferencePitch::release()
@@ -29,7 +30,7 @@ bool ReferencePitch::integrate_tick()
     p.z += v.z * pitch_dt;
     v.y += earth_gravity_mps2 * pitch_dt;
     ++tick;
-    if (previous.position_m.z > plate_front_z_m && p.z <= plate_front_z_m) {
+    if (previous.position_m.z > evaluation_plane_z && p.z <= evaluation_plane_z) {
         phase = PitchPhase::Complete;
         paused = false;
         pending_ticks = fractional_credit = 0;
@@ -59,4 +60,32 @@ const char* ReferencePitch::state_name() const
     if (phase == PitchPhase::Complete) return "Complete";
     return paused ? "Paused" : "InFlight";
 }
+PitchArrival ReferencePitch::arrival_at_plane() const
+{
+    if (phase != PitchPhase::Complete)
+        throw std::runtime_error("Pitch evaluation requires a completed plane crossing.");
+    // A sample within the last fixed tick; do not overwrite the integrated state.
+    const float fraction = (previous.position_m.z - evaluation_plane_z)
+        / (previous.position_m.z - current.position_m.z);
+    const auto lerp = [fraction](DirectX::XMFLOAT3 a, DirectX::XMFLOAT3 b) {
+        return DirectX::XMFLOAT3{a.x + (b.x - a.x) * fraction,
+            a.y + (b.y - a.y) * fraction, a.z + (b.z - a.z) * fraction};
+    };
+    BallState evaluated{lerp(previous.position_m, current.position_m),
+        lerp(previous.velocity_mps, current.velocity_mps)};
+    evaluated.position_m.z = evaluation_plane_z;
+    return {evaluated, (static_cast<double>(tick - 1) + fraction) / pitch_hz, tick};
+}
+
+PitchArrival predict_arrival(const ReferencePitch& pitch)
+{
+    ReferencePitch prediction(pitch.initial.position_m, pitch.initial.velocity_mps, pitch.evaluation_plane_z);
+    prediction.release();
+    prediction.toggle_pause();
+    // Validated startup fixtures cross in under one second; bound failures explicitly.
+    for (std::uint64_t tick = 0; tick < pitch_hz * 2; ++tick)
+        if (prediction.single_step()) return prediction.arrival_at_plane();
+    throw std::runtime_error("Reference pitch prediction did not reach its evaluation plane within 2 s.");
+}
+
 }

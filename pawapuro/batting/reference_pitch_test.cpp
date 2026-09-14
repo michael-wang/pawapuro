@@ -1,4 +1,6 @@
 #include "reference_pitch.hpp"
+#include "reference_scene.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <stdexcept>
@@ -15,7 +17,7 @@ bool equal(const ReferencePitch& a, const ReferencePitch& b)
 ReferencePitch fixture()
 {
     const BattingStaging s;
-    return ReferencePitch(s.release_position_m, s.reference_velocity_mps);
+    return ReferencePitch(s.release_position_m, s.reference_velocity_mps, s.strike_zone_plane_z());
 }
 ReferencePitch ticks(unsigned count)
 {
@@ -29,6 +31,41 @@ ReferencePitch ticks(unsigned count)
 int main()
 {
     try {
+        BattingStaging geometry;
+        require(geometry.home_plate_depth_m() == geometry.strike_zone_width_m
+            && geometry.strike_zone_plane_z() == geometry.home_plate_depth_m() / 2, "Plate proportions/centre differ");
+        geometry.strike_zone_width_m = 1.5f;
+        auto wider = ReferencePitch(geometry.release_position_m, geometry.reference_velocity_mps, geometry.strike_zone_plane_z());
+        const auto prediction = predict_arrival(wider);
+        wider.release();
+        while (wider.phase != PitchPhase::Complete) (void)wider.advance(16'666'667);
+        const auto actual = wider.arrival_at_plane();
+        require(wider.tick == 93 && wider.previous.position_m.z > 0.75f && wider.current.position_m.z <= 0.75f,
+            "Crossing still uses the old fixed plane");
+        require(prediction.tick == actual.tick && prediction.time_s == actual.time_s
+            && equal(prediction.state.position_m, actual.state.position_m)
+            && equal(prediction.state.velocity_mps, actual.state.velocity_mps)
+            && actual.state.position_m.z == geometry.strike_zone_plane_z(), "Prediction/evaluation differ");
+        const auto baseline_prediction = predict_arrival(fixture());
+        for (float width : {0.8636f, 1.5f}) {
+            BattingStaging s;
+            s.strike_zone_width_m = width;
+            const ReferencePitch pitch(s.release_position_m, s.reference_velocity_mps, s.strike_zone_plane_z());
+            const auto scene = make_batting_reference(s, predict_arrival(pitch).state.position_m, 16.0f / 9);
+            float left = 1e9f, right = -1e9f, back = 1e9f, front = -1e9f;
+            unsigned plate_vertices = 0;
+            for (unsigned i = 0; i < scene.ball_vertex_start; ++i) {
+                const auto& v = scene.vertices[i];
+                if (v.position.y != 0.012f) continue; // The plate's existing ground clearance.
+                ++plate_vertices;
+                left = std::min(left, v.position.x); right = std::max(right, v.position.x);
+                back = std::min(back, v.position.z); front = std::max(front, v.position.z);
+            }
+            require(plate_vertices == 9 && right-left == width && front-back == s.home_plate_depth_m()
+                && (front+back)/2 == s.strike_zone_plane_z(), "Rendered plate disagrees with gameplay zone/plane");
+            require(scene.zone_max_ndc.x > scene.zone_min_ndc.x && scene.zone_max_ndc.y > scene.zone_min_ndc.y,
+                "Projected overlay bounds invalid");
+        }
         // Compare fields exactly in one build/platform; never compare struct padding.
         const auto expected = ticks(48);
         for (int run = 0; run < 20; ++run) require(equal(ticks(48), expected), "Fixed N ticks differ");
@@ -48,7 +85,7 @@ int main()
             }
             require(equal(p, ticks(95)), "Render chunking changed arrival state");
             require(arrivals == 1 && p.tick == 95, "Arrival must occur once at tick 95");
-            require(p.previous.position_m.z > plate_front_z_m && p.current.position_m.z <= plate_front_z_m,
+            require(p.previous.position_m.z > p.evaluation_plane_z && p.current.position_m.z <= p.evaluation_plane_z,
                 "Arrival does not bracket plate plane");
             require(!p.advance(1'000'000'000) && !p.single_step(), "Complete advanced without release");
         }
@@ -94,6 +131,15 @@ int main()
             require(arrivals == 1 && !repeated.advance(1'000'000'000)
                 && !repeated.single_step() && equal(repeated, last), "Rethrow arrival differs");
         }
+        const auto baseline_actual = last.arrival_at_plane();
+        require(equal(baseline_prediction.state.position_m, baseline_actual.state.position_m)
+            && equal(baseline_prediction.state.velocity_mps, baseline_actual.state.velocity_mps)
+            && baseline_prediction.time_s == baseline_actual.time_s, "Baseline prediction differs");
+        const BattingStaging s;
+        const auto predicted_screen = project_batting_point(s, baseline_prediction.state.position_m, 16.0f / 9);
+        const auto actual_screen = project_batting_point(s, baseline_actual.state.position_m, 16.0f / 9);
+        require(predicted_screen.x == actual_screen.x && predicted_screen.y == actual_screen.y,
+            "Prediction and evaluation screen coordinates differ");
         const auto& p = last.current.position_m;
         const auto& v = last.current.velocity_mps;
         std::printf("PASS: deterministic ticks, 30/60/120 FPS, catch-up, pause, single-step, one-shot arrival, 20 rethrows with identical per-tick trajectories.\n"

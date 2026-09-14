@@ -121,3 +121,6 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 
 2026-09-15：依本輪授權將既有框改為單一 authoritative gameplay strike zone，僅放大寬度。Gameplay-first 決策由設計文件維護，畫面量測／建置／重投回歸結果見開發環境文件；沒有新增好壞球判定或推進投手動畫等後續工作，M1 體驗驗收仍未完成。
+
+
+2026-09-15 本壘／好球帶一致性：依本輪授權，home plate width 直接採 authoritative strike-zone width，depth 中央成為 evaluation plane；完成 screen-space rectangle 與同一 deterministic simulation 的 predicted-location 環。此為投球驗證迴圈的延伸，未開始好壞球判定、aiming、人物或揮棒。契約與實測分別由設計／開發環境文件維護，M1 尚未完成。

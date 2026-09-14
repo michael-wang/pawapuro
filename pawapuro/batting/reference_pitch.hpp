@@ -14,11 +14,18 @@ struct BallState {
     DirectX::XMFLOAT3 velocity_mps;
 };
 
+struct PitchArrival {
+    BallState state;
+    double time_s;
+    std::uint64_t tick;
+};
+
 // Retain the startup fixture so each completed pitch can be repeated exactly.
 struct ReferencePitch {
-    ReferencePitch(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 velocity)
-        : initial{position, velocity}, previous(initial), current(initial) {}
+    ReferencePitch(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 velocity, float plane_z)
+        : initial{position, velocity}, evaluation_plane_z(plane_z), previous(initial), current(initial) {}
     const BallState initial;
+    const float evaluation_plane_z;
     BallState previous, current;
     PitchPhase phase = PitchPhase::Ready;
     bool paused = false;
@@ -29,10 +36,12 @@ struct ReferencePitch {
     bool single_step(); // True only on the one arrival transition.
     bool advance(std::uint64_t elapsed_ns);
     const char* state_name() const;
+    PitchArrival arrival_at_plane() const;
 
 private:
     // ns * Hz credit avoids rounding a 240 Hz tick to a whole nanosecond.
     std::uint64_t fractional_credit = 0;
     bool integrate_tick();
 };
+PitchArrival predict_arrival(const ReferencePitch& pitch);
 }

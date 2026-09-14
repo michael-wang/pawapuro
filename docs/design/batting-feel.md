@@ -14,7 +14,9 @@
 
 **Pawapuro 是遊戲，不是棒球模擬器。** 真實棒球的尺寸、物理與規則是重要起點與可信度來源，但 gameplay rule 由遊戲性決定。當真實規則與可讀性、操作樂趣或遊戲性衝突時，可以有意識地偏離；每項偏離都必須說明 gameplay 理由，不能無意識地產生，也不把「更真實」自動等同於「更好玩」。
 
-好球帶是第一個明確例子：為探索更容易判讀、操作的進壘區，先把遊戲好球帶加寬至本壘板的兩倍，保留真實場地尺度。這是 game-design decision，不是 rendering hack；是否更好玩仍須實玩驗證。
+好球帶是第一個明確例子：為探索更容易判讀、操作的進壘區，先以真實本壘板寬度的兩倍作為好球帶 candidate，並讓 Pawapuro 本壘 geometry 採相同 gameplay width。這是 game-design decision，不是 rendering hack；是否更好玩仍須實玩驗證。
+
+**Gameplay-first 也必須內部一致。** Field geometry、gameplay rule 與 presentation 必須共同建立清楚的玩家心智模型，不能要求玩家猜哪一套才是真正規則。Simulation truth 與 presentation 可以不同（例如 3D 規則改用 2D overlay），但 presentation 必須忠實表達 gameplay rule。真實尺寸只作設計參考，不另維護一套平行的 physical／visual／gameplay 真相。
 
 ## 六階段設計
 
@@ -57,7 +59,7 @@ Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真�
 | 位置 | 本輪決定與原因 |
 |---|---|
 | Data | Camera position（X 即 lateral offset）、target、vertical FOV；release position、球 marker radius；草地半寬／遠端 Z；投手丘底部／平頂 radius；本壘平面紅土與投手丘外圍視覺紅土 radius；authoritative gameplay strike zone 的 width／bottom／top。這些都有實際 staging 調整需求。距離採公尺，FOV 採度。`camera.preset` 目前只接受上述完整對戰名稱，避免標籤與構圖意義不符。 |
-| Native | 本壘尺寸、本壘尖端至投手板 18.4404 m、投手丘高度 0.254 m、投手板尺寸與丘中心位置；它們是空間參考，不能為了讓投手看起來更近而任意調整。2 m 高度標尺／0.5 m 刻度也是固定度量參考；標尺 X=0、Z=投手板中心，直接由既有尺寸推導，不提供會讓中央軸漂移的 Data offset。 |
+| Native | 本壘五角形的比例與由 width 推導的 depth／中央 plane、本壘尖端至投手板 18.4404 m、投手丘高度 0.254 m、投手板尺寸與丘中心位置；它們是空間參考，不能為了讓投手看起來更近而任意調整。2 m 高度標尺／0.5 m 刻度也是固定度量參考；標尺 X=0、Z=投手板中心，直接由既有尺寸推導，不提供會讓中央軸漂移的 Data offset。 |
 | Native | 固定開發視窗尺寸、geometry 拓樸／分段數、顏色、細線厚度、近遠裁切、草地背向延伸至 z=-12 m；目前沒有反覆調整需求。Release 圓環尺寸從球 marker radius 推導，支柱底端依丘面高度計算，避免同一關係有多份可漂移設定。 |
 
 `BattingStaging` 是 batting 擁有的一份具體、唯讀啟動快照。toml++ 僅在 `staging.cpp` 解析；完整 validation 通過後才讓 geometry／camera 使用，不把 parser node 傳入 Engine。只在啟動讀檔，沒有 file watcher、hot reload、Lua 或 property system。
@@ -66,13 +68,23 @@ Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真�
 
 ### 單一 authoritative gameplay strike zone
 
-`staging.toml` 的 `[strike_zone]` 是 Pawapuro runtime 唯一的好球帶規則來源，由 Pawapuro Native／Data 擁有，目前保存在既有 `BattingStaging` 啟動快照，沒有另建規則 API。第一個 tuning candidate 為 width **0.8636 m**（2 × 本壘板寬度）、bottom **0.5 m**、top **1.3 m**。本壘板 physical width 仍是 **0.4318 m**，投手丘、場地與球路不因好球帶放大而改變。
+`staging.toml` 的 `[strike_zone]` 是 Pawapuro runtime 唯一的好球帶規則來源，由 Pawapuro Native／Data 擁有，目前保存在既有 `BattingStaging` 啟動快照，沒有另建規則 API。目前 tuning candidate 為 width **0.8636 m**（真實棒球尺寸參考 0.4318 m 的兩倍）、bottom **0.5 m**、top **1.45 m**。Pawapuro 本壘 gameplay width 直接使用同一欄位；五角形依原比例放大，depth=width，catcher-side tip 維持 Z=0、肩點 Z=depth/2、pitcher-side edge Z=depth。沒有另一份 plate width Data 或 aspect tuning。
+
+`BattingStaging::home_plate_depth_m()` 與 `strike_zone_plane_z()` 是具體推導：plane Z=depth/2，穿過本壘前後中央，並由 reference pitch、overlay 共用。目前 plane 恰好仍為 0.4318 m，是本輪倍寬尺寸推導的結果，不是保留舊前緣常數；改 width 時 plane 必須跟著移動。投手丘、其他場地與積分公式不變。
 
 Authoritative 指單一規則來源，不代表數值永久定案；尺寸之後可依 Q 版打者模型、站姿與實玩結果調整。藍框直接呈現這一份規則，不畫第二個真實好球帶內框。未來 ball／strike judgement、pitcher targeting、batting aiming、pitch-location feedback 預設都使用同一份 Data；本輪尚未實作這些 consumers。只有實玩證明 called strike zone 與 bat reachable area 必須分開時，才引入第二個概念，不預建 physical／visual／guide／interaction 四套區域。
 
 三值皆為公尺：width 允許 **0.25～1.5**，保留較窄與較寬玩法候選的試驗空間（含 0.75／0.86／0.95）；bottom 0.2～1、top 0.8～2，且 top 至少高於 bottom 0.2。這是有限、非退化的啟動檢查界限，不是正式棒球規則。沿用 finite／型別／來源診斷與 defaults，只在 startup load，沒有 hot reload。舊 `[strike_zone_reference]` 視為 unknown key，沒有外部相容需求或 compatibility layer。
 
-Native 固定中心 X=0、Z=arrival plane，以四條 0.01 m 薄幾何畫框，不另存可漂移的 offset；目前不做好壞球判定或 UI。
+### Screen-space overlay 與預測落點
+
+Gameplay zone 中心 X=0、Z=`strike_zone_plane_z()`。Pawapuro 將四角投影到 camera，以投影結果的 min/max 組成 axis-aligned NDC rectangle；藍框水平／垂直，最後以 depth test／write 關閉的 draw 顯示，不受 3D 遮蔽。這是投影範圍的平面化表達，不是第二個判定區；原 3D 四角的透視 skew 不保留。位置、大小不存 pixel Data。厚度隨投影寬度縮放。
+
+橘色空心預測環由初始 state 建立一次獨立的 `ReferencePitch`，呼叫相同 single-step／積分及 crossing evaluation；有 2 秒上限以明確報告未抵達異常。環中心直接投影 prediction 的 world evaluation position；半徑由既有球 marker radius 的 1.5 倍投影，再維持 screen-space 圓形，避免實心符號遮住球。Prediction 不修改正在玩的 pitch。
+
+目前固定 camera／啟動 Data，Pawapuro 在建立場景時產生 overlay NDC vertices，與 world／球 vertices 放在既有 immutable buffer。下次以不同 camera Data 啟動會重新投影；沒有 runtime camera 變更或重新配置 overlay 的 framework。Renderer 只增加一個 depth-disabled PSO，沿用既有 shader、root constants 與 buffer，identity matrix 畫 NDC。兩個實際 caller 是好球帶框與 prediction 環，Engine 不知道其棒球語意。
+
+Prediction 環目前在各 phase 都顯示，僅為 development／gameplay exploration tool；正式遊戲是否、何時顯示，或是否依能力模糊，尚未決定。沒有 aiming cursor、好壞球判定或通用 UI。
 
 球 marker 仍是刻意放大的視覺參考，不是物理球半徑。Raised mound 保留簡單平頂斜坡與既有高度／半徑；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移，沒有投手模型。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
 
@@ -87,8 +99,8 @@ Native 固定中心 X=0、Z=arrival plane，以四條 0.01 m 薄幾何畫框，�
 - App 以 SDL monotonic nanoseconds 提供經過時間。Pawapuro accumulator 使用整數 `ns × Hz` credit（每 tick 消耗 10⁹），保留不足一 tick 的餘額。每 frame 最多 **16 ticks**，為 30 FPS 與短暫延遲保留追趕餘裕；超額欠帳保留並顯示於 title 的 `backlog`，不 clamp／丟棄時間、不放大 dt。持續低 FPS 時會落後 wall time；Complete 後不再需要剩餘欠帳。
 - Ready／Paused／Complete 不累積新 wall time。Pause 保留既有 fractional credit／backlog；單步是額外執行一個固定 tick，仍保持暫停，若跨平面則進入 Complete。App 每圈先推進舊狀態，再處理該 frame 的按鍵；live input 的接受邊界仍依事件輪詢，不宣稱不同 FPS 下相同人類按鍵時刻一定落在同一 tick。
 - **Space** 在 Ready release，在 Complete 清除 tick／pending ticks／fractional credit／pause flag，將 previous/current 恢復 initial state 並立即進入 InFlight；app 同時重設 wall-clock 基準，排除上一階段的閒置時間。**P** 暫停／恢復 InFlight；**.** 僅在 Paused 單步；**Esc／window close** 退出。忽略 key repeat，InFlight（含 Paused）不接受再次 release。Minimize 時自動暫停進行中的球，restore 後需 P 恢復，不在背景補進最小化期間的時間。
-- Arrival plane 是本壘朝投手的前緣 **Z=0.4318 m**，與畫板共用 Native constant。球心第一次從 `previous.z > plane` 到 `current.z <= plane` 即記錄 tick／tick÷Hz、位置、速度與 previous Z，進入 Complete；保留跨越後位置，不吸附／插值到平面。時間誤差小於一 tick，Z overshoot 小於 `abs(vz)*dt`（不含浮點捨入）。不做 strike-zone 判定、球半徑接觸或 CCD。
-- Rendering 直接讀 `current.position_m`，不產生另一條球路，也不做 render interpolation／extrapolation。`BattingReference` 只保存既有 vertices 與球的尾段起點；Engine 用同一 immutable buffer 做固定區與平移區兩次 draw，以 root constants 設定平移，沒有新增 GPU resource 或 dynamic mesh。GPU fence lifetime 沿用原有 owner。
+- Evaluation plane 來自本壘 depth 中央的 `strike_zone_plane_z()`，在建構 pitch 時固定保存。球心第一次由 `previous.z > plane` 到 `current.z <= plane` 進入 Complete；tick／current state 仍保留完整積分結果。另以該 tick 的 previous/current 線性插值，取得 plane 上的權威 evaluation sample（位置、速度與 fractional simulation time），供 prediction／位置比較共用；不回寫 current，也不偷偷調整球路。這是單一 crossing sample，不是第二份 trajectory 或 generic CCD；重力軌跡在 tick 內用直線近似，理論 Y chord 誤差上限約 0.022 mm，另有浮點誤差。原 tick overshoot 仍小於 `abs(vz)*dt`；stderr 同時列 raw tick 與 evaluation sample，避免混淆。尚無 strike-zone 判定或球半徑接觸。
+- Rendering 直接讀 `current.position_m`，不產生另一條球路，也不做 render interpolation／extrapolation。`BattingReference` 保存 vertices、球／overlay 的起點與投影量測值；Engine 用同一 immutable buffer 做 world、球平移、NDC overlay 三次 draw，以 root constants 設定 matrix／平移，沒有新增 vertex buffer 或 dynamic mesh。GPU fence lifetime 沿用原有 owner。
 - Title 顯示 state、tick、位置及 backlog，只有文字變動才更新；stderr 只在 release／arrival 記錄摘要，不逐 tick logging。重現範圍為同 build／平台與相同初始 state、相同固定 tick 序列；不承諾跨 compiler bit identity，沒有 replay framework。
 
 無 drag、spin、Magnus effect、pitcher animation、碰撞、hot reload 或通用 replay。此次同球重投與進壘 framing 沒有修改球路物理或 oversized marker 尺寸；實測 initial conditions／arrival 與限制記於開發環境文件。

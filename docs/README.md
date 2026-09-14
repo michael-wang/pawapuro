@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-15。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；已加入進壘區置中、authoritative gameplay 好球帶及同球重投驗證；M1 尚未完成。
+更新：2026-09-15。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；已加入進壘區置中、authoritative gameplay 好球帶／本壘一致性、2D overlay／預測落點及同球重投驗證；M1 尚未完成。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 

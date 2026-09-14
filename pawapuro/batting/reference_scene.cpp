@@ -1,10 +1,11 @@
 #include "reference_scene.hpp"
 #include <cmath>
 #include <algorithm>
+#include <stdexcept>
 
 using namespace DirectX;
 namespace pawapuro {
-BattingReference make_batting_reference(const BattingStaging& staging)
+BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 predicted_position, float aspect)
 {
     // Metres, +Y up, +Z from home plate toward the pitcher. These are Native fixtures.
     BattingReference scene;
@@ -38,11 +39,12 @@ BattingReference make_batting_reference(const BattingStaging& staging)
     dirt_disk(0, staging.home_dirt_radius_m);
     dirt_disk(mound_center_z_m, staging.mound_visual_dirt_radius_m);
     // Five-sided plate: point toward catcher, full-width edge toward pitcher.
-    constexpr float half_width = 0.2159f;
+    const float half_width = staging.strike_zone_width_m / 2;
+    const float plate_depth = staging.home_plate_depth_m();
     const XMFLOAT3 point{0, 0.012f, 0};
     const XMFLOAT3 left{-half_width, 0.012f, half_width};
-    const XMFLOAT3 front_left{-half_width, 0.012f, plate_front_z_m};
-    const XMFLOAT3 front_right{half_width, 0.012f, plate_front_z_m};
+    const XMFLOAT3 front_left{-half_width, 0.012f, plate_depth};
+    const XMFLOAT3 front_right{half_width, 0.012f, plate_depth};
     const XMFLOAT3 right{half_width, 0.012f, half_width};
     const XMFLOAT3 white{0.96f, 0.95f, 0.87f};
     triangle(point, left, front_left, white);
@@ -95,17 +97,6 @@ BattingReference make_batting_reference(const BattingStaging& staging)
         };
         quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
     }
-    // Display the authoritative gameplay zone directly; judgement is not implemented yet.
-    const float zone_half = staging.strike_zone_width_m / 2;
-    const float bottom = staging.strike_zone_bottom_m, top = staging.strike_zone_top_m;
-    constexpr float line_half = 0.005f, zone_z = plate_front_z_m;
-    const XMFLOAT3 zone_color{0.55f, 0.72f, 1.0f};
-    for (float x : {-zone_half, zone_half})
-        quad({x - line_half, bottom, zone_z}, {x - line_half, top, zone_z},
-            {x + line_half, top, zone_z}, {x + line_half, bottom, zone_z}, zone_color);
-    for (float y : {bottom, top})
-        quad({-zone_half, y - line_half, zone_z}, {-zone_half, y + line_half, zone_z},
-            {zone_half, y + line_half, zone_z}, {zone_half, y - line_half, zone_z}, zone_color);
     scene.ball_vertex_start = static_cast<unsigned>(vertices.size());
     // A small faceted sphere, generated only for this one fixture, not a primitive API.
     const auto ball_point = [&](int latitude, int longitude) -> XMFLOAT3 {
@@ -121,6 +112,45 @@ BattingReference make_batting_reference(const BattingStaging& staging)
                 ball_point(lat, lon + 1), {shade, shade, shade * 0.92f});
         }
     }
+    // Project the one gameplay zone, then flatten its bounds into an axis-aligned overlay.
+    scene.overlay_vertex_start = static_cast<unsigned>(vertices.size());
+    scene.zone_min_ndc = {1e9f, 1e9f};
+    scene.zone_max_ndc = {-1e9f, -1e9f};
+    for (float x : {-half_width, half_width}) {
+        for (float y : {staging.strike_zone_bottom_m, staging.strike_zone_top_m}) {
+            const auto p = project_batting_point(staging, {x, y, staging.strike_zone_plane_z()}, aspect);
+            scene.zone_min_ndc.x = std::min(scene.zone_min_ndc.x, p.x);
+            scene.zone_min_ndc.y = std::min(scene.zone_min_ndc.y, p.y);
+            scene.zone_max_ndc.x = std::max(scene.zone_max_ndc.x, p.x);
+            scene.zone_max_ndc.y = std::max(scene.zone_max_ndc.y, p.y);
+        }
+    }
+    const float overlay_left = scene.zone_min_ndc.x, overlay_right = scene.zone_max_ndc.x;
+    const float bottom = scene.zone_min_ndc.y, top = scene.zone_max_ndc.y;
+    // Thickness scales with the projected zone, not an authored pixel rectangle.
+    const float stroke_x = (overlay_right - overlay_left) * 0.008f, stroke_y = stroke_x * aspect;
+    const XMFLOAT3 blue{0.55f, 0.72f, 1};
+    for (float x : {overlay_left, overlay_right})
+        quad({x - stroke_x / 2, bottom, 0}, {x - stroke_x / 2, top, 0},
+            {x + stroke_x / 2, top, 0}, {x + stroke_x / 2, bottom, 0}, blue);
+    for (float y : {bottom, top})
+        quad({overlay_left, y - stroke_y / 2, 0}, {overlay_left, y + stroke_y / 2, 0},
+            {overlay_right, y + stroke_y / 2, 0}, {overlay_right, y - stroke_y / 2, 0}, blue);
+    scene.prediction_ndc = project_batting_point(staging, predicted_position, aspect);
+    const auto p = scene.prediction_ndc;
+    // Open ring surrounds the enlarged ball marker without painting over its centre.
+    const auto edge = project_batting_point(staging,
+        {predicted_position.x + staging.ball_marker_radius_m * 1.5f, predicted_position.y, predicted_position.z}, aspect);
+    const float radius = std::abs(edge.x - p.x);
+    const XMFLOAT3 prediction_color{1, 0.55f, 0.25f};
+    for (int i = 0; i < 48; ++i) {
+        const float a = XM_2PI * static_cast<float>(i) / 48;
+        const float b = XM_2PI * static_cast<float>(i + 1) / 48;
+        const auto ring = [&](float angle, float r) -> XMFLOAT3 {
+            return {p.x + r * std::cos(angle), p.y + r * aspect * std::sin(angle), 0};
+        };
+        quad(ring(a, radius), ring(b, radius), ring(b, radius + stroke_x), ring(a, radius + stroke_x), prediction_color);
+    }
     return scene;
 }
 
@@ -132,5 +162,15 @@ XMFLOAT4X4 batting_view_projection(const BattingStaging& staging, float aspect)
     XMFLOAT4X4 result;
     XMStoreFloat4x4(&result, view * XMMatrixPerspectiveFovLH(XMConvertToRadians(staging.vertical_fov_degrees), aspect, 0.1f, 300));
     return result;
+}
+
+DirectX::XMFLOAT2 project_batting_point(const BattingStaging& staging, DirectX::XMFLOAT3 point, float aspect)
+{
+    const auto matrix = batting_view_projection(staging, aspect);
+    XMFLOAT4 clip;
+    XMStoreFloat4(&clip, XMVector4Transform(XMVectorSet(point.x, point.y, point.z, 1), XMLoadFloat4x4(&matrix)));
+    if (!std::isfinite(clip.w) || clip.w <= 0)
+        throw std::runtime_error("Batting overlay point is behind the camera.");
+    return {clip.x / clip.w, clip.y / clip.w};
 }
 }
