@@ -66,6 +66,17 @@ int main()
             require(scene.zone_max_ndc.x > scene.zone_min_ndc.x && scene.zone_max_ndc.y > scene.zone_min_ndc.y,
                 "Projected overlay bounds invalid");
         }
+        // An independently tuned release must not create a zero-length throwing forearm.
+        {
+            BattingStaging s;
+            const float h = s.pitcher_blockout_height_m;
+            const auto o = s.pitcher_blockout_position_m;
+            s.release_position_m = {o.x - 0.30f*h, o.y + 0.66f*h + 0.035f, o.z - 0.54f*h - 0.13f};
+            bool rejected = false;
+            try { (void)make_batting_reference(s, {0, 1, s.strike_zone_plane_z()}, 16.0f / 9); }
+            catch (const std::runtime_error&) { rejected = true; }
+            require(rejected, "Coincident release-pose endpoints were not rejected");
+        }
         // Compare fields exactly in one build/platform; never compare struct padding.
         const auto expected = ticks(48);
         for (int run = 0; run < 20; ++run) require(equal(ticks(48), expected), "Fixed N ticks differ");

@@ -30,7 +30,7 @@ home_dirt_radius_m = 2.8
 # Flat visual apron; independent of the smaller raised mound below.
 visual_dirt_radius_m = 5.5
 # Raised presentation volume; rubber X/Z distance stays unchanged.
-height_m = 0.65
+height_m = 0.35
 radius_m = 3.5
 top_radius_m = 1.5
 
@@ -40,12 +40,13 @@ top_radius_m = 1.5
 # Width and heights above ground in metres; evaluation plane crosses the plate depth centre.
 [strike_zone]
 width_m = 0.8636
-bottom_m = 0.5
-top_m = 1.45
+bottom_m = 0.30
+top_m = 1.25
 
 # Static composition fixtures only. Position is the foot/ground origin; height excludes the bat.
 [pitcher_blockout]
-position_m = [0.0, 0.655, 18.5166]
+# Rear-foot origin for the static release pose; height is the standing-proportion scale.
+position_m = [0.0, 0.355, 18.5166]
 height_m = 2.45
 
 [batter_blockout]

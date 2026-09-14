@@ -152,7 +152,11 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         }
     };
     const auto segment = [&](XMFLOAT3 a, XMFLOAT3 b, float start_radius, float end_radius, XMFLOAT3 color) {
-        const auto axis = XMVector3Normalize(XMVectorSubtract(XMLoadFloat3(&b), XMLoadFloat3(&a)));
+        const auto direction = XMVectorSubtract(XMLoadFloat3(&b), XMLoadFloat3(&a));
+        // Independently tuned release and body landmarks can coincide; reject before normalization.
+        if (XMVectorGetX(XMVector3LengthSq(direction)) < 1e-8f)
+            throw std::runtime_error("Static blockout endpoints overlap; check pitcher/release staging.");
+        const auto axis = XMVector3Normalize(direction);
         const auto helper = std::abs(XMVectorGetY(axis)) < 0.9f ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
         const auto side = XMVector3Normalize(XMVector3Cross(axis, helper));
         const auto up = XMVector3Cross(axis, side);
@@ -181,22 +185,47 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         const auto part = [&](XMFLOAT3 centre, XMFLOAT3 radii, XMFLOAT3 color) {
             ellipsoid(centre, {radii.x * h, radii.y * h, radii.z * h}, color);
         };
-        part(at(0, 0.47f, 0), {0.18f, 0.19f, 0.14f}, shirt);
-        part(at(0, 0.77f, 0), {0.23f, 0.22f, 0.21f}, skin);
-        part(at(0, 0.96f, 0), {0.24f, 0.04f, 0.22f}, shirt);
-        for (float side : {-1.0f, 1.0f}) {
-            segment(at(side * 0.10f, 0.34f, 0), at(side * 0.15f, 0.10f, -0.02f), h * 0.065f, h * 0.06f, pants);
-            part(at(side * 0.15f, 0.045f, -0.045f), {0.085f, 0.045f, 0.12f}, shoes);
-        }
         if (!batter) {
-            for (float side : {-1.0f, 1.0f}) {
-                part(at(side * 0.075f, 0.80f, -0.202f), {0.025f, 0.032f, 0.015f}, shoes);
-                segment(at(side * 0.16f, 0.57f, 0), at(side * 0.22f, 0.43f, -0.10f), h * 0.055f, h * 0.05f, shirt);
-                segment(at(side * 0.22f, 0.43f, -0.10f), at(side * 0.035f, 0.57f, -0.21f), h * 0.05f, h * 0.045f, skin);
-            }
-            // Left glove (+X from the catcher); the right throwing hand rests beside it.
-            part(at(0.035f, 0.57f, -0.23f), {0.09f, 0.10f, 0.07f}, {0.55f, 0.30f, 0.13f});
+            // One release fixture: explicit landmarks, not joints or an evaluated pose.
+            // The rear-foot origin stays at the rubber; pelvis/chest lean toward home.
+            const auto pelvis = at(0, 0.34f, -0.23f);
+            const auto chest = at(-0.02f, 0.57f, -0.40f);
+            segment(pelvis, chest, h * 0.18f, h * 0.17f, shirt);
+            part(pelvis, {0.18f, 0.10f, 0.15f}, shirt);
+            part(at(0.02f, 0.75f, -0.40f), {0.23f, 0.22f, 0.21f}, skin);
+            part(at(0.02f, 0.94f, -0.40f), {0.24f, 0.04f, 0.22f}, shirt);
+            for (float side : {-1.0f, 1.0f})
+                part(at(0.02f + side * 0.075f, 0.78f, -0.602f), {0.025f, 0.032f, 0.015f}, shoes);
+            const auto rear_knee = at(-0.12f, 0.17f, -0.04f);
+            const auto front_knee = at(0.18f, 0.20f, -0.57f);
+            const auto rear_foot = at(-0.07f, 0.045f, 0);
+            const auto front_foot = at(0.15f, 0.045f, -0.68f);
+            segment(at(-0.085f, 0.34f, -0.23f), rear_knee, h * 0.065f, h * 0.06f, pants);
+            segment(rear_knee, rear_foot, h * 0.06f, h * 0.05f, pants);
+            segment(at(0.085f, 0.34f, -0.23f), front_knee, h * 0.065f, h * 0.06f, pants);
+            segment(front_knee, front_foot, h * 0.06f, h * 0.05f, pants);
+            part(rear_foot, {0.085f, 0.045f, 0.10f}, shoes);
+            part(front_foot, {0.085f, 0.045f, 0.10f}, shoes);
+            const auto shoulder = at(-0.16f, 0.57f, -0.40f);
+            const auto elbow = at(-0.30f, 0.66f, -0.54f);
+            // Hand centre sits just behind the unchanged ball; no IK or simulation input.
+            const XMFLOAT3 hand{release.x, release.y - 0.035f, release.z + 0.13f};
+            segment(shoulder, elbow, h * 0.055f, h * 0.045f, skin);
+            segment(elbow, hand, h * 0.045f, h * 0.035f, skin);
+            part(hand, {0.045f, 0.045f, 0.045f}, skin);
+            const auto glove_elbow = at(0.25f, 0.44f, -0.50f);
+            const auto glove = at(0.13f, 0.43f, -0.59f);
+            segment(at(0.16f, 0.57f, -0.40f), glove_elbow, h * 0.055f, h * 0.05f, shirt);
+            segment(glove_elbow, glove, h * 0.05f, h * 0.045f, skin);
+            part(glove, {0.09f, 0.10f, 0.07f}, {0.55f, 0.30f, 0.13f});
         } else {
+            part(at(0, 0.47f, 0), {0.18f, 0.19f, 0.14f}, shirt);
+            part(at(0, 0.77f, 0), {0.23f, 0.22f, 0.21f}, skin);
+            part(at(0, 0.96f, 0), {0.24f, 0.04f, 0.22f}, shirt);
+            for (float side : {-1.0f, 1.0f}) {
+                segment(at(side * 0.10f, 0.34f, 0), at(side * 0.15f, 0.10f, -0.02f), h * 0.065f, h * 0.06f, pants);
+                part(at(side * 0.15f, 0.045f, -0.045f), {0.085f, 0.045f, 0.12f}, shoes);
+            }
             const XMFLOAT3 grip{origin.x - 0.18f * h, origin.y + 0.62f * h, origin.z - 0.12f * h};
             const XMFLOAT3 tip{origin.x + 0.12f * h, origin.y + 1.18f * h, origin.z - 0.34f * h};
             // Ready bat stays on the catcher side; no swing path or contact model.

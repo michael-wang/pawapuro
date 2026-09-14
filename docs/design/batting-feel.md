@@ -14,6 +14,8 @@
 
 **Pawapuro 是遊戲，不是棒球模擬器。** 真實棒球的尺寸、物理與規則是重要起點與可信度來源，但 gameplay rule 由遊戲性決定。當真實規則與可讀性、操作樂趣或遊戲性衝突時，可以有意識地偏離；每項偏離都必須說明 gameplay 理由，不能無意識地產生，也不把「更真實」自動等同於「更好玩」。
 
+Gameplay-first 不等於越誇張越好；誇張必須改善 readability／feel。0.65 m raised mound 經使用者實玩指出過度像高台，應降低，而不是繼續靠丘高建立投手壓迫感。
+
 好球帶是第一個明確例子：為探索更容易判讀、操作的進壘區，先以真實本壘板寬度的兩倍作為好球帶 candidate，並讓 Pawapuro 本壘 geometry 採相同 gameplay width。這是 game-design decision，不是 rendering hack；是否更好玩仍須實玩驗證。
 
 **Gameplay-first 也必須內部一致。** Field geometry、gameplay rule 與 presentation 必須共同建立清楚的玩家心智模型，不能要求玩家猜哪一套才是真正規則。Simulation truth 與 presentation 可以不同（例如 3D 規則改用 2D overlay），但 presentation 必須忠實表達 gameplay rule。真實尺寸只作設計參考，不另維護一套平行的 physical／visual／gameplay 真相。
@@ -68,7 +70,7 @@ Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真�
 
 ### 單一 authoritative gameplay strike zone
 
-`staging.toml` 的 `[strike_zone]` 是 Pawapuro runtime 唯一的好球帶規則來源，由 Pawapuro Native／Data 擁有，目前保存在既有 `BattingStaging` 啟動快照，沒有另建規則 API。目前 tuning candidate 為 width **0.8636 m**（真實棒球尺寸參考 0.4318 m 的兩倍）、bottom **0.5 m**、top **1.45 m**。Pawapuro 本壘 gameplay width 直接使用同一欄位；五角形依原比例放大，depth=width，catcher-side tip 維持 Z=0、肩點 Z=depth/2、pitcher-side edge Z=depth。沒有另一份 plate width Data 或 aspect tuning。
+`staging.toml` 的 `[strike_zone]` 是 Pawapuro runtime 唯一的好球帶規則來源，由 Pawapuro Native／Data 擁有，目前保存在既有 `BattingStaging` 啟動快照，沒有另建規則 API。目前 tuning candidate 為 width **0.8636 m**（真實棒球尺寸參考 0.4318 m 的兩倍）、bottom **0.30 m**、top **1.25 m**。Pawapuro 本壘 gameplay width 直接使用同一欄位；五角形依原比例放大，depth=width，catcher-side tip 維持 Z=0、肩點 Z=depth/2、pitcher-side edge Z=depth。沒有另一份 plate width Data 或 aspect tuning。已有 Q 版打者後，zone 整體下移 0.20 m，保留 0.95 m 高度。使用者選擇保留此候選，頂邊與大頭下半部仍同高的關係留待 review；不為了避開頭部而把框底繼續壓到地面，也不調球路配合。
 
 `BattingStaging::home_plate_depth_m()` 與 `strike_zone_plane_z()` 是具體推導：plane Z=depth/2，穿過本壘前後中央，並由 reference pitch、overlay 共用。目前 plane 恰好仍為 0.4318 m，是本輪倍寬尺寸推導的結果，不是保留舊前緣常數；改 width 時 plane 必須跟著移動。投手丘、其他場地與積分公式不變。
 
@@ -86,23 +88,25 @@ Gameplay zone 中心 X=0、Z=`strike_zone_plane_z()`。Pawapuro 將四角投影�
 
 Prediction 環目前在各 phase 都顯示，僅為 development／gameplay exploration tool；正式遊戲是否、何時顯示，或是否依能力模糊，尚未決定。沒有 aiming cursor、好壞球判定或通用 UI。
 
-球 marker 的 startup Data 半徑目前為 **0.085 m**，是 gameplay presentation size，不是物理球半徑。Raised mound 保留簡單平頂斜坡，高度／半徑可為舞台感刻意偏離真實尺寸；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移；靜態投手 blockout 以此檢查人體尺度，尚未建立手部出球對應。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
+球 marker 的 startup Data 半徑目前為 **0.085 m**，是 gameplay presentation size，不是物理球半徑。Raised mound 保留簡單平頂斜坡，高度／半徑可為舞台感刻意偏離真實尺寸；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移；靜態投手 release-pose blockout 以此對照手部與球的位置，尚未建立動畫與 simulation 的出手對應。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
 
 使用者回饋場景整體稍暗，列為待人物／materials／lighting 進入後再 review 的 presentation issue；暫不為暗沉感調整顏色或引入 lighting／material system。目前只驗證靜態 blockout 的 foreground 遮擋，不代表正式模型／動作不會遮擋。
 
 ### 靜態人物 blockout
 
-右投手與左打者使用同一組簡單橢球／短圓柱比例，在既有 Vertex path 產生固定幾何，只驗證 composition、人物尺度與遮擋。投手雙手在身前準備，左手戴手套；打者位於捕手視角右側、身體朝本壘，球棒斜向後上方。這不是 release pose 或揮棒軌跡，release reference 不隨人物移動。
+右投手與左打者使用同一組簡單橢球／短圓柱比例，在既有 Vertex path 產生固定幾何，只驗證 composition、人物尺度與遮擋。投手現改為唯一的靜態 release pose：後腳在投手板區域、前腳跨向本壘，pelvis／chest 前移前傾，右臂展開至既有 release 附近，左手手套收在身前。打者仍位於捕手視角右側、身體朝本壘，球棒斜向後上方，幾何完全不變。姿勢在 Ready／flight／Complete 都固定，沒有動作或揮棒軌跡，release reference 不隨人物移動。
 
-`[pitcher_blockout]` 與 `[batter_blockout]` 各只有 `position_m`（腳底原點）及 `height_m`（含帽、不含球棒的總高），沿用 startup defaults／validation／來源診斷。位置與總高是當前需要比較的 staging 值；頭身比例、手腳與 bat 靜態端點比例留在 Native，尚無獨立調整需求，不預建 pose Data。角色幾何只屬於 Pawapuro scene fixture，沒有新增 Engine API、character system、skeleton、rig 或 animation。正式角色 asset／rig／animation 做法留待下一階段決定，不能將本次 blockout 當成正式 pipeline。
+`[pitcher_blockout]` 與 `[batter_blockout]` 各只有 `position_m` 與 `height_m`；打者仍是腳底原點及含帽、不含球棒的總高，投手現在是投手板附近的後腳參考原點及站立比例 scale，沿用 startup defaults／validation／來源診斷。位置與總高是當前需要比較的 staging 值；頭身比例、手腳與 bat 靜態端點比例留在 Native，尚無獨立調整需求，不預建 pose Data。角色幾何只屬於 Pawapuro scene fixture，沒有新增 Engine API、character system、skeleton、rig 或 animation。正式角色 asset／rig／animation 做法留待下一階段決定，不能將本次 blockout 當成正式 pipeline。
 
 ### Field readability／presence pass
 
-本次只增強投打對決的舞台感：投手以既有 `height_m` 等比例放大，維持 Q 版頭身／四肢比例，不增加尚無需求的比例欄位。Raised mound 的 `height_m` 成為 startup Data，允許 0.125～1 m；平頂 radius 上限放寬到 2 m，仍小於底部 radius 下限。投手板、中央標尺及 release 支柱的落地高度直接使用丘高；投手腳底仍由角色 `position_m` 明示，本次一起調整到板面，單獨調丘高時須同步檢查站位。Release 的世界位置與整條球路不隨丘高移動；靜態準備姿勢不代表正式出手姿勢。
+本次只增強投打對決的舞台感：投手以既有 `height_m` 等比例放大，維持 Q 版頭身／四肢比例，不增加尚無需求的比例欄位。Raised mound 的 `height_m` 成為 startup Data，允許 0.125～1 m；平頂 radius 上限放寬到 2 m，仍小於底部 radius 下限。投手板、中央標尺及 release 支柱的落地高度直接使用丘高；投手腳底仍由角色 `position_m` 明示，本次一起調整到板面，單獨調丘高時須同步檢查站位。Release 的世界位置與整條球路不隨丘高移動。後續 pre-animation correction 比較 0.30／0.35／0.40 m 後選 0.35 m；radius／top radius／visual apron 不變，camera 也保留原設定以免破壞近景構圖。
 
 Camera 只抬高 target Y，保留 position、target X/Z 與 36° FOV；以畫面確認本壘／腳底更靠下、好球帶水平置中、投手偏左與打者遮擋。上下 framing 是 presentation，沒有調整好球帶 rule 或球路來配合。
 
 既有 Vertex path 加入左右打擊區白線、一／三壘低矮白色 blockout、兩側界外線及帶頂緣的初步外野牆。依使用者選擇保留標準 90° diamond 方向，允許一／三壘在窄 FOV 視野外，不壓縮位置換取入鏡；界外白線在打擊區外才開始顯示，避免交叉污染近景方框。這些元素只提供方位、打席尺度與外野邊界，不加入跑壘、界內外／全壘打判定或碰撞。白線尺寸、壘包位置／尺寸、牆距／高度先保留具體 Native fixture，尚無反覆調參證據；不建立 stadium／terrain／animation 系統。
+
+靜態 release fixture 只在 `reference_scene.cpp` 直接列出比例化的腳、pelvis、chest、肩、肘與手部端點，沿用橢球／短圓柱。手心在 release 後方 0.13 m、下方 0.035 m，端點從既有 release Data 推導，只有 presentation 依賴 simulation 初始位置，反向沒有依賴；不是 IK。對重合端點拒絕建立幾何，避免零向量 normalization。沒有新增 pose Data schema、joints、骨架、hierarchy 或 interpolation。前跨深度在 batting 視角受透視縮短，靜態對齊不代表動態 body mechanics 已驗收；正式 rig／animation pipeline 尚未開始。
 
 ## Reference pitch：固定步長與同球重投契約
 

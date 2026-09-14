@@ -130,3 +130,6 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 
 2026-09-15 field readability／presence pass：依本輪授權放大靜態投手、提高並加寬 raised mound、小幅抬高 camera target，加入打擊區／界外白線、一／三壘與外野牆 blockout。使用者選擇保留 90° diamond 方向，允許壘包在目前視角外。Debug／Release、CTest、實際投球／重投與三狀態擷取完成，細節見設計／開發環境文件；未開始 animation pipeline 或新 gameplay rule，M1 體驗驗收尚未完成。
+
+
+2026-09-15 pre-animation staging correction：依使用者回饋比較三個較低丘高後選 0.35 m，下移 authoritative zone 並維持其寬高；將站立投手替換為唯一靜態 release pose，對照後腳／跨步／前傾與原 release point。使用者選擇保留 0.30～1.25 m zone，頭身比例關係留待 review。這是正式 rig／animation 前的幾何驗證，沒有開始動畫、打者揮棒或修改投球物理；實測證據見開發環境文件。

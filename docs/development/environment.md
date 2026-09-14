@@ -354,3 +354,34 @@ Native UI helper 仍無法啟動；上述是真正 app 的 SDL 按鍵路徑與 P
 - 各 build 的 21 筆 raw arrival 與前版 log 完全相同：tick **95**、t=**0.395833333 s**、position **(0.005105,1.044226,0.306804)** m、velocity **(1.655,−4.481804,−41.667)** m/s。Plane evaluation world/time/velocity 也完全相同。Mid-flight 球投影至投手身前仍可見；打者與 bat 未遮住好球帶／主要球路，正式出手或揮棒遮擋仍未驗證。
 - Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource，報告只留供報告的 device。兩種 app 正常 exit 0，各完成 **619 frames**。
 - Computer-use helper 因 sandbox setup 失敗，沿用只針對 app process 的 Windows key messages／SDL event loop／PrintWindow；量測程式採 DPI-aware client pixel。這是實際 app 自動操作與畫面檢視，人物存在感與最終玩法仍待人類 review。沒有新增 dependency 或 renderer／character／stadium abstraction。
+
+
+## Pre-animation staging correction 驗證（2026-09-15）
+
+使用者實玩指出 0.65 m mound 像高台、好球帶在 Q 版打者旁偏高。設計決策與單一靜態 release pose 的界線見 [Batting Feel](../design/batting-feel.md)；本次沒有正式 rig／skeleton／animation。
+
+- 實際以同一 camera、zone 與初版 release pose 擷取 **0.30／0.35／0.40 m** 三個丘高（1920×1080，`build/release-pose-0.xx-ready.png`）。0.30 m 較平、0.40 m 丘面略突出，選 **0.35 m** 作為仍可辨斜坡且不再像高台的中間候選。底部 radius **3.5 m**、平頂 radius **1.5 m**、visual dirt radius **5.5 m** 均未變；選定後只再澄清兩腳的橫向 silhouette，沒有進行動畫。
+- Camera 完全不改：position **(−0.75,1.25,−5)**、target **(2.260052,2.10,16.8)**、FOV **36°**。前次 target Y 提高所保留的本壘／腳底近景仍成立，不因降低丘高再調整。左右打擊區、界外線、壘包、外野牆及打者 Data／幾何皆保留。
+- Authoritative zone 為 **width=0.8636、bottom=0.30、top=1.25 m**，高度仍 **0.95 m**；Data 只下移上下界，不改 width／本壘／evaluation plane。截圖外框 **X=827～1089、Y=603～898**，**263×296 px**、center X=**958**、高／寬約 **1.125**；前版為 263×295 px、Y=542～836，1 px 高差來自投影／rasterization。
+- 畫面顯示下移後頂邊仍與打者大頭下半部同高。使用者已選擇保留 **0.30～1.25 m** 候選，頭身比例關係留待 review；不宣稱頂邊已完全低於頭部，也不判定本球為好／壞球。右側 X≥1150 的 Ready 畫面與前版逐像素相同，打者與 bat 未被偷偷改動。
+
+Release fixture 的 world landmarks（公尺，腳底點為鞋底中央，其餘為幾何中心）：
+
+| Landmark | (X, Y, Z) |
+|---|---|
+| 原點／站立比例 scale | (0, 0.355, 18.5166)／2.45 m；原點 X/Z 不改，Y 隨降低的丘面調整 |
+| 後腳鞋底中央 | (−0.1715, 0.355, 18.5166)，仍與投手板相交 |
+| 前腳鞋底中央 | (0.3675, 0.355, 16.8506)，向本壘跨出 1.666 m；兩腳均在平頂範圍 |
+| Pelvis／chest | (0, 1.188, 17.9531)／(−0.049, 1.7515, 17.5366)；胸口比 pelvis 再前移 0.4165 m |
+| 頭中心 | (0.049, 2.1925, 17.5366)，保留原大頭比例 |
+| 右肩／右肘 | (−0.392, 1.7515, 17.5366)／(−0.735, 1.972, 17.1936) |
+| 右手中心 | (−0.65, 2.015, 16.93) |
+| Release（不變） | (−0.65, 2.05, 16.8)，距右手中心 **0.134629 m** |
+
+手中心與球心分開，手位於球後方／略下，Ready 可見手與球接近；Mid-flight 球離開手部且可追蹤，Complete 關係不變。主視角會縮短前跨與胸口前傾的 Z 深度；本次只證明端點能連到現有 release 幾何，不能以靜態圖冒充動態 body mechanics、連貫動作或投球節奏驗收。所有 pose 比例留 Native，沒有新增 Data schema；只有 mound height、pitcher origin Y、zone bottom／top 使用既有 Data 調整。
+
+- Debug／Release build 成功，CTest 各 **2/2**。保留全部 staging validation、20 次 deterministic rethrow、30／60／120 FPS chunking、pause／single-step、arrival once、prediction consistency；新增獨立 release/body 端點重合時拒絕建立幾何的測試，避免 normalize 零向量。
+- 最終兩種 app 各完成初投加 **20 次重投**，pause **12→13 tick** 的單步成功，暫停等待期間畫面逐像素相同。Ready／暫停 tick 48 的 Mid-flight／Complete 皆為 1920×1080，留於忽略的 `build/release-pose-debug-*.png` 與 `build/release-pose-release-*.png`。
+- 各 build 的 **21 筆 raw arrival 與 plane evaluation 完整 log 與前版逐行相同**：tick **95**、time **0.395833333 s**、position **(0.005105,1.044226,0.306804)**、velocity **(1.655,−4.481804,−41.667)**。Plane sample **(0.000140,1.057610,0.431800)**、time **0.392833450 s**；prediction／actual plane pixel **(960.042114,662.669617)**、error **0 px**。Raw 球心仍為 **(966.884094,668.182678)**。Camera／球半徑／prediction logic 未改，環與球的尺寸關係也未改。
+- Debug GPU-based validation **0 errors**，未見 corruption，shutdown 無 live child resource（僅供報告使用的 device）。Debug／Release 正常 exit 0，分別完成 **613／616 frames**。
+- Computer-use helper 因 sandbox setup 失敗，沿用只針對 Pawapuro process 的 Windows key messages／SDL event loop／PrintWindow；這是實際 app 自動操作及畫面檢視，不是人類手動試玩。暫存操作腳本移除，候選 Data／截圖／logs 留在忽略的 `build/`。沒有新增 dependency、renderer 或 character／animation framework。
