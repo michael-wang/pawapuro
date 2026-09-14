@@ -1,7 +1,7 @@
 # M1 Step 0 — 開發環境
 
 核對日期：2026-09-14。本文件記錄本機觀察結果與準備缺項；scope 與驗收標準由
-[milestone](../milestones/01-batting-feel.md) 定義。已完成 **Step 1 交付 1 的靜態場景驗證**；Step 1 整體尚未完成，結果與建置方式見末節。
+[milestone](../milestones/01-batting-feel.md) 定義。已完成 **Step 1 交付 1 的靜態場景驗證**；Step 1 整體尚未完成，後續已加入靜態 staging calibration 與啟動 Data；結果與建置方式見各節。
 
 以下至「Step 0 辨識出的後續 sample 需求」保留 Step 0 當時的核對結果：當時未安裝任何工具或依賴，也未建立 source、build 設定、shader 或資產。本次 SDL3 準備與驗證另記於末節，不改寫 Step 0 的範圍或結果。
 
@@ -92,7 +92,7 @@ SDL3 的開發套件缺項已解決。首次準備仍需要連線取得官方 ar
 
 ## M1 Step 1／交付 1：靜態參考場景（2026-09-14）
 
-本次僅實作 native window 與靜態 3D 場景。沒有球的運動、simulation tick、pause／single-step、重投、動畫、Lua、Data reload、audio 或 asset import；不代表 Step 1 整體或 M1 已完成。
+以下保留 delivery 1 當時的結果；本輪 calibration 的改動另記於末節。本次僅實作 native window 與靜態 3D 場景。沒有球的運動、simulation tick、pause／single-step、重投、動畫、Lua、Data reload、audio 或 asset import；不代表 Step 1 整體或 M1 已完成。
 
 ### 建置與啟動
 
@@ -101,6 +101,7 @@ SDL3 的開發套件缺項已解決。首次準備仍需要連線取得官方 ar
 ```bat
 chcp 65001
 cmake -P cmake/PrepareSDL3.cmake
+cmake -P cmake/PrepareToml.cmake
 cmake -S . -B build/debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build/debug
 build\debug\pawapuro.exe
@@ -138,3 +139,42 @@ Start-Process -FilePath (Resolve-Path build/debug/pawapuro.exe) -RedirectStandar
 - 已確認 Ninja 記錄 project/shader header dependencies；touch 共用 header 會排入三個 `.cpp` 重編，沒有修改時 Debug／Release 都顯示 `no work to do`。
 - 原生 computer-use helper 在 sandbox 啟動失敗；改用暫存的 process-targeted Windows API 檢查與 `PrintWindow` 擷取，實際檢視擷取結果。檢查腳本未納入版本控制；本機 build/run logs 與擷取圖留在忽略的 `build/`。
 - 未測 AMD adapter、多螢幕／DPI 切換、極端視窗比例、device removal recovery 或乾淨機器部署。球的大小只是可視 placeholder；無球路或打擊手感驗收。Present 使用同步間隔 1，未量測 frame-time 分位數或端到端 latency，不能據此宣告 T10／T11 通過。
+
+## 靜態 staging calibration 與啟動 Data（2026-09-14）
+
+### Dependency 與操作方式
+
+新增且只新增 **toml++ 3.4.0**，使用 [官方 v3.4.0 release](https://github.com/marzer/tomlplusplus/releases/tag/v3.4.0) 的 [固定 source archive](https://github.com/marzer/tomlplusplus/archive/refs/tags/v3.4.0.zip)。下載實測 SHA-256：`ad2a4cd786e25305d802e7490ea65a2531195e5834bf6b4fa5a323421fd81f9b`；[PrepareToml.cmake](../../cmake/PrepareToml.cmake) 固定 URL／雜湊並驗證後解壓至 `.deps/tomlplusplus-3.4.0/`。沒有全域安裝或 PATH 變更。
+
+選 TOML 是因本次需要人類可讀、帶註解的少量 staging 值；[toml++](https://marzer.github.io/tomlplusplus/v3.4.0/index.html) 已提供成熟的 TOML parser 與語法位置診斷，省去自行定義格式／parser。它支援 C++17 以上、沒有額外依賴；只在一個 production `.cpp` include，透過上游 `tomlplusplus::tomlplusplus` header-only target 整合，不建立 package manager 或自己的 dependency wrapper。Build 後複製其 MIT 授權至 `tomlplusplus-LICENSE.txt`。
+
+先依上方 developer console 命令準備依賴與建置；新增的必要準備命令為：
+
+```bat
+cmake -P cmake/PrepareToml.cmake
+```
+
+開發調參時，在 repository 根目錄直接讀取 authored Data：
+
+```bat
+build\debug\pawapuro.exe --staging pawapuro/batting/staging.toml
+```
+
+修改 TOML 後關閉並重開即可，不需要編譯、link 或 CMake refresh。`--staging` 只指定本次啟動資料來源。未提供參數時讀取 executable 旁的 `staging.toml`；那是 CMake `configure_file(COPYONLY)` 產生的 launch copy，更新 authored TOML 後 build 會更新它，不應把它當成另一份維護來源。已從不同工作目錄啟動 Debug／Release，確認 default path 不依賴 CWD。
+
+### 實際比較與驗證
+
+- 固定 1280×720 後比較了 40° 與 36° 兩個 camera candidate；比較只修改 TOML 並重開同一 executable。採用 36°，本壘仍完整且更扁平，release／球 marker 較醒目。與 delivery 1 的擷取圖相比，投手後方不再緊接短草地邊界，而可見延伸草地與漸密的距離色帶。這是靜態構圖檢視，不宣稱完成玩家手感驗收。
+- 選定的右打構圖、Data／Native 分工與固定視窗政策見 [設計契約](../design/batting-feel.md)；當前所有 tuning 值只維護在 authored TOML。視窗標題與啟動 log 都明示 `right_handed`，log 也列出 Data path、Native owner、camera position／target／FOV。
+- 最終 Debug／Release 均成功建置與執行於既有 RTX 5070 Ti；Windows API 檢查確認 client area **1280×720**，`WS_THICKFRAME` 與 `WS_MAXIMIZEBOX` 都未設定，minimize／restore 後尺寸仍相同，正常 `WM_CLOSE` 均以 exit code 0 結束。最後兩次執行各完成 3040／1106 frames，靜態 buffer 為 1557 vertices。
+- 兩組態擷取確認五角本壘、低矮投手丘、投手板旁的金色高度標尺、青色 release 支柱／圓環及球 marker 可辨識。真正尺寸的投手板在低角度下仍很薄，標尺提供高度與站位參照，沒有以移近投手板或放大丘高度解決問題。
+- 最終 Debug 的 D3D12 debug layer／GPU-based validation error/corruption 為 **0**；shutdown report 只列出用於回報的 device，未新增 live child resource。Engine rendering source 與 HLSL 均未修改。
+- CTest 的 `batting_staging` 在 Debug／Release 皆通過：authored 檔可載入、空檔採明示 defaults、合法整數覆寫、缺檔，以及 18 組語法／型別／NaN／Infinity／越界／未知 key／錯誤 preset 案例。測試不要求 authored tuning 值與 Native fallback 永遠相同，避免調 Data 反而被迫重新改 C++。
+- 另外對真正的 Debug app 實測缺檔、語法錯誤與 FOV=500：三者皆顯示錯誤對話框與來源診斷，關閉訊息後 exit code 1；未進入 D3D12 初始化，沒有 silent fallback 或 crash。
+
+```bat
+ctest --test-dir build/debug --output-on-failure
+ctest --test-dir build/release --output-on-failure
+```
+
+原生 computer-use helper 仍在 sandbox 啟動失敗，因此沿用 process-targeted 檢查及 `PrintWindow` 擷取並實際檢視。暫存檢查腳本已移除；run logs／擷取圖保留於忽略的 `build/`。尚未測跨螢幕／DPI 變更、其他 GPU 或全部合法參數組合的構圖品質。仍沒有 runtime reload、左右打切換、投手模型／動畫、球移動或 simulation；delivery 2 未開始。

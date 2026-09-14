@@ -1,9 +1,10 @@
 #include "reference_scene.hpp"
 #include <cmath>
+#include <algorithm>
 
 using namespace DirectX;
 namespace pawapuro {
-std::vector<engine::Vertex> make_batting_reference()
+std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging)
 {
     // Metres, +Y up, +Z from home plate toward the pitcher. These are Native fixtures.
     std::vector<engine::Vertex> vertices;
@@ -14,7 +15,15 @@ std::vector<engine::Vertex> make_batting_reference()
         triangle(a, b, c, color);
         triangle(a, c, d, color);
     };
-    quad({-15, 0, -6}, {-15, 0, 35}, {15, 0, 35}, {15, 0, -6}, {0.075f, 0.20f, 0.15f});
+    const float extent = staging.grass_half_width_m;
+    quad({-extent, 0, -12}, {-extent, 0, staging.grass_end_z_m},
+        {extent, 0, staging.grass_end_z_m}, {extent, 0, -12}, {0.075f, 0.20f, 0.15f});
+    // Broad, subtle grass bands communicate depth beyond the pitcher without walls.
+    for (float z = 20; z < staging.grass_end_z_m; z += 20) {
+        const float end = std::min(z + 10, staging.grass_end_z_m);
+        quad({-extent, 0.001f, z}, {-extent, 0.001f, end}, {extent, 0.001f, end},
+            {extent, 0.001f, z}, {0.08f, 0.215f, 0.16f});
+    }
     quad({-1.6f, 0.002f, -1}, {-1.6f, 0.002f, 20}, {1.6f, 0.002f, 20}, {1.6f, 0.002f, -1},
         {0.33f, 0.23f, 0.17f});
     // Sparse metre-scale references make the long pitching distance readable.
@@ -34,29 +43,58 @@ std::vector<engine::Vertex> make_batting_reference()
     triangle(point, left, front_left, white);
     triangle(point, front_left, front_right, white);
     triangle(point, front_right, right, white);
-    quad({-0.305f, 0.01f, 18.44f}, {-0.305f, 0.01f, 18.59f},
-        {0.305f, 0.01f, 18.59f}, {0.305f, 0.01f, 18.44f}, white);
+    // A shallow mound with a flat top supplies height/stance context, not terrain.
+    const auto mound_point = [](float angle, float radius, float y) -> XMFLOAT3 {
+        return {radius * std::cos(angle), y, mound_center_z_m + radius * std::sin(angle)};
+    };
+    for (int i = 0; i < 48; ++i) {
+        const float a = XM_2PI * static_cast<float>(i) / 48;
+        const float b = XM_2PI * static_cast<float>(i + 1) / 48;
+        quad(mound_point(a, staging.mound_radius_m, 0.008f), mound_point(b, staging.mound_radius_m, 0.008f),
+            mound_point(b, staging.mound_top_radius_m, mound_height_m),
+            mound_point(a, staging.mound_top_radius_m, mound_height_m), {0.46f, 0.33f, 0.22f});
+        triangle({0, mound_height_m, mound_center_z_m},
+            mound_point(a, staging.mound_top_radius_m, mound_height_m),
+            mound_point(b, staging.mound_top_radius_m, mound_height_m), {0.54f, 0.40f, 0.27f});
+    }
+    constexpr float rubber_y = mound_height_m + 0.005f;
+    quad({-0.3048f, rubber_y, rubber_distance_m}, {-0.3048f, rubber_y, rubber_distance_m + 0.1524f},
+        {0.3048f, rubber_y, rubber_distance_m + 0.1524f}, {0.3048f, rubber_y, rubber_distance_m}, white);
 
-    // Release is ahead of the rubber. Cyan support/ring identifies the reference,
-    // while the ivory ball stays distinct. Its 0.10 m radius is an oversized marker.
-    constexpr XMFLOAT3 release{0.25f, 1.8f, 16.8f};
+    // Fixed metric ruler beside the rubber: 0.5 m marks, not a pitcher silhouette.
+    const XMFLOAT3 gold{0.90f, 0.69f, 0.25f};
+    quad({-0.56f, rubber_y, rubber_distance_m}, {-0.56f, rubber_y + 2, rubber_distance_m},
+        {-0.54f, rubber_y + 2, rubber_distance_m}, {-0.54f, rubber_y, rubber_distance_m}, gold);
+    for (int step = 0; step <= 4; ++step) {
+        const float y = rubber_y + static_cast<float>(step) * 0.5f;
+        quad({-0.64f, y, rubber_distance_m}, {-0.64f, y + 0.02f, rubber_distance_m},
+            {-0.46f, y + 0.02f, rubber_distance_m}, {-0.46f, y, rubber_distance_m}, gold);
+    }
+
+    const XMFLOAT3 release = staging.release_position_m;
+    const float ring_inner = staging.ball_marker_radius_m + 0.15f;
+    const float ring_outer = ring_inner + 0.03f;
+    const float distance = std::hypot(release.x, release.z - mound_center_z_m);
+    const float base_y = 0.008f + (mound_height_m - 0.008f) * std::clamp(
+        (staging.mound_radius_m - distance) / (staging.mound_radius_m - staging.mound_top_radius_m), 0.0f, 1.0f);
     const XMFLOAT3 cyan{0.16f, 0.80f, 0.86f};
-    quad({release.x - 0.025f, 0.01f, release.z}, {release.x - 0.025f, 1.49f, release.z},
-        {release.x + 0.025f, 1.49f, release.z}, {release.x + 0.025f, 0.01f, release.z}, cyan);
+    // The post meets the mound surface and stops at the ring, not inside the ball.
+    quad({release.x - 0.025f, base_y, release.z}, {release.x - 0.025f, release.y - ring_outer, release.z},
+        {release.x + 0.025f, release.y - ring_outer, release.z}, {release.x + 0.025f, base_y, release.z}, cyan);
     for (int i = 0; i < 32; ++i) {
         const float a = XM_2PI * static_cast<float>(i) / 32;
         const float b = XM_2PI * static_cast<float>(i + 1) / 32;
         const auto ring_point = [&](float angle, float radius) -> XMFLOAT3 {
             return {release.x + radius * std::cos(angle), release.y + radius * std::sin(angle), release.z};
         };
-        quad(ring_point(a, 0.28f), ring_point(b, 0.28f), ring_point(b, 0.31f), ring_point(a, 0.31f), cyan);
+        quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
     }
     // A small faceted sphere, generated only for this one fixture, not a primitive API.
     const auto ball_point = [&](int latitude, int longitude) -> XMFLOAT3 {
         const float a = XM_PI * static_cast<float>(latitude) / 8;
         const float b = XM_2PI * static_cast<float>(longitude) / 16;
-        return {release.x + 0.10f * std::sin(a) * std::cos(b),
-            release.y + 0.10f * std::cos(a), release.z + 0.10f * std::sin(a) * std::sin(b)};
+        return {release.x + staging.ball_marker_radius_m * std::sin(a) * std::cos(b),
+            release.y + staging.ball_marker_radius_m * std::cos(a), release.z + staging.ball_marker_radius_m * std::sin(a) * std::sin(b)};
     };
     for (int lat = 0; lat < 8; ++lat) {
         const float shade = 0.65f + 0.35f * (1 - static_cast<float>(lat) / 8);
@@ -68,13 +106,13 @@ std::vector<engine::Vertex> make_batting_reference()
     return vertices;
 }
 
-XMFLOAT4X4 batting_view_projection(float aspect)
+XMFLOAT4X4 batting_view_projection(const BattingStaging& staging, float aspect)
 {
-    // Offset slightly toward a batter; downward framing keeps the plate visible.
-    const auto view = XMMatrixLookAtLH(XMVectorSet(-0.65f, 1.65f, -2.5f, 1),
-        XMVectorSet(0, 0.9f, 9, 1), XMVectorSet(0, 1, 0, 0));
+    // Right-handed framing; camera orientation changes presentation, not field geometry.
+    const auto view = XMMatrixLookAtLH(XMLoadFloat3(&staging.camera_position_m),
+        XMLoadFloat3(&staging.camera_target_m), XMVectorSet(0, 1, 0, 0));
     XMFLOAT4X4 result;
-    XMStoreFloat4x4(&result, view * XMMatrixPerspectiveFovLH(XMConvertToRadians(65), aspect, 0.1f, 100));
+    XMStoreFloat4x4(&result, view * XMMatrixPerspectiveFovLH(XMConvertToRadians(staging.vertical_fov_degrees), aspect, 0.1f, 300));
     return result;
 }
 }

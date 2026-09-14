@@ -5,7 +5,7 @@
 # Local Codex state, caches, and logs.
 /.codex/
 
-# Repository-local SDL development package and download cache.
+# Repository-local dependency packages and download caches.
 /.deps/
 
 # CMake/Ninja outputs, shader headers and local run logs.

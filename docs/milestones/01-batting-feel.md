@@ -1,6 +1,6 @@
 # M1：Batting Feel
 
-更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；交付 2／3 尚未開始，Step 1 整體與 M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
+更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2／3 尚未開始，Step 1 整體與 M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
 
 ## 完成的定義
 
@@ -109,3 +109,5 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 當步接受準則：能在目標 Windows 環境啟動與退出；球可見地飛向本壘；暫停不推進 tick、single-step 恰進一 tick；重投不留上一球狀態；能展示可重現的 20 次紀錄。過程不需要 Lua、完整 asset pipeline、球棒碰撞、ECS 或 editor。若 D3D12 啟動工作已大，第一小交付就停在可見靜態場景 review，不順手建立 renderer framework。
 
 2026-09-14：使用者已授權並完成交付 1；Debug／Release 均成功建置、呈現靜態場景、resize／minimize／restore 並正常退出。Debug validation error 為 0；live-object report 未列出未釋放的 child resources。實測方式、限制與建置命令見 [開發環境／交付 1 紀錄](../development/environment.md)。交付 2 的球運動與交付 3 的重投／紀錄尚未開始；未驗收球飛行、固定 tick 或 20 次重投。
+
+2026-09-14 staging calibration：固定 1280×720 windowed，校正 camera／外野深度／投手丘 reference，加入 batting 專屬的啟動 TOML 載入。這是交付 1 的延伸，不是新增 simulation 交付；決策見設計文件，建置與驗證證據見開發環境文件。

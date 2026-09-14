@@ -36,6 +36,26 @@
 
 引擎與 game 的分界靠具體函式、資料 ownership、依賴方向和 source location 成立，不要求 interface、factory、DLL 或全專案 C ABI。將來 Jai migration 沿已存在的資料與 library 邊界評估；M1 不建 migration framework。
 
+## 目前靜態場景的 staging／Data 契約
+
+本次延伸 delivery 1 做 staging calibration，**不是 delivery 2**。開發顯示固定為 windowed 1280×720、16:9，不提供任意 resize、fullscreen 或解析度選單；保留既有 D3D12 resize 函式。尚不實作 DPI mode switching、letterbox／pillarbox。
+
+採用 `right_handed` 右打側構圖：+Z 朝投手、+Y 向上，負 X 是從本壘往投手看的三壘側。這是稍退到本壘後方的 presentation camera，不是假稱位於打者模型眼睛內；本次不實作左打 preset 或 runtime switching。Camera 調整不改變本壘至投手板的空間參考距離。
+
+唯一的 authored staging 檔是 [pawapuro/batting/staging.toml](../../pawapuro/batting/staging.toml)，與 `staging.cpp/.hpp`、`reference_scene` 位於同一概念目錄。Engine 不接觸 TOML、投手丘、release 或 batter-side 語意；保留既有 `engine::Vertex` coupling，不增加 renderer abstraction。
+
+| 位置 | 本輪決定與原因 |
+|---|---|
+| Data | Camera position（X 即 lateral offset）、target、vertical FOV；release position、球 marker radius；草地半寬／遠端 Z；投手丘底部／平頂 radius。這些都有本次實際畫面比較需求。距離採公尺，FOV 採度。`camera.preset` 目前只接受 `right_handed`，避免標籤與構圖意義不符。 |
+| Native | 本壘尺寸、本壘尖端至投手板 18.4404 m、投手丘高度 0.254 m、投手板尺寸與丘中心位置；它們是空間參考，不能為了讓投手看起來更近而任意調整。2 m 高度標尺／0.5 m 刻度也是固定度量參考。 |
+| Native | 固定開發視窗尺寸、geometry 拓樸／分段數、顏色、細線厚度、近遠裁切、草地背向延伸至 z=-12 m；目前沒有反覆調整需求。Release 圓環尺寸從球 marker radius 推導，支柱底端依丘面高度計算，避免同一關係有多份可漂移設定。 |
+
+`BattingStaging` 是 batting 擁有的一份具體、唯讀啟動快照。toml++ 僅在 `staging.cpp` 解析；完整 validation 通過後才讓 geometry／camera 使用，不把 parser node 傳入 Engine。只在啟動讀檔，沒有 file watcher、hot reload、Lua 或 property system。
+
+缺少個別欄位時採 `staging.hpp` 的安全 defaults，並逐項記錄；這些 fallback 不必隨每次 authored Data 調參同步修改。整個檔案缺失、TOML 語法錯誤、型別錯誤、unknown key、非有限數值或超出 `staging.cpp` 的界限時，顯示檔案／欄位或語法位置的錯誤，拒絕啟動並正常回傳 exit code 1，不默默套用另一個完整場景。Camera 與 target 的界限分離，避免零方向或平行 up vector；mound top radius 的上限低於 base radius 下限，避免退化坡面。
+
+球 marker 仍是刻意放大的視覺參考，不是物理球半徑。投手丘為簡單平頂斜坡，投手板旁金色標尺提供站位／高度 context，沒有投手模型。草地與稀疏色帶只用來消除投手後方很快到場地終點的錯覺，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
+
 ## Concept locality
 
 未來布局採概念分組。下列是位置示意，**本輪不建立這些檔案，也不要求空模組先存在**：
