@@ -13,7 +13,7 @@ vertical_fov_degrees = 36.0
 # Right-handed pitcher releases to catcher-view left of the centre axis.
 position_m = [-0.65, 2.05, 16.8]
 # Intentionally enlarged visual marker, not a physical baseball radius.
-ball_marker_radius_m = 0.10
+ball_marker_radius_m = 0.085
 
 # Gravity-only fixture, approximately 150 km/h; not a tuned pitch model.
 # Lateral velocity approximately aims the baseline release toward the plate centre.
@@ -41,3 +41,12 @@ top_radius_m = 0.9
 width_m = 0.8636
 bottom_m = 0.5
 top_m = 1.45
+
+# Static composition fixtures only. Position is the foot/ground origin; height excludes the bat.
+[pitcher_blockout]
+position_m = [0.0, 0.259, 18.5166]
+height_m = 1.85
+
+[batter_blockout]
+position_m = [1.25, 0.008, 0.0]
+height_m = 1.7

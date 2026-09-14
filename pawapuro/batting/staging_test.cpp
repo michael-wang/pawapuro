@@ -6,13 +6,15 @@
 #include <string>
 
 namespace {
-std::array<float, 23> values(const pawapuro::BattingStaging& s)
+std::array<float, 31> values(const pawapuro::BattingStaging& s)
 {
     return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
         s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m,
-        s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m};
+        s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m,
+        s.pitcher_blockout_position_m.x, s.pitcher_blockout_position_m.y, s.pitcher_blockout_position_m.z, s.pitcher_blockout_height_m,
+        s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m};
 }
 }
 int main(int argc, char** argv)
@@ -52,6 +54,11 @@ int main(int argc, char** argv)
             if (pawapuro::load_batting_staging(fixture).strike_zone_width_m != width)
                 throw std::runtime_error("Gameplay width candidate was not loaded.");
         }
+        write("[pitcher_blockout]\nposition_m=[0.1,0.3,18]\nheight_m=2.0\n[batter_blockout]\nposition_m=[1.5,0.01,0.2]\nheight_m=1.6\n");
+        const auto people = pawapuro::load_batting_staging(fixture);
+        if (people.pitcher_blockout_position_m.x != 0.1f || people.pitcher_blockout_height_m != 2
+            || people.batter_blockout_position_m.z != 0.2f || people.batter_blockout_height_m != 1.6f)
+            throw std::runtime_error("Blockout overrides were not loaded.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -65,6 +72,10 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[pitcher_blockout]\nheight_m=0\n", "pitcher_blockout.height_m"},
+            {"[pitcher_blockout]\nposition_m=[0,0,0]\n", "pitcher_blockout.position_m[2]"},
+            {"[batter_blockout]\nheight_m=nan\n", "batter_blockout.height_m"},
+            {"[batter_blockout]\nposition_m=[-1,0,0]\n", "batter_blockout.position_m[0]"},
             {"[strike_zone_reference]\nwidth_m = 0.8636\n", "Unknown staging key: strike_zone_reference"},
             {"[strike_zone]\nwidth_m = 1.6\n", "strike_zone.width_m"},
             {"[strike_zone]\nwidth_m = -1\n", "strike_zone.width_m"},
@@ -100,7 +111,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 32 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 36 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

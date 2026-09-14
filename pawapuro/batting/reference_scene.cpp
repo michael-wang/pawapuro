@@ -97,6 +97,83 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         };
         quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
     }
+    // Two static fixtures share these small geometry operations, not a character/pose system.
+    const auto ellipsoid = [&](XMFLOAT3 centre, XMFLOAT3 radius, XMFLOAT3 color) {
+        const auto point_at = [&](int lat, int lon) -> XMFLOAT3 {
+            const float a = XM_PI * static_cast<float>(lat) / 8;
+            const float b = XM_2PI * static_cast<float>(lon) / 16;
+            return {centre.x + radius.x * std::sin(a) * std::cos(b),
+                centre.y + radius.y * std::cos(a), centre.z + radius.z * std::sin(a) * std::sin(b)};
+        };
+        for (int lat = 0; lat < 8; ++lat) {
+            const float shade = 0.72f + 0.28f * (1 - static_cast<float>(lat) / 8);
+            for (int lon = 0; lon < 16; ++lon)
+                quad(point_at(lat, lon), point_at(lat + 1, lon), point_at(lat + 1, lon + 1),
+                    point_at(lat, lon + 1), {color.x * shade, color.y * shade, color.z * shade});
+        }
+    };
+    const auto segment = [&](XMFLOAT3 a, XMFLOAT3 b, float start_radius, float end_radius, XMFLOAT3 color) {
+        const auto axis = XMVector3Normalize(XMVectorSubtract(XMLoadFloat3(&b), XMLoadFloat3(&a)));
+        const auto helper = std::abs(XMVectorGetY(axis)) < 0.9f ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
+        const auto side = XMVector3Normalize(XMVector3Cross(axis, helper));
+        const auto up = XMVector3Cross(axis, side);
+        const auto rim = [&](XMFLOAT3 centre, float radius, int i) {
+            const float angle = XM_2PI * static_cast<float>(i) / 12;
+            XMFLOAT3 result;
+            XMStoreFloat3(&result, XMVectorAdd(XMLoadFloat3(&centre),
+                XMVectorScale(XMVectorAdd(XMVectorScale(side, std::cos(angle)), XMVectorScale(up, std::sin(angle))), radius)));
+            return result;
+        };
+        for (int i = 0; i < 12; ++i) {
+            quad(rim(a, start_radius, i), rim(b, end_radius, i), rim(b, end_radius, i + 1), rim(a, start_radius, i + 1), color);
+            triangle(a, rim(a, start_radius, i + 1), rim(a, start_radius, i), color);
+            triangle(b, rim(b, end_radius, i), rim(b, end_radius, i + 1), color);
+        }
+    };
+    for (bool batter : {false, true}) {
+        const auto origin = batter ? staging.batter_blockout_position_m : staging.pitcher_blockout_position_m;
+        const float h = batter ? staging.batter_blockout_height_m : staging.pitcher_blockout_height_m;
+        const XMFLOAT3 shirt = batter ? XMFLOAT3{0.65f, 0.36f, 0.73f} : XMFLOAT3{0.22f, 0.48f, 0.78f};
+        const XMFLOAT3 skin{0.97f, 0.74f, 0.51f}, shoes{0.16f, 0.19f, 0.24f}, pants{0.76f, 0.80f, 0.86f};
+        // Pitcher faces -Z; batter torso faces the plate (-X), feet spread along Z.
+        const auto at = [&](float x, float y, float z) -> XMFLOAT3 {
+            return {origin.x + (batter ? z : x) * h, origin.y + y * h, origin.z + (batter ? -x : z) * h};
+        };
+        const auto part = [&](XMFLOAT3 centre, XMFLOAT3 radii, XMFLOAT3 color) {
+            ellipsoid(centre, {radii.x * h, radii.y * h, radii.z * h}, color);
+        };
+        part(at(0, 0.47f, 0), {0.18f, 0.19f, 0.14f}, shirt);
+        part(at(0, 0.77f, 0), {0.23f, 0.22f, 0.21f}, skin);
+        part(at(0, 0.96f, 0), {0.24f, 0.04f, 0.22f}, shirt);
+        for (float side : {-1.0f, 1.0f}) {
+            segment(at(side * 0.10f, 0.34f, 0), at(side * 0.15f, 0.10f, -0.02f), h * 0.065f, h * 0.06f, pants);
+            part(at(side * 0.15f, 0.045f, -0.045f), {0.085f, 0.045f, 0.12f}, shoes);
+        }
+        if (!batter) {
+            for (float side : {-1.0f, 1.0f}) {
+                part(at(side * 0.075f, 0.80f, -0.202f), {0.025f, 0.032f, 0.015f}, shoes);
+                segment(at(side * 0.16f, 0.57f, 0), at(side * 0.22f, 0.43f, -0.10f), h * 0.055f, h * 0.05f, shirt);
+                segment(at(side * 0.22f, 0.43f, -0.10f), at(side * 0.035f, 0.57f, -0.21f), h * 0.05f, h * 0.045f, skin);
+            }
+            // Left glove (+X from the catcher); the right throwing hand rests beside it.
+            part(at(0.035f, 0.57f, -0.23f), {0.09f, 0.10f, 0.07f}, {0.55f, 0.30f, 0.13f});
+        } else {
+            const XMFLOAT3 grip{origin.x - 0.18f * h, origin.y + 0.62f * h, origin.z - 0.12f * h};
+            const XMFLOAT3 tip{origin.x + 0.12f * h, origin.y + 1.18f * h, origin.z - 0.34f * h};
+            // Ready bat stays on the catcher side; no swing path or contact model.
+            segment(grip, tip, h * 0.018f, h * 0.035f, {0.94f, 0.68f, 0.27f});
+            for (float side : {-1.0f, 1.0f}) {
+                const XMFLOAT3 hand{grip.x + (side + 1) * 0.015f * h,
+                    grip.y + (side + 1) * 0.028f * h, grip.z - (side + 1) * 0.011f * h};
+                segment(at(side * 0.16f, 0.56f, 0), at(side * 0.20f, 0.44f, -0.16f), h * 0.055f, h * 0.05f, shirt);
+                segment(at(side * 0.20f, 0.44f, -0.16f), hand, h * 0.045f, h * 0.04f, skin);
+                part(hand, {0.045f, 0.045f, 0.045f}, skin);
+            }
+            // Head looks toward the pitcher (+Z) while the torso remains side-on.
+            part({origin.x - 0.08f * h, origin.y + 0.78f * h, origin.z + 0.21f * h},
+                {0.05f, 0.05f, 0.045f}, skin);
+        }
+    }
     scene.ball_vertex_start = static_cast<unsigned>(vertices.size());
     // A small faceted sphere, generated only for this one fixture, not a primitive API.
     const auto ball_point = [&](int latitude, int longitude) -> XMFLOAT3 {
@@ -138,10 +215,15 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
             {overlay_right, y + stroke_y / 2, 0}, {overlay_right, y - stroke_y / 2, 0}, blue);
     scene.prediction_ndc = project_batting_point(staging, predicted_position, aspect);
     const auto p = scene.prediction_ndc;
-    // Open ring surrounds the enlarged ball marker without painting over its centre.
-    const auto edge = project_batting_point(staging,
-        {predicted_position.x + staging.ball_marker_radius_m * 1.5f, predicted_position.y, predicted_position.z}, aspect);
+    // Match the ball's projected radius at the evaluation plane; keep the stroke inside it.
+    const auto forward = XMVectorSubtract(XMLoadFloat3(&staging.camera_target_m), XMLoadFloat3(&staging.camera_position_m));
+    const auto camera_right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), forward));
+    XMFLOAT3 edge_position;
+    XMStoreFloat3(&edge_position, XMVectorAdd(XMLoadFloat3(&predicted_position),
+        XMVectorScale(camera_right, staging.ball_marker_radius_m)));
+    const auto edge = project_batting_point(staging, edge_position, aspect);
     const float radius = std::abs(edge.x - p.x);
+    const float inner_radius = std::max(0.0f, radius - stroke_x);
     const XMFLOAT3 prediction_color{1, 0.55f, 0.25f};
     for (int i = 0; i < 48; ++i) {
         const float a = XM_2PI * static_cast<float>(i) / 48;
@@ -149,7 +231,7 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         const auto ring = [&](float angle, float r) -> XMFLOAT3 {
             return {p.x + r * std::cos(angle), p.y + r * aspect * std::sin(angle), 0};
         };
-        quad(ring(a, radius), ring(b, radius), ring(b, radius + stroke_x), ring(a, radius + stroke_x), prediction_color);
+        quad(ring(a, inner_radius), ring(b, inner_radius), ring(b, radius), ring(a, radius), prediction_color);
     }
     return scene;
 }

@@ -18,13 +18,17 @@ struct BattingStaging {
     // Single authoritative gameplay zone; rendering consumes these same rule values.
     float strike_zone_width_m = 0.8636f;
     float strike_zone_bottom_m = 0.5f, strike_zone_top_m = 1.45f;
-    float ball_marker_radius_m = 0.10f;
+    float ball_marker_radius_m = 0.085f;
     float grass_half_width_m = 85;
     float grass_end_z_m = 140;
     float home_dirt_radius_m = 2.8f;
     float mound_visual_dirt_radius_m = 5.5f;
     float mound_radius_m = 2.75f;
     float mound_top_radius_m = 0.9f;
+    DirectX::XMFLOAT3 pitcher_blockout_position_m{0, 0.259f, 18.5166f};
+    float pitcher_blockout_height_m = 1.85f;
+    DirectX::XMFLOAT3 batter_blockout_position_m{1.25f, 0.008f, 0};
+    float batter_blockout_height_m = 1.7f;
     // Preserve the original pentagon proportions: depth equals width, tip stays at Z=0.
     float home_plate_depth_m() const { return strike_zone_width_m; }
     float strike_zone_plane_z() const { return home_plate_depth_m() / 2; }

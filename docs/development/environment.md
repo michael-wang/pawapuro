@@ -311,3 +311,23 @@ Native UI helper 仍無法啟動；上述是真正 app 的 SDL 按鍵路徑與 P
 - 實際兩種 app 均 Space → P → . → P，pause tick 19→20；等待暫停時 client 畫面逐像素相同。各完成初投加 20 次重投，每球 raw arrival／plane evaluation log 一致，正常 exit 0。Debug GPU-based validation **0 errors／corruption**，shutdown 沒有 live child resource；只保留供報告的 device。
 - 原生 UI helper 再次啟動失敗，沿用只針對 Pawapuro process 的 Windows key messages／SDL event loop 與 PrintWindow；這是實際 app 自動操作，不是人類手動試玩。暫存驗證腳本移除，擷取與 logs 保留於忽略的 `build/overlay-*`。
 - Renderer 只增加 depth-disabled PSO 與第三段 NDC draw，共用原 vertex buffer、shader 與 fence ownership；沒有新增 dependency、UI／camera／physics framework 或新 HLSL。Prediction 與 geometry 推導均留在 Pawapuro。
+
+
+## 球尺寸與靜態人物 blockout 驗證（2026-09-15）
+
+設計目的與 Data 邊界見 [Batting Feel](../design/batting-feel.md)。本次沒有修改 camera、好球帶、本壘、release、初速、gravity、240 Hz 或 evaluation／rethrow 邏輯，也沒有修改 renderer／shader 或新增 dependency。
+
+| 設定 | 本次候選（公尺） |
+|---|---|
+| Ball visual radius | 0.085，較 0.10 縮小 15%；prediction 環不另存半徑 |
+| 右投手腳底原點／總高 | (0, 0.259, 18.5166)／1.85；站在投手板中央，頭寬約 0.851、頭高約 0.814 |
+| 左打者腳底原點／總高 | (1.25, 0.008, 0)／1.70；頭寬約 0.782、頭高約 0.748 |
+| Bat 靜態端點 | grip=(0.944, 1.062, −0.204)、tip=(1.454, 2.014, −0.578)，長約 1.143；端點由打者位置／高度及 Native 比例推導 |
+
+- Debug／Release build 成功，CTest 各 **2/2**。新增角色位置／高度 override、default 與非法值檢查；staging 共 **36 個非法案例**通過。既有 20 次 deterministic rethrow、30／60／120 FPS chunking、pause／single-step、arrival once 測試全部保留。
+- 兩種 app 實際 client 均 **1920×1080**，各操作初投加 **20 次重投**；pause 19→20 tick 的 single-step 成功，暫停等待時畫面逐像素相同。Ready、暫停在 tick 48 的 mid-flight、Complete 擷取留於忽略的 `build/blockout-debug-*.png` 與 `build/blockout-release-*.png`，logs 同前綴。暫存驗證腳本已移除。
+- Ready 橘環 raster bounds 為 **X=934～985、Y=576～627**，外徑 **52×52 px**；Complete 球可見 bounds 為 **X=941～992、Y=581～633**，**52×53 px**。兩種 build 相同；球的 faceting、rasterization 及完整 tick 深度造成約 1 px 尺寸差，沒有另一份 marker radius。
+- 實際檢視三張畫面：投手站在 mound，雙手準備姿勢與大頭短肢 silhouette 可辨；release 在人物左上方清楚可見。左打者與斜向後上的球棒在畫面右側，與置中的好球帶保留間隔，未遮住主要球路。Mid-flight 球接近投手帽頂的投影位置，仍可見；這是目前靜態構圖觀察，不是完整動作遮擋驗收。好球帶與 Q 版頭身比例、人物造型仍需人類實玩 review。
+- 每種 build 的 21 筆 raw arrival／plane evaluation 與前版 log 完全一致：raw tick **95**、time **0.395833333 s**、position **(0.005105,1.044226,0.306804)**；plane sample **(0.000140,1.057610,0.431800)**。Prediction／actual plane sample 的 pixel error 仍為 **0**；Complete raw 球心與環中心約 **8.761 px** 的既有差距仍保留，原因見前節。
+- Debug layer／GPU-based validation **0 errors**，未見 corruption 或 live child resource；shutdown 報告只保留供報告的 device。Debug／Release 正常 exit 0，分別完成 **603／599 frames**。
+- 原生 computer-use helper 本次啟動失敗；沿用只針對 Pawapuro process 的 Windows key messages 經 SDL event loop 與 PrintWindow。以上是實際 app 自動操作／畫面檢視，不是人類手動試玩；沒有開始正式人物 pipeline、揮棒或新物理。

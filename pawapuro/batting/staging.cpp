@@ -59,8 +59,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch", "strike_zone"}, "");
-        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch", "strike_zone"}) {
+        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout"}, "");
+        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
@@ -69,6 +69,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (prefix == "release.") only_keys(fields, {"position_m", "ball_marker_radius_m"}, prefix);
                 if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m", "home_dirt_radius_m"}, prefix);
                 if (prefix == "reference_pitch.") only_keys(fields, {"initial_velocity_mps"}, prefix);
+                if (prefix == "pitcher_blockout." || prefix == "batter_blockout.")
+                    only_keys(fields, {"position_m", "height_m"}, prefix);
                 if (prefix == "strike_zone.") only_keys(fields, {"width_m", "bottom_m", "top_m"}, prefix);
                 if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m", "visual_dirt_radius_m"}, prefix);
             }
@@ -94,6 +96,12 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.strike_zone_top_m = number(table, "strike_zone.top_m", candidate.strike_zone_top_m, 0.8f, 2);
         if (candidate.strike_zone_top_m - candidate.strike_zone_bottom_m < 0.2f)
             throw std::runtime_error("strike_zone.top_m must exceed bottom_m by at least 0.2 m.");
+        candidate.pitcher_blockout_position_m = vector(table, "pitcher_blockout.position_m", candidate.pitcher_blockout_position_m,
+            {-0.5f, 0, 17}, {0.5f, 1, 19});
+        candidate.pitcher_blockout_height_m = number(table, "pitcher_blockout.height_m", candidate.pitcher_blockout_height_m, 1.25f, 2.5f);
+        candidate.batter_blockout_position_m = vector(table, "batter_blockout.position_m", candidate.batter_blockout_position_m,
+            {0.75f, 0, -1}, {2, 0.5f, 1});
+        candidate.batter_blockout_height_m = number(table, "batter_blockout.height_m", candidate.batter_blockout_height_m, 1.25f, 2.25f);
         candidate.ball_marker_radius_m = number(table, "release.ball_marker_radius_m", candidate.ball_marker_radius_m, 0.03f, 0.15f);
         candidate.grass_half_width_m = number(table, "field.grass_half_width_m", candidate.grass_half_width_m, 40, 120);
         candidate.grass_end_z_m = number(table, "field.grass_end_z_m", candidate.grass_end_z_m, 90, 180);

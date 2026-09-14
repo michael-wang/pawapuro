@@ -80,15 +80,21 @@ Authoritative 指單一規則來源，不代表數值永久定案；尺寸之後
 
 Gameplay zone 中心 X=0、Z=`strike_zone_plane_z()`。Pawapuro 將四角投影到 camera，以投影結果的 min/max 組成 axis-aligned NDC rectangle；藍框水平／垂直，最後以 depth test／write 關閉的 draw 顯示，不受 3D 遮蔽。這是投影範圍的平面化表達，不是第二個判定區；原 3D 四角的透視 skew 不保留。位置、大小不存 pixel Data。厚度隨投影寬度縮放。
 
-橘色空心預測環由初始 state 建立一次獨立的 `ReferencePitch`，呼叫相同 single-step／積分及 crossing evaluation；有 2 秒上限以明確報告未抵達異常。環中心直接投影 prediction 的 world evaluation position；半徑由既有球 marker radius 的 1.5 倍投影，再維持 screen-space 圓形，避免實心符號遮住球。Prediction 不修改正在玩的 pitch。
+橘色空心預測環由初始 state 建立一次獨立的 `ReferencePitch`，呼叫相同 single-step／積分及 crossing evaluation；有 2 秒上限以明確報告未抵達異常。環中心直接投影 prediction 的 world evaluation position；半徑由 evaluation plane 上的預測位置，沿 camera-right 偏移一個 ball visual radius 後投影取得；維持 screen-space 圓形，stroke 向內畫，不另存 marker radius。球的視覺尺寸改變時，環自然跟著改變，空心中央避免遮住球。Prediction 不修改正在玩的 pitch。
 
 目前固定 camera／啟動 Data，Pawapuro 在建立場景時產生 overlay NDC vertices，與 world／球 vertices 放在既有 immutable buffer。下次以不同 camera Data 啟動會重新投影；沒有 runtime camera 變更或重新配置 overlay 的 framework。Renderer 只增加一個 depth-disabled PSO，沿用既有 shader、root constants 與 buffer，identity matrix 畫 NDC。兩個實際 caller 是好球帶框與 prediction 環，Engine 不知道其棒球語意。
 
 Prediction 環目前在各 phase 都顯示，僅為 development／gameplay exploration tool；正式遊戲是否、何時顯示，或是否依能力模糊，尚未決定。沒有 aiming cursor、好壞球判定或通用 UI。
 
-球 marker 仍是刻意放大的視覺參考，不是物理球半徑。Raised mound 保留簡單平頂斜坡與既有高度／半徑；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移，沒有投手模型。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
+球 marker 的 startup Data 半徑目前為 **0.085 m**，是 gameplay presentation size，不是物理球半徑。Raised mound 保留簡單平頂斜坡與既有高度／半徑；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移；靜態投手 blockout 以此檢查人體尺度，尚未建立手部出球對應。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
 
-使用者回饋場景整體稍暗，列為待人物／materials／lighting 進入後再 review 的 presentation issue；暫不為暗沉感調整顏色或引入 lighting／material system。尚無打者模型，因此 foreground 預留構圖不代表已驗證實際模型／動作不會遮擋。
+使用者回饋場景整體稍暗，列為待人物／materials／lighting 進入後再 review 的 presentation issue；暫不為暗沉感調整顏色或引入 lighting／material system。目前只驗證靜態 blockout 的 foreground 遮擋，不代表正式模型／動作不會遮擋。
+
+### 靜態人物 blockout
+
+右投手與左打者使用同一組簡單橢球／短圓柱比例，在既有 Vertex path 產生固定幾何，只驗證 composition、人物尺度與遮擋。投手雙手在身前準備，左手戴手套；打者位於捕手視角右側、身體朝本壘，球棒斜向後上方。這不是 release pose 或揮棒軌跡，release reference 不隨人物移動。
+
+`[pitcher_blockout]` 與 `[batter_blockout]` 各只有 `position_m`（腳底原點）及 `height_m`（含帽、不含球棒的總高），沿用 startup defaults／validation／來源診斷。位置與總高是當前需要比較的 staging 值；頭身比例、手腳與 bat 靜態端點比例留在 Native，尚無獨立調整需求，不預建 pose Data。角色幾何只屬於 Pawapuro scene fixture，沒有新增 Engine API、character system、skeleton、rig 或 animation。正式角色 asset／rig／animation 做法留待下一階段決定，不能將本次 blockout 當成正式 pipeline。
 
 ## Reference pitch：固定步長與同球重投契約
 
