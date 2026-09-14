@@ -136,3 +136,6 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 
 2026-09-15 off-axis projection correction：正式 animation pipeline 前，將 camera 水平方向對齊 +Z，透過從 gameplay focus 推導的 horizontal lens shift 置中，消除打擊區 X 向橫線的斜視感。Debug／Release、CTest 與三狀態實際擷取完成，兩側後方白線 screenshot ΔY=0 px、zone center X=960；projection 契約與量測見設計／開發環境文件。沒有修改人物、球場、gameplay 或投球物理，也沒有開始 rig／animation。
+
+
+2026-09-15 Character Style v1：在既有設計文件確立大頭、大腳、簡化身腳、球形手與 silhouette-first 原則，校正右投手 release／左打者 ready 靜態 blockout。Debug／Release、CTest、實際重投與三狀態擷取通過，證據見開發環境文件；camera／gameplay／投球物理未改，正式 rig／skeleton／animation pipeline 尚未開始。

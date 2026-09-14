@@ -96,11 +96,26 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 
 使用者回饋場景整體稍暗，列為待人物／materials／lighting 進入後再 review 的 presentation issue；暫不為暗沉感調整顏色或引入 lighting／material system。目前只驗證靜態 blockout 的 foreground 遮擋，不代表正式模型／動作不會遮擋。
 
+### Pawapuro Character Style v1
+
+**角色不是要像真人，而是要讓玩家一眼讀懂力量、節奏與情緒。** 真實人體只作參考，重心與動作方向的可讀性優先。
+
+- **Large head**：放大頭部，讓遠距離注意力、帽簷方向與未來眼神／情緒容易辨識。
+- **Large feet**：大腳表達站穩、踩地、跨步、煞車與重心轉移，形成有重量的輪廓。
+- **Detached / simplified body-foot relationship**：身體與腳可分離或簡化連接；間距是風格特徵，並非待修的解剖缺陷。
+- **Simple spherical hands**：球形／橢球手即可表達握球、握棒與移動方向，不做手指細節或 finger rig。
+- **Silhouette first**：未來投手的 ready、抬腿、跨步、旋轉、release、follow-through，以及打者的 ready、load、啟動、通過 zone、follow-through／失衡，都應能快速區分；不為靜態漂亮犧牲動作輪廓。
+- **Exaggerated equipment allowed**：球、bat、glove、鞋、帽／頭盔可誇張，以提升 readability、impact 與 motion clarity，並保持世界內部一致。
+- **Simple face first**：先用簡單眼睛、眉毛或帽簷／頭部方向；有實際情緒需求才擴充，不預建 facial animation。
+- **Proportions serve animation**：比例以未來投球／揮棒的力量、重心與節奏判讀為準，不以縮小真人或 static concept art 作唯一標準。
+
+目前只用既有橢球／短圓柱驗證右投手 release 與左打者 ready 兩個固定姿勢。放大頭、鞋、球形手、bat，縮短軀幹並保留短褲與鞋之間空隙；手、帽與鞋的相依尺寸直接由共用比例計算。這不證明動態姿勢已成立；正式 asset／rig／skeleton／animation 仍未開始。
+
 ### 靜態人物 blockout
 
-右投手與左打者使用同一組簡單橢球／短圓柱比例，在既有 Vertex path 產生固定幾何，只驗證 composition、人物尺度與遮擋。投手現改為唯一的靜態 release pose：後腳在投手板區域、前腳跨向本壘，pelvis／chest 前移前傾，右臂展開至既有 release 附近，左手手套收在身前。打者仍位於捕手視角右側、身體朝本壘，球棒斜向後上方，幾何完全不變。姿勢在 Ready／flight／Complete 都固定，沒有動作或揮棒軌跡，release reference 不隨人物移動。
+右投手與左打者使用同一組簡單橢球／短圓柱比例，在既有 Vertex path 產生固定幾何，只驗證 composition、人物尺度與遮擋。投手現改為唯一的靜態 release pose：後腳在投手板區域、前腳跨向本壘，pelvis／chest 前移前傾，右臂展開至既有 release 附近，左手手套收在身前。打者仍位於捕手視角右側、身體朝本壘，球棒斜向後上方；Character Style v1 校正造型比例，保留 ready stance 與球棒端點。姿勢在 Ready／flight／Complete 都固定，沒有動作或揮棒軌跡，release reference 不隨人物移動。
 
-`[pitcher_blockout]` 與 `[batter_blockout]` 各只有 `position_m` 與 `height_m`；打者仍是腳底原點及含帽、不含球棒的總高，投手現在是投手板附近的後腳參考原點及站立比例 scale，沿用 startup defaults／validation／來源診斷。位置與總高是當前需要比較的 staging 值；頭身比例、手腳與 bat 靜態端點比例留在 Native，尚無獨立調整需求，不預建 pose Data。角色幾何只屬於 Pawapuro scene fixture，沒有新增 Engine API、character system、skeleton、rig 或 animation。正式角色 asset／rig／animation 做法留待下一階段決定，不能將本次 blockout 當成正式 pipeline。
+`[pitcher_blockout]` 與 `[batter_blockout]` 各保留 `position_m` 與 `height_m`；height 是站立比例 scale，頭／帽放大後不再等於精確總高。投手原點是投手板附近後腳參考，打者原點是腳底高度參考。新增一份共用 `[character_style]`，只提供 head／foot／hand scale 與 bat thickness scale，因本次需要反覆比較且兩個角色應採同一造型語言。沿用 startup defaults／validation；軀幹、短褲、帽簷與 pose 端點的固定比例留 Native，不把每個部位變成 Data。角色只是 Pawapuro scene fixture，沒有新增 Engine API 或正式人物 pipeline。
 
 ### Field readability／presence pass
 

@@ -59,8 +59,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout"}, "");
-        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout"}) {
+        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style"}, "");
+        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
@@ -71,6 +71,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (prefix == "reference_pitch.") only_keys(fields, {"initial_velocity_mps"}, prefix);
                 if (prefix == "pitcher_blockout." || prefix == "batter_blockout.")
                     only_keys(fields, {"position_m", "height_m"}, prefix);
+                if (prefix == "character_style.")
+                    only_keys(fields, {"head_scale", "foot_scale", "hand_scale", "bat_thickness_scale"}, prefix);
                 if (prefix == "strike_zone.") only_keys(fields, {"width_m", "bottom_m", "top_m"}, prefix);
                 if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m", "visual_dirt_radius_m", "height_m"}, prefix);
             }
@@ -102,6 +104,10 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.batter_blockout_position_m = vector(table, "batter_blockout.position_m", candidate.batter_blockout_position_m,
             {0.75f, 0, -1}, {2, 0.5f, 1});
         candidate.batter_blockout_height_m = number(table, "batter_blockout.height_m", candidate.batter_blockout_height_m, 1.25f, 2.25f);
+        candidate.blockout_head_scale = number(table, "character_style.head_scale", candidate.blockout_head_scale, 0.8f, 1.25f);
+        candidate.blockout_foot_scale = number(table, "character_style.foot_scale", candidate.blockout_foot_scale, 1, 2);
+        candidate.blockout_hand_scale = number(table, "character_style.hand_scale", candidate.blockout_hand_scale, 0.75f, 1.75f);
+        candidate.blockout_bat_thickness_scale = number(table, "character_style.bat_thickness_scale", candidate.blockout_bat_thickness_scale, 0.75f, 1.75f);
         candidate.ball_marker_radius_m = number(table, "release.ball_marker_radius_m", candidate.ball_marker_radius_m, 0.03f, 0.15f);
         candidate.grass_half_width_m = number(table, "field.grass_half_width_m", candidate.grass_half_width_m, 40, 120);
         candidate.grass_end_z_m = number(table, "field.grass_end_z_m", candidate.grass_end_z_m, 90, 180);

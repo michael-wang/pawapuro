@@ -52,3 +52,11 @@ height_m = 2.45
 [batter_blockout]
 position_m = [1.25, 0.008, 0.0]
 height_m = 1.7
+
+# Character Style v1: shared dimensionless multipliers, applied to Native blockout proportions.
+# Height remains the overall proportion scale; feet stay grounded as their size changes.
+[character_style]
+head_scale = 1.08
+foot_scale = 1.6
+hand_scale = 1.3
+bat_thickness_scale = 1.25

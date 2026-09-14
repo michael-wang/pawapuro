@@ -6,7 +6,7 @@
 #include <string>
 
 namespace {
-std::array<float, 32> values(const pawapuro::BattingStaging& s)
+std::array<float, 36> values(const pawapuro::BattingStaging& s)
 {
     return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
@@ -14,7 +14,7 @@ std::array<float, 32> values(const pawapuro::BattingStaging& s)
         s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m, s.mound_height_m,
         s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m,
         s.pitcher_blockout_position_m.x, s.pitcher_blockout_position_m.y, s.pitcher_blockout_position_m.z, s.pitcher_blockout_height_m,
-        s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m};
+        s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m, s.blockout_head_scale, s.blockout_foot_scale, s.blockout_hand_scale, s.blockout_bat_thickness_scale};
 }
 }
 int main(int argc, char** argv)
@@ -59,6 +59,11 @@ int main(int argc, char** argv)
         if (people.pitcher_blockout_position_m.x != 0.1f || people.pitcher_blockout_height_m != 2
             || people.batter_blockout_position_m.z != 0.2f || people.batter_blockout_height_m != 1.6f)
             throw std::runtime_error("Blockout overrides were not loaded.");
+        write("[character_style]\nhead_scale=1.1\nfoot_scale=1.7\nhand_scale=1.4\nbat_thickness_scale=1.2\n");
+        const auto style = pawapuro::load_batting_staging(fixture);
+        if (style.blockout_head_scale != 1.1f || style.blockout_foot_scale != 1.7f
+            || style.blockout_hand_scale != 1.4f || style.blockout_bat_thickness_scale != 1.2f)
+            throw std::runtime_error("Character style overrides were not loaded.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -72,6 +77,10 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[character_style]\nhead_scale=nan\n", "character_style.head_scale"},
+            {"[character_style]\nfoot_scale=0\n", "character_style.foot_scale"},
+            {"[character_style]\nhand_scale='large'\n", "character_style.hand_scale"},
+            {"[character_style]\nbat_thickness_scale=5\n", "character_style.bat_thickness_scale"},
             {"[mound]\nheight_m=0\n", "mound.height_m"},
             {"[mound]\nheight_m=nan\n", "mound.height_m"},
             {"[pitcher_blockout]\nheight_m=0\n", "pitcher_blockout.height_m"},
@@ -113,7 +122,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 38 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 42 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

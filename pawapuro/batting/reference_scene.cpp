@@ -185,60 +185,65 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         const auto part = [&](XMFLOAT3 centre, XMFLOAT3 radii, XMFLOAT3 color) {
             ellipsoid(centre, {radii.x * h, radii.y * h, radii.z * h}, color);
         };
+        const float head = staging.blockout_head_scale, foot = staging.blockout_foot_scale;
+        const float hand_radius = 0.045f * staging.blockout_hand_scale;
+        const XMFLOAT3 head_radii{0.23f * head, 0.22f * head, 0.21f * head};
+        const XMFLOAT3 cap_radii{0.24f * head, 0.04f * head, 0.22f * head};
+        const XMFLOAT3 hand_radii{hand_radius, hand_radius, hand_radius};
         if (!batter) {
             // One release fixture: explicit landmarks, not joints or an evaluated pose.
             // The rear-foot origin stays at the rubber; pelvis/chest lean toward home.
             const auto pelvis = at(0, 0.34f, -0.23f);
             const auto chest = at(-0.02f, 0.57f, -0.40f);
-            segment(pelvis, chest, h * 0.18f, h * 0.17f, shirt);
-            part(pelvis, {0.18f, 0.10f, 0.15f}, shirt);
-            part(at(0.02f, 0.75f, -0.40f), {0.23f, 0.22f, 0.21f}, skin);
-            part(at(0.02f, 0.94f, -0.40f), {0.24f, 0.04f, 0.22f}, shirt);
+            segment(pelvis, chest, h * 0.16f, h * 0.15f, shirt);
+            part(at(0, 0.30f, -0.23f), {0.17f, 0.09f, 0.15f}, pants);
+            part(at(0.02f, 0.75f, -0.40f), head_radii, skin);
+            part(at(0.02f, 0.75f + 0.19f * head, -0.40f), cap_radii, shirt);
+            part(at(0.02f, 0.75f + 0.17f * head, -0.40f - 0.22f * head),
+                {0.18f * head, 0.015f * head, 0.12f * head}, shirt);
             for (float side : {-1.0f, 1.0f})
-                part(at(0.02f + side * 0.075f, 0.78f, -0.602f), {0.025f, 0.032f, 0.015f}, shoes);
-            const auto rear_knee = at(-0.12f, 0.17f, -0.04f);
-            const auto front_knee = at(0.18f, 0.20f, -0.57f);
-            const auto rear_foot = at(-0.07f, 0.045f, 0);
-            const auto front_foot = at(0.15f, 0.045f, -0.68f);
-            segment(at(-0.085f, 0.34f, -0.23f), rear_knee, h * 0.065f, h * 0.06f, pants);
-            segment(rear_knee, rear_foot, h * 0.06f, h * 0.05f, pants);
-            segment(at(0.085f, 0.34f, -0.23f), front_knee, h * 0.065f, h * 0.06f, pants);
-            segment(front_knee, front_foot, h * 0.06f, h * 0.05f, pants);
-            part(rear_foot, {0.085f, 0.045f, 0.10f}, shoes);
-            part(front_foot, {0.085f, 0.045f, 0.10f}, shoes);
+                part(at(0.02f + side * 0.075f * head, 0.75f + 0.03f * head, -0.40f - 0.202f * head), {0.025f, 0.032f, 0.015f}, shoes);
+            // Detached feet are the style: readable planted supports, not anatomical legs.
+            const auto rear_foot = at(-0.07f, 0.045f * foot, 0);
+            const auto front_foot = at(0.15f, 0.045f * foot, -0.68f);
+            part(rear_foot, {0.085f * foot, 0.045f * foot, 0.10f * foot}, shoes);
+            part(front_foot, {0.085f * foot, 0.045f * foot, 0.10f * foot}, shoes);
             const auto shoulder = at(-0.16f, 0.57f, -0.40f);
             const auto elbow = at(-0.30f, 0.66f, -0.54f);
             // Hand centre sits just behind the unchanged ball; no IK or simulation input.
             const XMFLOAT3 hand{release.x, release.y - 0.035f, release.z + 0.13f};
             segment(shoulder, elbow, h * 0.055f, h * 0.045f, skin);
             segment(elbow, hand, h * 0.045f, h * 0.035f, skin);
-            part(hand, {0.045f, 0.045f, 0.045f}, skin);
+            part(hand, hand_radii, skin);
             const auto glove_elbow = at(0.25f, 0.44f, -0.50f);
             const auto glove = at(0.13f, 0.43f, -0.59f);
             segment(at(0.16f, 0.57f, -0.40f), glove_elbow, h * 0.055f, h * 0.05f, shirt);
             segment(glove_elbow, glove, h * 0.05f, h * 0.045f, skin);
             part(glove, {0.09f, 0.10f, 0.07f}, {0.55f, 0.30f, 0.13f});
         } else {
-            part(at(0, 0.47f, 0), {0.18f, 0.19f, 0.14f}, shirt);
-            part(at(0, 0.77f, 0), {0.23f, 0.22f, 0.21f}, skin);
-            part(at(0, 0.96f, 0), {0.24f, 0.04f, 0.22f}, shirt);
+            part(at(0, 0.47f, 0), {0.17f, 0.16f, 0.14f}, shirt);
+            part(at(0, 0.30f, 0), {0.17f, 0.09f, 0.15f}, pants);
+            part(at(0, 0.77f, 0), head_radii, skin);
+            part(at(0, 0.77f + 0.19f * head, 0), cap_radii, shirt);
+            // Brim and simple nose indicate attention toward the pitcher (+Z).
+            part({origin.x - 0.06f * h, origin.y + (0.77f + 0.17f * head) * h, origin.z + 0.22f * head * h},
+                {0.18f * head, 0.015f * head, 0.12f * head}, shirt);
             for (float side : {-1.0f, 1.0f}) {
-                segment(at(side * 0.10f, 0.34f, 0), at(side * 0.15f, 0.10f, -0.02f), h * 0.065f, h * 0.06f, pants);
-                part(at(side * 0.15f, 0.045f, -0.045f), {0.085f, 0.045f, 0.12f}, shoes);
+                part(at(side * 0.15f, 0.045f * foot, -0.045f), {0.085f * foot, 0.045f * foot, 0.12f * foot}, shoes);
             }
             const XMFLOAT3 grip{origin.x - 0.18f * h, origin.y + 0.62f * h, origin.z - 0.12f * h};
             const XMFLOAT3 tip{origin.x + 0.12f * h, origin.y + 1.18f * h, origin.z - 0.34f * h};
             // Ready bat stays on the catcher side; no swing path or contact model.
-            segment(grip, tip, h * 0.018f, h * 0.035f, {0.94f, 0.68f, 0.27f});
+            segment(grip, tip, h * 0.018f * staging.blockout_bat_thickness_scale, h * 0.035f * staging.blockout_bat_thickness_scale, {0.94f, 0.68f, 0.27f});
             for (float side : {-1.0f, 1.0f}) {
-                const XMFLOAT3 hand{grip.x + (side + 1) * 0.015f * h,
-                    grip.y + (side + 1) * 0.028f * h, grip.z - (side + 1) * 0.011f * h};
+                const XMFLOAT3 hand{grip.x + (side + 1) * 0.027f * h,
+                    grip.y + (side + 1) * 0.050f * h, grip.z - (side + 1) * 0.020f * h};
                 segment(at(side * 0.16f, 0.56f, 0), at(side * 0.20f, 0.44f, -0.16f), h * 0.055f, h * 0.05f, shirt);
                 segment(at(side * 0.20f, 0.44f, -0.16f), hand, h * 0.045f, h * 0.04f, skin);
-                part(hand, {0.045f, 0.045f, 0.045f}, skin);
+                part(hand, hand_radii, skin);
             }
             // Head looks toward the pitcher (+Z) while the torso remains side-on.
-            part({origin.x - 0.08f * h, origin.y + 0.78f * h, origin.z + 0.21f * h},
+            part({origin.x - 0.08f * h, origin.y + (0.77f + 0.01f * head) * h, origin.z + 0.21f * head * h},
                 {0.05f, 0.05f, 0.045f}, skin);
         }
     }

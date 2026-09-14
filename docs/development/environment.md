@@ -410,3 +410,18 @@ Release fixture 的 world landmarks（公尺，腳底點為鞋底中央，其餘
 - Ready／mid-flight（暫停 tick 48）／Complete 圖可見投手仍偏左、打者與 bat 在右側，主要球路／release 不受遮擋，本壘／腳底仍靠近下緣。本次 projection 消除橫線傾斜，但沒有消除正常透視或改人物比例；正式動畫尚未開始。
 - Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource（僅保留供報告的 device）。Debug／Release 均正常 exit 0，各完成 **616 frames**。
 - 原生 computer-use helper 本次啟動失敗；沿用 process-targeted Windows key messages／SDL event loop／DPI-aware PrintWindow。這是實際 app 自動操作／畫面檢視，非人類手動試玩。截圖／logs 留在忽略的 `build/offaxis-debug-*`、`build/offaxis-release-*`；暫存驗證腳本已移除。沒有新增 dependency、renderer abstraction 或 cinematic-camera framework。
+
+
+## Character Style v1 靜態校正（2026-09-15）
+
+長期造型規則見 [Batting Feel](../design/batting-feel.md)。本次只校正兩個既有 blockout，沒有正式 animation pipeline。
+
+- 共用 `[character_style]` 無單位倍率：head **1.08**、foot **1.6**、hand **1.3**、bat thickness **1.25**；允許範圍分別 0.8～1.25、1～2、0.75～1.75、0.75～1.75。只有啟動載入，沿用 defaults／finite／型別／範圍診斷。
+- Pitcher 原點 **(0,0.355,18.5166)** m、比例 scale **2.45 m**；頭完整 XYZ 尺寸約 **1.217×1.164×1.111 m**，球形手直徑 **0.287 m**，單鞋 **0.666×0.353×0.784 m**。Torso 兩端直徑 0.784／0.735 m，使用較緊湊軀幹與短褲。後／前腳 XZ、胸口、肩肘、手中心與 release 關係不變，鞋放大時底面維持原高度。
+- Batter 原點 **(1.25,0.008,0)** m、比例 scale **1.7 m**；頭 **0.845×0.808×0.771 m**，球形手直徑 **0.199 m**，單鞋 **0.462×0.245×0.653 m**，torso **0.578×0.544×0.476 m**。頭頂含帽約 Y=1.739 m；height 欄位是比例 scale，不宣稱它仍是精確總高。兩個球形手沿 bat 分開，讓雙手握棒可辨；bat grip／tip 保留 **(0.944,1.062,−0.204)／(1.454,2.014,−0.578)** m，長約 **1.143 m**，直徑由握端 **0.0765 m** 漸增至 **0.14875 m**。
+- Native 保留軀幹／短褲、帽簷、臉部、手腳位置與固定 pose 比例；移除細腿連接，短褲與鞋的垂直空隙約投手 **0.162 m**／打者 **0.112 m**。這是刻意的簡化身腳關係，沒有加入 hierarchy 或 character abstraction。
+- Debug／Release build 成功，CTest 各 **2/2**；staging 測試涵蓋四倍率載入及非法值，非法案例共 **42**。既有 20 次 deterministic rethrow、30／60／120 FPS chunking、pause／single-step、arrival once、prediction／projection 契約均通過。
+- 兩種實際 app 各完成初投加 **20 次重投**；pause **11→12 tick** 單步，暫停等待畫面逐像素相同，正常 exit 0。Ready／暫停 tick 48 的 Mid-flight／Complete 擷取均為 **1920×1080**，留在忽略的 `build/style-v1-debug-*.png` 與 `build/style-v1-release-*.png`，log 同前綴。
+- 實際圖可見兩者共用大頭／大鞋／簡單手與緊湊軀幹語言；打者雙手、粗 bat 與身腳間距清楚，仍在右側，沒有遮住 zone、release 或主要球路。投手跨步 Z 深度仍受正面透視壓縮；這是靜態 silhouette review，不能代替未來動作驗收。Zone 與打者大頭的高度關係保留待 review，未為配合人物修改規則。
+- Camera／field／zone／ball Data 未改，simulation、prediction 與 renderer source 未改。兩種 build 各 21 筆 release／arrival／evaluation 紀錄與前版完全一致：arrival tick **95**、t=**0.395833333 s**、position **(0.005105,1.044226,0.306804)**、velocity **(1.655,−4.481804,−41.667)**；plane prediction／actual pixel **(959.574707,663.836792)**，error **0 px**。
+- Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource（僅供報告使用的 device）。Debug／Release 分別完成 **609／608 frames**。原生 computer-use helper 啟動失敗，沿用僅針對 app process 的 Windows key messages／SDL event loop／DPI-aware PrintWindow，非人類手動試玩。暫存操作腳本已移除；沒有新增 dependency、renderer／character／animation architecture。
