@@ -127,3 +127,6 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 
 2026-09-15 靜態人物尺度／遮擋：依本輪授權縮小 ball marker、讓 prediction 環尺寸跟隨球，加入右投手與左打者（含靜態 bat）的程序式 Q 版 blockout。Debug／Release、CTest 與實際投球／重投通過，已擷取 Ready／mid-flight／Complete 供 review；證據見開發環境文件。這只是 composition fixture，沒有開始正式 asset／rig／animation pipeline、揮棒或新物理，M1 體驗驗收仍未完成。
+
+
+2026-09-15 field readability／presence pass：依本輪授權放大靜態投手、提高並加寬 raised mound、小幅抬高 camera target，加入打擊區／界外白線、一／三壘與外野牆 blockout。使用者選擇保留 90° diamond 方向，允許壘包在目前視角外。Debug／Release、CTest、實際投球／重投與三狀態擷取完成，細節見設計／開發環境文件；未開始 animation pipeline 或新 gameplay rule，M1 體驗驗收尚未完成。

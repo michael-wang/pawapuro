@@ -6,12 +6,12 @@
 #include <string>
 
 namespace {
-std::array<float, 31> values(const pawapuro::BattingStaging& s)
+std::array<float, 32> values(const pawapuro::BattingStaging& s)
 {
     return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
-        s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m,
+        s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m, s.mound_height_m,
         s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m,
         s.pitcher_blockout_position_m.x, s.pitcher_blockout_position_m.y, s.pitcher_blockout_position_m.z, s.pitcher_blockout_height_m,
         s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m};
@@ -34,9 +34,9 @@ int main(int argc, char** argv)
         write("[camera]\nvertical_fov_degrees = 42\n");
         if (pawapuro::load_batting_staging(fixture).vertical_fov_degrees != 42)
             throw std::runtime_error("Valid integer override was not applied.");
-        write("[field]\nhome_dirt_radius_m = 3.1\n[mound]\nvisual_dirt_radius_m = 6.2\n");
+        write("[field]\nhome_dirt_radius_m = 3.1\n[mound]\nvisual_dirt_radius_m = 6.2\nheight_m = 0.65\ntop_radius_m = 1.5\n");
         const auto dirt = pawapuro::load_batting_staging(fixture);
-        if (dirt.home_dirt_radius_m != 3.1f || dirt.mound_visual_dirt_radius_m != 6.2f)
+        if (dirt.home_dirt_radius_m != 3.1f || dirt.mound_visual_dirt_radius_m != 6.2f || dirt.mound_height_m != 0.65f || dirt.mound_top_radius_m != 1.5f)
             throw std::runtime_error("Visual dirt overrides were not applied.");
         write("[camera]\nposition_m = [-0.75, 1.25, -5]\n");
         if (pawapuro::load_batting_staging(fixture).camera_position_m.x != -0.75f)
@@ -72,6 +72,8 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[mound]\nheight_m=0\n", "mound.height_m"},
+            {"[mound]\nheight_m=nan\n", "mound.height_m"},
             {"[pitcher_blockout]\nheight_m=0\n", "pitcher_blockout.height_m"},
             {"[pitcher_blockout]\nposition_m=[0,0,0]\n", "pitcher_blockout.position_m[2]"},
             {"[batter_blockout]\nheight_m=nan\n", "batter_blockout.height_m"},
@@ -111,7 +113,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 36 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 38 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

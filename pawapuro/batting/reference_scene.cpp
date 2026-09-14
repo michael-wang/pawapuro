@@ -20,7 +20,7 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     const float extent = staging.grass_half_width_m;
     quad({-extent, 0, -12}, {-extent, 0, staging.grass_end_z_m},
         {extent, 0, staging.grass_end_z_m}, {extent, 0, -12}, {0.075f, 0.20f, 0.15f});
-    // Broad, subtle grass bands communicate depth beyond the pitcher without walls.
+    // Broad, subtle grass bands communicate depth beyond the pitcher toward the outfield wall.
     for (float z = 20; z < staging.grass_end_z_m; z += 20) {
         const float end = std::min(z + 10, staging.grass_end_z_m);
         quad({-extent, 0.001f, z}, {-extent, 0.001f, end}, {extent, 0.001f, end},
@@ -50,7 +50,46 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     triangle(point, left, front_left, white);
     triangle(point, front_left, front_right, white);
     triangle(point, front_right, right, white);
-    // A shallow mound with a flat top supplies height/stance context, not terrain.
+    // Ground markings share only this local strip operation; no field/terrain system.
+    const auto chalk = [&](float ax, float az, float bx, float bz) {
+        const float length = std::hypot(bx - ax, bz - az);
+        const float dx = -(bz - az) * 0.025f / length, dz = (bx - ax) * 0.025f / length;
+        quad({ax + dx, 0.018f, az + dz}, {bx + dx, 0.018f, bz + dz},
+            {bx - dx, 0.018f, bz - dz}, {ax - dx, 0.018f, az - dz}, white);
+    };
+    for (float side : {-1.0f, 1.0f}) {
+        const float inside = side * (half_width + 0.18f), outside = inside + side * 1.2f;
+        chalk(inside, -0.6f, outside, -0.6f);
+        chalk(outside, -0.6f, outside, 1.4f);
+        chalk(outside, 1.4f, inside, 1.4f);
+        chalk(inside, 1.4f, inside, -0.6f);
+    }
+    // Standard 90-degree diamond directions. Bases may lie outside this batting camera.
+    constexpr float base_distance = 27.432f, wall_radius = 110, wall_height = 3.5f;
+    const float base_axis = base_distance / std::sqrt(2.0f);
+    const float foul_end = wall_radius / std::sqrt(2.0f);
+    for (float side : {-1.0f, 1.0f}) {
+        // Leave the batting-box chalk uncluttered; direction still originates at the plate tip.
+        chalk(side * 2, 2, side * foul_end, foul_end);
+        const float x = side * base_axis, z = base_axis, r = 0.23f;
+        quad({x-r, 0.10f, z-r}, {x-r, 0.10f, z+r}, {x+r, 0.10f, z+r}, {x+r, 0.10f, z-r}, white);
+        quad({x-r, 0.004f, z-r}, {x-r, 0.10f, z-r}, {x+r, 0.10f, z-r}, {x+r, 0.004f, z-r}, white);
+        quad({x-r, 0.004f, z+r}, {x-r, 0.10f, z+r}, {x+r, 0.10f, z+r}, {x+r, 0.004f, z+r}, white);
+        for (float edge : {-r, r})
+            quad({x+edge, 0.004f, z-r}, {x+edge, 0.10f, z-r}, {x+edge, 0.10f, z+r}, {x+edge, 0.004f, z+r}, white);
+    }
+    // A bounded outfield silhouette only: no collision or home-run judgement.
+    for (int i = 0; i < 48; ++i) {
+        const float a = -XM_PIDIV4 + XM_PIDIV2 * static_cast<float>(i) / 48;
+        const float b = -XM_PIDIV4 + XM_PIDIV2 * static_cast<float>(i + 1) / 48;
+        const float ax = wall_radius * std::sin(a), az = wall_radius * std::cos(a);
+        const float bx = wall_radius * std::sin(b), bz = wall_radius * std::cos(b);
+        const XMFLOAT3 color = i % 2 ? XMFLOAT3{0.13f, 0.30f, 0.32f} : XMFLOAT3{0.15f, 0.33f, 0.35f};
+        quad({ax, 0, az}, {ax, wall_height-0.12f, az}, {bx, wall_height-0.12f, bz}, {bx, 0, bz}, color);
+        quad({ax, wall_height-0.12f, az}, {ax, wall_height, az}, {bx, wall_height, bz},
+            {bx, wall_height-0.12f, bz}, {0.90f, 0.69f, 0.25f});
+    }
+    // A raised flat-top mound supplies staging presence, not simulation terrain.
     const auto mound_point = [](float angle, float radius, float y) -> XMFLOAT3 {
         return {radius * std::cos(angle), y, mound_center_z_m + radius * std::sin(angle)};
     };
@@ -58,13 +97,13 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         const float a = XM_2PI * static_cast<float>(i) / 48;
         const float b = XM_2PI * static_cast<float>(i + 1) / 48;
         quad(mound_point(a, staging.mound_radius_m, 0.008f), mound_point(b, staging.mound_radius_m, 0.008f),
-            mound_point(b, staging.mound_top_radius_m, mound_height_m),
-            mound_point(a, staging.mound_top_radius_m, mound_height_m), {0.46f, 0.33f, 0.22f});
-        triangle({0, mound_height_m, mound_center_z_m},
-            mound_point(a, staging.mound_top_radius_m, mound_height_m),
-            mound_point(b, staging.mound_top_radius_m, mound_height_m), {0.54f, 0.40f, 0.27f});
+            mound_point(b, staging.mound_top_radius_m, staging.mound_height_m),
+            mound_point(a, staging.mound_top_radius_m, staging.mound_height_m), {0.46f, 0.33f, 0.22f});
+        triangle({0, staging.mound_height_m, mound_center_z_m},
+            mound_point(a, staging.mound_top_radius_m, staging.mound_height_m),
+            mound_point(b, staging.mound_top_radius_m, staging.mound_height_m), {0.54f, 0.40f, 0.27f});
     }
-    constexpr float rubber_y = mound_height_m + 0.005f;
+    const float rubber_y = staging.mound_height_m + 0.005f;
     quad({-0.3048f, rubber_y, rubber_distance_m}, {-0.3048f, rubber_y, rubber_distance_m + 0.1524f},
         {0.3048f, rubber_y, rubber_distance_m + 0.1524f}, {0.3048f, rubber_y, rubber_distance_m}, white);
 
@@ -83,7 +122,7 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     const float ring_inner = staging.ball_marker_radius_m + 0.15f;
     const float ring_outer = ring_inner + 0.03f;
     const float distance = std::hypot(release.x, release.z - mound_center_z_m);
-    const float base_y = 0.008f + (mound_height_m - 0.008f) * std::clamp(
+    const float base_y = 0.008f + (staging.mound_height_m - 0.008f) * std::clamp(
         (staging.mound_radius_m - distance) / (staging.mound_radius_m - staging.mound_top_radius_m), 0.0f, 1.0f);
     const XMFLOAT3 cyan{0.16f, 0.80f, 0.86f};
     // The post meets the mound surface and stops at the ring, not inside the ball.

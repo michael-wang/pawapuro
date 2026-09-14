@@ -331,3 +331,26 @@ Native UI helper 仍無法啟動；上述是真正 app 的 SDL 按鍵路徑與 P
 - 每種 build 的 21 筆 raw arrival／plane evaluation 與前版 log 完全一致：raw tick **95**、time **0.395833333 s**、position **(0.005105,1.044226,0.306804)**；plane sample **(0.000140,1.057610,0.431800)**。Prediction／actual plane sample 的 pixel error 仍為 **0**；Complete raw 球心與環中心約 **8.761 px** 的既有差距仍保留，原因見前節。
 - Debug layer／GPU-based validation **0 errors**，未見 corruption 或 live child resource；shutdown 報告只保留供報告的 device。Debug／Release 正常 exit 0，分別完成 **603／599 frames**。
 - 原生 computer-use helper 本次啟動失敗；沿用只針對 Pawapuro process 的 Windows key messages 經 SDL event loop 與 PrintWindow。以上是實際 app 自動操作／畫面檢視，不是人類手動試玩；沒有開始正式人物 pipeline、揮棒或新物理。
+
+
+## Field readability／presence pass 驗證（2026-09-15）
+
+本次設計契約見 [Batting Feel](../design/batting-feel.md)，以下為最終 candidate 與實測；沒有開始 animation pipeline。
+
+| 項目 | 最終設定 |
+|---|---|
+| 右投手 | 腳底 (0, 0.655, 18.5166) m；總高 2.45 m（原 1.85），等比例放大；頭寬約 1.127、頭高 1.078 m，既有準備姿勢不變 |
+| Raised mound | 底部 radius=3.5、平頂 radius=1.5、height=0.65 m；原為 2.75／0.9／0.254。外圍平面紅土 radius=5.5 m 不變，丘中心／投手板 X、Z 不變 |
+| Camera | position=(-0.75,1.25,-5) 不變；target=(2.260052,2.10,16.8)，只將 Y 由 1.30 提高 0.80 m；vertical FOV=36°、1920×1080 不變 |
+| 打擊區白線 | 兩側各寬 1.2、深 2 m，內緣離 plate side 0.18 m，Z=−0.6～1.4；白線寬 0.05 m |
+| 一／三壘 | 中心 X=±27.432/√2、Z=27.432/√2（約 ±19.397／19.397 m），邊長 0.46、頂高 0.10 m；保留 90° diamond 方向，位於本視角外 |
+| 界外線／牆 | 界外線沿 X=±Z；可見 chalk 從 (±2,2) m 起，以免穿過打擊區。外野牆為本壘尖端半徑 110 m、±45° 弧段，高 3.5 m，頂緣色帶高 0.12 m；無碰撞或 HR rule |
+
+- Data 只新增 `mound.height_m`；既有 mound radius／top radius、pitcher position／height、camera target 調整。其餘 authored release、初速、球半徑、strike zone、草地／紅土與 batter Data 逐項比較相同；simulation／prediction source、renderer、shader 未改。Native fallback 保留原來的安全 camera／角色候選，新增 mound height fallback=0.254 m；省略欄位會明確記錄 default。
+- Debug／Release build 成功，CTest 各 **2/2**。Staging 新增丘高 override／非有限值／零高度拒絕，擴大平頂 override 通過，共 **38 個非法案例**；既有 deterministic 20 rethrows、30／60／120 FPS chunking、pause／single-step、arrival once 通過。
+- 兩種 app 實際 client 均 **1920×1080**；各完成初投加 20 次重投，pause **11→12 tick** 單步，暫停等待畫面逐像素相同。Ready／tick 48 暫停的 mid-flight／Complete 擷取位於忽略的 `build/presence-debug-*.png` 與 `build/presence-release-*.png`，logs 同前綴；暫存操作腳本已移除。
+- 實際三狀態畫面可見：投手更厚實、raised mound 斜坡／平頂清楚，兩側打擊區與界外線可辨，遠端牆提供外野邊界。投手帽頂至鞋底的色塊 pixel 範圍由 **Y=483～614（132 px）** 增為 **472～646（175 px）**；打者鞋底由 **Y=963** 移至 **1028**，本壘尖端到 **Y=1015**。左側打擊區靠後白線部分被畫面裁切；這是保留近景臨場感的當前 candidate，不代表完整球場俯視驗收。一／三壘未強迫入鏡，依使用者選擇以界外線表達方位。
+- 好球帶外框 **X=827～1089、Y=542～836**，含兩端 **263×295 px**、center X=**958**。Prediction 環外緣 **X=934～985、Y=637～687**，**52×51 px**；Complete 球 **X=941～992、Y=642～694**，**52×53 px**，尺寸仍接近。預測／actual plane sample 投影皆 **(960.042114,662.669617)**，pixel error=**0**。Raw tick 球心 **(966.884094,668.182678)**，既有離散 crossing gap 約 **8.787 px**；沒有改 physics 來吸附 marker。
+- 各 build 的 21 筆 raw arrival 與前版 log 完全相同：tick **95**、t=**0.395833333 s**、position **(0.005105,1.044226,0.306804)** m、velocity **(1.655,−4.481804,−41.667)** m/s。Plane evaluation world/time/velocity 也完全相同。Mid-flight 球投影至投手身前仍可見；打者與 bat 未遮住好球帶／主要球路，正式出手或揮棒遮擋仍未驗證。
+- Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource，報告只留供報告的 device。兩種 app 正常 exit 0，各完成 **619 frames**。
+- Computer-use helper 因 sandbox setup 失敗，沿用只針對 app process 的 Windows key messages／SDL event loop／PrintWindow；量測程式採 DPI-aware client pixel。這是實際 app 自動操作與畫面檢視，人物存在感與最終玩法仍待人類 review。沒有新增 dependency 或 renderer／character／stadium abstraction。

@@ -3,9 +3,8 @@
 #include <filesystem>
 
 namespace pawapuro {
-// Spatial references, not camera tuning: 60 ft 6 in and 10 in, in metres.
+// Longitudinal field reference in metres; mound height is presentation Data.
 inline constexpr float rubber_distance_m = 18.4404f;
-inline constexpr float mound_height_m = 0.254f;
 inline constexpr float mound_center_z_m = rubber_distance_m - 0.4572f;
 
 // Startup-only snapshot. Missing keys use these defaults; invalid files are rejected.
@@ -23,6 +22,7 @@ struct BattingStaging {
     float grass_end_z_m = 140;
     float home_dirt_radius_m = 2.8f;
     float mound_visual_dirt_radius_m = 5.5f;
+    float mound_height_m = 0.254f;
     float mound_radius_m = 2.75f;
     float mound_top_radius_m = 0.9f;
     DirectX::XMFLOAT3 pitcher_blockout_position_m{0, 0.259f, 18.5166f};

@@ -72,7 +72,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (prefix == "pitcher_blockout." || prefix == "batter_blockout.")
                     only_keys(fields, {"position_m", "height_m"}, prefix);
                 if (prefix == "strike_zone.") only_keys(fields, {"width_m", "bottom_m", "top_m"}, prefix);
-                if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m", "visual_dirt_radius_m"}, prefix);
+                if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m", "visual_dirt_radius_m", "height_m"}, prefix);
             }
         }
         if (const auto preset = table.at_path("camera.preset")) {
@@ -107,8 +107,9 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.grass_end_z_m = number(table, "field.grass_end_z_m", candidate.grass_end_z_m, 90, 180);
         candidate.home_dirt_radius_m = number(table, "field.home_dirt_radius_m", candidate.home_dirt_radius_m, 1.5f, 4);
         candidate.mound_visual_dirt_radius_m = number(table, "mound.visual_dirt_radius_m", candidate.mound_visual_dirt_radius_m, 3.5f, 7);
+        candidate.mound_height_m = number(table, "mound.height_m", candidate.mound_height_m, 0.125f, 1.0f);
         candidate.mound_radius_m = number(table, "mound.radius_m", candidate.mound_radius_m, 2.2f, 3.5f);
-        candidate.mound_top_radius_m = number(table, "mound.top_radius_m", candidate.mound_top_radius_m, 0.7f, 1.1f);
+        candidate.mound_top_radius_m = number(table, "mound.top_radius_m", candidate.mound_top_radius_m, 0.7f, 2.0f);
         std::fprintf(stderr, "Staging loaded: %s | owner: pawapuro/batting/staging.cpp | right_handed_pitcher_vs_left_handed_batter\n",
             source.c_str());
         std::fprintf(stderr, "Camera: [%g, %g, %g] -> [%g, %g, %g], vertical FOV %g degrees\n",

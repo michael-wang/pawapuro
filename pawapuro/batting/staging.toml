@@ -6,7 +6,7 @@ preset = "right_handed_pitcher_vs_left_handed_batter"
 # This presentation camera leaves catcher-view right for the foreground batter.
 position_m = [-0.75, 1.25, -5.0]
 # Aim horizontally through (0, arrival_plane_z), keeping the distant pitcher left.
-target_m = [2.260052, 1.30, 16.8]
+target_m = [2.260052, 2.10, 16.8]
 vertical_fov_degrees = 36.0
 
 [release]
@@ -29,9 +29,10 @@ home_dirt_radius_m = 2.8
 [mound]
 # Flat visual apron; independent of the smaller raised mound below.
 visual_dirt_radius_m = 5.5
-# Silhouette tuning only; rubber distance and mound height remain Native references.
-radius_m = 2.75
-top_radius_m = 0.9
+# Raised presentation volume; rubber X/Z distance stays unchanged.
+height_m = 0.65
+radius_m = 3.5
+top_radius_m = 1.5
 
 # Authoritative Pawapuro gameplay strike zone, not a separate visual guide.
 # Shared gameplay width also scales the home plate pentagon; depth equals width.
@@ -44,8 +45,8 @@ top_m = 1.45
 
 # Static composition fixtures only. Position is the foot/ground origin; height excludes the bat.
 [pitcher_blockout]
-position_m = [0.0, 0.259, 18.5166]
-height_m = 1.85
+position_m = [0.0, 0.655, 18.5166]
+height_m = 2.45
 
 [batter_blockout]
 position_m = [1.25, 0.008, 0.0]
