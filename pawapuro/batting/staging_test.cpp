@@ -35,6 +35,9 @@ int main(int argc, char** argv)
         const auto dirt = pawapuro::load_batting_staging(fixture);
         if (dirt.home_dirt_radius_m != 3.1f || dirt.mound_visual_dirt_radius_m != 6.2f)
             throw std::runtime_error("Visual dirt overrides were not applied.");
+        write("[camera]\nposition_m = [-0.75, 1.25, -5]\n");
+        if (pawapuro::load_batting_staging(fixture).camera_position_m.x != -0.75f)
+            throw std::runtime_error("Opposite-side camera override was not applied.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -56,7 +59,7 @@ int main(int argc, char** argv)
             {"[camera]\nvertical_fov_degrees = true\n", "camera.vertical_fov_degrees"},
             {"[camera]\nposition_m = [0, 1]\n", "camera.position_m"},
             {"[camera]\nposition_m = [0.7, nan, -5]\n", "camera.position_m[1]"},
-            {"[camera]\nposition_m = [-0.7, 1.4, -5]\n", "camera.position_m[0]"},
+            {"[camera]\nposition_m = [-2, 1.4, -5]\n", "camera.position_m[0]"},
             {"[camera]\npreset = 'right_handed'\n", "camera.preset"},
             {"[camera]\nfvo = 40\n", "camera.fvo"},
             {"camera = 3\n", "camera must be a table"},

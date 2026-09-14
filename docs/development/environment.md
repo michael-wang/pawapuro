@@ -207,3 +207,10 @@ ctest --test-dir build/release --output-on-failure
 - Debug 的 debug layer／GPU-based validation 保持啟用，error/corruption **0**；shutdown 僅列出仍為報告保留的 device，沒有 live child resource。Engine rendering source／HLSL 未變。
 
 本輪 computer-use helper 在 sandbox 初始化失敗，沿用只針對本次 app process 的 Windows API／`PrintWindow` 檢查；不是手動拖曳或點擊 X 的測試。暫存檢查腳本移除，畫面與 logs 保留於忽略的 `build/left-staging-debug.*`、`build/left-staging-release.*`。尚未測其他 GPU／DPI 情境與全部合法 Data 組合的構圖；沒有人物、animation、hot reload、runtime 左右打切換或球運動，delivery 2 仍未開始。
+
+
+### Camera 對側修正（2026-09-14）
+
+本次只將 authored camera position X 由 +0.75 改為 −0.75 m：最終 position `(-0.75, 1.25, -5.0)`、target `(0, 1.30, 16.8)`，FOV 仍為 36°；上述其餘 staging 設定不變。原 Native validation 只接受正 X，因此必要地將範圍改為 −1.5～1.5 m，並同步修改 fallback 與既有測試；沒有修改 geometry、Engine、shader 或依賴。對側構圖與暗沉感的後續處理見設計文件。
+
+Debug／Release build 與 CTest 均通過；實際 client area 1920×1080、固定 windowed，正常關閉皆 exit code 0，分別完成 230／237 frames。Debug GPU-based validation error/corruption 為 0，shutdown 沒有 live child resource。沿用僅針對 app process 的 Windows API／PrintWindow 擷取，檢視本壘、中央標尺、release 與右側 foreground 空間；兩組態 client 畫面一致。尚無模型，不能據此承諾實際打者／揮棒不遮擋。暫存檢查腳本已移除，logs／畫面留在忽略的 `build/opposite-camera-debug.*`、`build/opposite-camera-release.*`；沒有開始 delivery 2。

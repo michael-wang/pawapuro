@@ -79,7 +79,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         }
         BattingStaging candidate;
         candidate.camera_position_m = vector(table, "camera.position_m", candidate.camera_position_m,
-            {0.1f, 0.8f, -10}, {1.5f, 2.2f, -2});
+            {-1.5f, 0.8f, -10}, {1.5f, 2.2f, -2});
         candidate.camera_target_m = vector(table, "camera.target_m", candidate.camera_target_m,
             {-3, 0.4f, 10}, {3, 2.8f, 25});
         candidate.vertical_fov_degrees = number(table, "camera.vertical_fov_degrees", candidate.vertical_fov_degrees, 30, 70);

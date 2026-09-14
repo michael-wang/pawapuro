@@ -40,7 +40,7 @@
 
 本次延伸 delivery 1 做 staging calibration，**不是 delivery 2**。開發顯示固定為 windowed 1920×1080、16:9（原 1280×720 對使用者太小），不提供任意 resize、fullscreen 或解析度選單；保留既有 D3D12 resize 函式。尚不實作 DPI mode switching、letterbox／pillarbox。
 
-基準情境為 **右投手 vs 左打者**，唯一 preset 為 `right_handed_pitcher_vs_left_handed_batter`。+Z 朝投手、+Y 向上；捕手視角的畫面右側（+X、一壘側）是左打者打擊區，畫面左側（−X、三壘側）是右打者打擊區。本輪 camera 位於 +X，右投手的 release reference 位於中央軸的 −X 側；這是固定 staging 契約，不是通用投球生物力學限制。
+基準情境為 **右投手 vs 左打者**，唯一 preset 為 `right_handed_pitcher_vs_left_handed_batter`。+Z 朝投手、+Y 向上；捕手視角的畫面右側（+X、一壘側）是左打者打擊區，畫面左側（−X、三壘側）是右打者打擊區。Camera 改放在左打者對側（−X、三壘側），為畫面右側的未來左打者 foreground silhouette 預留空間，維持投手／來球視線。右投手的 release reference 仍位於中央軸的 −X 側；打者所在側與 camera framing 是兩件事，不改變真實棒球空間參考。
 
 Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真實眼睛位置；降低 camera 並讓視線接近水平，FOV 本輪維持 36°，以保留既有壓迫感並隔離此次 position／target 的調整效果。沒有 runtime 左右打切換；不移動投手丘／投手板的 X 或 Z 來湊構圖。
 
@@ -54,9 +54,11 @@ Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真�
 
 `BattingStaging` 是 batting 擁有的一份具體、唯讀啟動快照。toml++ 僅在 `staging.cpp` 解析；完整 validation 通過後才讓 geometry／camera 使用，不把 parser node 傳入 Engine。只在啟動讀檔，沒有 file watcher、hot reload、Lua 或 property system。
 
-缺少個別欄位時採 `staging.hpp` 的安全 defaults，並逐項記錄；這些 fallback 不必隨每次 authored Data 調參同步修改。整個檔案缺失、TOML 語法錯誤、型別錯誤、unknown key、非有限數值或超出 `staging.cpp` 的界限時，顯示檔案／欄位或語法位置的錯誤，拒絕啟動並正常回傳 exit code 1，不默默套用另一個完整場景。Camera 與 target 的界限分離，避免零方向或平行 up vector；mound top radius 的上限低於 base radius 下限，避免退化坡面。新增紅土半徑的界限讓兩塊區域保持草地間隔，且投手丘的視覺紅土半徑不小於任何允許的 raised mound 半徑。舊 preset 名稱或與本基準相反的 camera／release X 符號會明確拒絕，不建立相容／切換層。
+缺少個別欄位時採 `staging.hpp` 的安全 defaults，並逐項記錄；這些 fallback 不必隨每次 authored Data 調參同步修改。整個檔案缺失、TOML 語法錯誤、型別錯誤、unknown key、非有限數值或超出 `staging.cpp` 的界限時，顯示檔案／欄位或語法位置的錯誤，拒絕啟動並正常回傳 exit code 1，不默默套用另一個完整場景。Camera 與 target 的界限分離，避免零方向或平行 up vector；mound top radius 的上限低於 base radius 下限，避免退化坡面。新增紅土半徑的界限讓兩塊區域保持草地間隔，且投手丘的視覺紅土半徑不小於任何允許的 raised mound 半徑。Camera X 允許 −1.5～1.5 m 的 presentation 調整，不以其符號判定打者慣用手；舊 preset 名稱或錯側 release X 仍拒絕，不建立相容／切換層。
 
 球 marker 仍是刻意放大的視覺參考，不是物理球半徑。Raised mound 保留簡單平頂斜坡與既有高度／半徑；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移，沒有投手模型。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
+
+使用者回饋場景整體稍暗，列為待人物／materials／lighting 進入後再 review 的 presentation issue；本輪不調整顏色或 shader，也不引入 lighting／material system。尚無打者模型，因此 foreground 預留構圖不代表已驗證實際模型／動作不會遮擋。
 
 ## Concept locality
 
