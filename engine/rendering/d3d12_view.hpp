@@ -15,15 +15,15 @@ struct Vertex {
     DirectX::XMFLOAT3 color;
 };
 
-// One window and one immutable triangle buffer. Owns the GPU lifetime as a unit.
+// One window and an immutable triangle buffer with a translated tail draw. Owns the GPU lifetime as a unit.
 struct D3D12View {
     D3D12View() = default;
     ~D3D12View();
     D3D12View(const D3D12View&) = delete;
     D3D12View& operator=(const D3D12View&) = delete;
-    void initialize(HWND window, UINT width, UINT height, std::span<const Vertex> vertices);
+    void initialize(HWND window, UINT width, UINT height, std::span<const Vertex> vertices, UINT translated_vertex_start);
     void resize(UINT width, UINT height);
-    void draw(const DirectX::XMFLOAT4X4& view_projection);
+    void draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation);
 
 private:
     void wait_for_gpu();
@@ -42,6 +42,7 @@ private:
     HANDLE fence_event = nullptr;
     UINT64 fence_value = 0, frame_count = 0;
     UINT width = 0, height = 0, rtv_stride = 0, vertex_count = 0;
+    UINT translated_vertex_start = 0;
     D3D12_VERTEX_BUFFER_VIEW vertex_view{};
 #ifdef _DEBUG
     Microsoft::WRL::ComPtr<ID3D12InfoQueue1> info_queue;

@@ -38,7 +38,8 @@ foreach(stage IN ITEMS vs ps)
 endforeach()
 
 add_executable(pawapuro WIN32 pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
-    engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp ${shader_headers})
+    engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp
+    pawapuro/batting/reference_pitch.cpp ${shader_headers})
 target_compile_features(pawapuro PRIVATE cxx_std_20)
 target_compile_options(pawapuro PRIVATE /W4 /WX /permissive- /utf-8)
 target_compile_definitions(pawapuro PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
@@ -55,6 +56,10 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(reference_pitch_test pawapuro/batting/reference_pitch_test.cpp pawapuro/batting/reference_pitch.cpp)
+    target_compile_features(reference_pitch_test PRIVATE cxx_std_20)
+    target_compile_options(reference_pitch_test PRIVATE /W4 /WX /permissive- /utf-8)
+    add_test(NAME reference_pitch COMMAND reference_pitch_test)
     add_executable(staging_test pawapuro/batting/staging_test.cpp pawapuro/batting/staging.cpp)
     target_compile_features(staging_test PRIVATE cxx_std_20)
     target_compile_options(staging_test PRIVATE /W4 /WX /permissive- /utf-8)

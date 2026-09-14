@@ -44,7 +44,7 @@ DirectX::XMFLOAT3 vector(const toml::table& table, const char* key,
         return fallback;
     }
     const auto* values = node.as_array();
-    if (!values || values->size() != 3) throw std::runtime_error(std::string(key) + " must contain exactly three numbers (metres).");
+    if (!values || values->size() != 3) throw std::runtime_error(std::string(key) + " must contain exactly three numbers.");
     return {checked_number(*values->get(0), std::string(key) + "[0]", low.x, high.x),
         checked_number(*values->get(1), std::string(key) + "[1]", low.y, high.y),
         checked_number(*values->get(2), std::string(key) + "[2]", low.z, high.z)};
@@ -59,8 +59,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"camera", "release", "field", "mound"}, "");
-        for (const char* section : {"camera", "release", "field", "mound"}) {
+        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch"}, "");
+        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
@@ -68,6 +68,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (prefix == "camera.") only_keys(fields, {"preset", "position_m", "target_m", "vertical_fov_degrees"}, prefix);
                 if (prefix == "release.") only_keys(fields, {"position_m", "ball_marker_radius_m"}, prefix);
                 if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m", "home_dirt_radius_m"}, prefix);
+                if (prefix == "reference_pitch.") only_keys(fields, {"initial_velocity_mps"}, prefix);
                 if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m", "visual_dirt_radius_m"}, prefix);
             }
         }
@@ -85,6 +86,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.vertical_fov_degrees = number(table, "camera.vertical_fov_degrees", candidate.vertical_fov_degrees, 30, 70);
         candidate.release_position_m = vector(table, "release.position_m", candidate.release_position_m,
             {-1.5f, 1.4f, 15}, {-0.1f, 3, rubber_distance_m});
+        candidate.reference_velocity_mps = vector(table, "reference_pitch.initial_velocity_mps", candidate.reference_velocity_mps,
+            {-5, -5, -60}, {5, 5, -20});
         candidate.ball_marker_radius_m = number(table, "release.ball_marker_radius_m", candidate.ball_marker_radius_m, 0.03f, 0.15f);
         candidate.grass_half_width_m = number(table, "field.grass_half_width_m", candidate.grass_half_width_m, 40, 120);
         candidate.grass_end_z_m = number(table, "field.grass_end_z_m", candidate.grass_end_z_m, 90, 180);

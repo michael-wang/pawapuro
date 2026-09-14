@@ -4,10 +4,11 @@
 
 using namespace DirectX;
 namespace pawapuro {
-std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging)
+BattingReference make_batting_reference(const BattingStaging& staging)
 {
     // Metres, +Y up, +Z from home plate toward the pitcher. These are Native fixtures.
-    std::vector<engine::Vertex> vertices;
+    BattingReference scene;
+    auto& vertices = scene.vertices;
     const auto triangle = [&](XMFLOAT3 a, XMFLOAT3 b, XMFLOAT3 c, XMFLOAT3 color) {
         vertices.insert(vertices.end(), {{a, color}, {b, color}, {c, color}});
     };
@@ -40,8 +41,8 @@ std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging
     constexpr float half_width = 0.2159f;
     const XMFLOAT3 point{0, 0.012f, 0};
     const XMFLOAT3 left{-half_width, 0.012f, half_width};
-    const XMFLOAT3 front_left{-half_width, 0.012f, 0.4318f};
-    const XMFLOAT3 front_right{half_width, 0.012f, 0.4318f};
+    const XMFLOAT3 front_left{-half_width, 0.012f, plate_front_z_m};
+    const XMFLOAT3 front_right{half_width, 0.012f, plate_front_z_m};
     const XMFLOAT3 right{half_width, 0.012f, half_width};
     const XMFLOAT3 white{0.96f, 0.95f, 0.87f};
     triangle(point, left, front_left, white);
@@ -94,6 +95,7 @@ std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging
         };
         quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
     }
+    scene.ball_vertex_start = static_cast<unsigned>(vertices.size());
     // A small faceted sphere, generated only for this one fixture, not a primitive API.
     const auto ball_point = [&](int latitude, int longitude) -> XMFLOAT3 {
         const float a = XM_PI * static_cast<float>(latitude) / 8;
@@ -108,7 +110,7 @@ std::vector<engine::Vertex> make_batting_reference(const BattingStaging& staging
                 ball_point(lat, lon + 1), {shade, shade, shade * 0.92f});
         }
     }
-    return vertices;
+    return scene;
 }
 
 XMFLOAT4X4 batting_view_projection(const BattingStaging& staging, float aspect)

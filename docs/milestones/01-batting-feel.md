@@ -1,6 +1,6 @@
 # M1：Batting Feel
 
-更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2／3 尚未開始，Step 1 整體與 M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
+更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2 的 reference flight／pause／single-step 已完成，交付 3 尚未開始，Step 1 整體與 M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
 
 ## 完成的定義
 
@@ -76,7 +76,7 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 ## 小步 implementation plan
 
-下列順序是逐步開發計畫；目前僅 Step 0 與 Step 1 交付 1 已完成，各後續交付仍須另行授權。每一步先做最小可見行為、展示與檢查，再決定下一步；任何一步太大，就拆成表內的小交付。新增 Engine capability 必須說得出它服務的是該步哪個 caller。
+下列順序是逐步開發計畫；目前 Step 0 與 Step 1 交付 1／2 已完成，各後續交付仍須另行授權。每一步先做最小可見行為、展示與檢查，再決定下一步；任何一步太大，就拆成表內的小交付。新增 Engine capability 必須說得出它服務的是該步哪個 caller。
 
 | 步驟 | 玩家／Pawapuro 的真實需求與最小交付 | 留在 Pawapuro 的內容 | 因而需要的最小 Engine capability | 當步檢查／刻意延後 |
 |---|---|---|---|---|
@@ -113,3 +113,5 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 2026-09-14 staging calibration：固定 1280×720 windowed，校正 camera／外野深度／投手丘 reference，加入 batting 專屬的啟動 TOML 載入。這是交付 1 的延伸，不是新增 simulation 交付；決策見設計文件，建置與驗證證據見開發環境文件。
 
 2026-09-14 後續 staging 校正：已完成右投 vs 左打構圖、1080p 固定視窗、獨立紅土分區與中央標尺；仍是交付 1 延伸，沒有開始交付 2。當前契約與實測設定分別由設計／開發環境文件維護。
+
+2026-09-14 交付 2：已驗證 Ready → release → fixed-tick flight → Complete、pause／single-step、不同 render chunking 的權威 state 一致及單次 arrival。控制／時間／ownership 契約見設計文件，數值與實測證據見開發環境文件。交付 3 的 rethrow／replay loop、20 次重投紀錄與投手動畫均未開始。

@@ -1,7 +1,7 @@
 # M1 Step 0 — 開發環境
 
 核對日期：2026-09-14。本文件記錄本機觀察結果與準備缺項；scope 與驗收標準由
-[milestone](../milestones/01-batting-feel.md) 定義。已完成 **Step 1 交付 1 的靜態場景驗證**；Step 1 整體尚未完成，後續已加入靜態 staging calibration 與啟動 Data；結果與建置方式見各節。
+[milestone](../milestones/01-batting-feel.md) 定義。已完成 **Step 1 交付 1 的靜態場景驗證**；Step 1 整體尚未完成，後續已加入 staging calibration、啟動 Data 與交付 2 的 reference flight；結果與建置方式見各節。
 
 以下至「Step 0 辨識出的後續 sample 需求」保留 Step 0 當時的核對結果：當時未安裝任何工具或依賴，也未建立 source、build 設定、shader 或資產。本次 SDL3 準備與驗證另記於末節，不改寫 Step 0 的範圍或結果。
 
@@ -214,3 +214,29 @@ ctest --test-dir build/release --output-on-failure
 本次只將 authored camera position X 由 +0.75 改為 −0.75 m：最終 position `(-0.75, 1.25, -5.0)`、target `(0, 1.30, 16.8)`，FOV 仍為 36°；上述其餘 staging 設定不變。原 Native validation 只接受正 X，因此必要地將範圍改為 −1.5～1.5 m，並同步修改 fallback 與既有測試；沒有修改 geometry、Engine、shader 或依賴。對側構圖與暗沉感的後續處理見設計文件。
 
 Debug／Release build 與 CTest 均通過；實際 client area 1920×1080、固定 windowed，正常關閉皆 exit code 0，分別完成 230／237 frames。Debug GPU-based validation error/corruption 為 0，shutdown 沒有 live child resource。沿用僅針對 app process 的 Windows API／PrintWindow 擷取，檢視本壘、中央標尺、release 與右側 foreground 空間；兩組態 client 畫面一致。尚無模型，不能據此承諾實際打者／揮棒不遮擋。暫存檢查腳本已移除，logs／畫面留在忽略的 `build/opposite-camera-debug.*`、`build/opposite-camera-release.*`；沒有開始 delivery 2。
+
+
+## M1 Step 1／交付 2：Reference pitch（2026-09-14）
+
+沿用既有 Debug／Release build 命令與兩個已固定依賴，未新增 library。操作與時間／Data／rendering 契約由 [設計文件](../design/batting-feel.md) 維護；執行後 Space release、P pause/resume、. single-step、Esc 退出，不能 rethrow。
+
+| 實測 reference fixture | 結果 |
+|---|---|
+| 初始位置 | 沿用 staging release `(-0.65, 2.05, 16.8)` m |
+| 唯一新增初始條件 Data | `reference_pitch.initial_velocity_mps = [1.655, -0.6, -41.667]`；向量長度約 150.14 km/h，不另存 speed／target |
+| Native 時間／重力 | 240 Hz；dt=1/240 s；Y acceleration −9.80665 m/s²；最多 16 ticks/frame，保留欠帳 |
+| Arrival | tick **95**；simulation time **0.395833333 s**；plane Z=0.4318 m |
+| Arrival position | `(0.005105, 1.044226, 0.306804)` m；previous Z=0.480416 m |
+| Arrival velocity | `(1.655000, −4.481804, −41.667000)` m/s |
+| 離散判定限制 | 停在跨越後位置，本例 overshoot 約 0.125 m，Z 每 tick 約 0.174 m；不做 sub-tick 接觸判定 |
+
+已驗證：
+
+- Debug／Release 均以既有 MSVC x64 C++20、`/W4 /WX` build 成功。兩組態 CTest **2/2 通過**：既有 Data 測試（新增 velocity 型別／範圍案例，26 個不合法 fixture），以及新的 `reference_pitch` 測試。
+- Simulation 測試對同一 Native reference 初始 state 重複 20 次固定 48 ticks，逐欄位精確相等；30／60／120 FPS 的奈秒分段在 0.2 s 得到相同 48-tick state，最後均 arrival tick 95。另測重力解析式容差、250 ms 長 frame 的 cap／欠帳補完、pause 保留 fractional credit、單步一 tick、Ready／Complete 不推進、arrival 恰好一次（包含 paused 單步抵達）。這不要求未來 authored Data 必須永遠等於 Native defaults。
+- 實際 app 使用 process-targeted Windows key messages 經 SDL event loop 執行 Space → P → . → P：Debug paused tick **16** → step **17**，Release **20** → **21**；等待期間 title state 不變且 paused client 截圖逐像素相同，單步後畫面確實改變。恢復後兩者都停在 tick 95，Complete 再按 Space／. 不改 state。
+- 實測固定 client area **1920×1080**、無 resize/maximize style；Debug 以 Esc、Release 以正常 WM_CLOSE 退出，exit code 皆 0。兩者 stderr 各只有一筆 release 與 arrival；最後執行各完成 **84／89 render frames**。
+- 檢視 Ready、Paused、單步、InFlight 與 Complete 的擷取：球從圓環離開、向本壘靠近並停在本壘上方；release 圓環與場地保持固定。球中心僅來自 current simulation state，沒有 render-only trajectory。Camera／FOV／場地 Data 值保持前一 commit 基準，場景 vertex buffer 仍為 1875 vertices，改成固定區／平移區兩次 draw。
+- Debug D3D12 debug layer／GPU-based validation error/corruption **0**；shutdown 只列出報告當下保留的 device，沒有 live child resource。沒有新增 GPU resource，原單一 frame-in-flight fence ownership 沿用。
+
+Native UI helper 仍無法啟動；上述是真正 app 的 SDL 按鍵路徑與 PrintWindow 檢查，不是人類手動鍵盤測試。暫存檢查腳本移除，logs／擷取留在忽略的 `build/flight-*`。本例飛行約 0.4 秒與畫面可見性已核對，最終速度感／打擊體驗仍需使用者 review。無 drag／spin／Magnus、投手動畫、collision／CCD、rethrow／replay 或 hot reload；240 Hz 不構成未來 bat-ball contact 精度保證。其他 GPU、全部合法初始向量與低 FPS 的視覺平順度尚未驗證。

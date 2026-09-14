@@ -6,12 +6,13 @@
 #include <string>
 
 namespace {
-std::array<float, 17> values(const pawapuro::BattingStaging& s)
+std::array<float, 20> values(const pawapuro::BattingStaging& s)
 {
     return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
-        s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m};
+        s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m,
+        s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z};
 }
 }
 int main(int argc, char** argv)
@@ -38,6 +39,9 @@ int main(int argc, char** argv)
         write("[camera]\nposition_m = [-0.75, 1.25, -5]\n");
         if (pawapuro::load_batting_staging(fixture).camera_position_m.x != -0.75f)
             throw std::runtime_error("Opposite-side camera override was not applied.");
+        write("[reference_pitch]\ninitial_velocity_mps = [1, -1, -40]\n");
+        if (pawapuro::load_batting_staging(fixture).reference_velocity_mps.z != -40)
+            throw std::runtime_error("Reference velocity override was not applied.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -51,6 +55,9 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[reference_pitch]\ninitial_velocity_mps = [1, 0, 0]\n", "reference_pitch.initial_velocity_mps[2]"},
+            {"[reference_pitch]\ninitial_velocity_mps = [nan, 0, -40]\n", "reference_pitch.initial_velocity_mps[0]"},
+            {"[reference_pitch]\ninitial_velocity_mps = [1, 0]\n", "reference_pitch.initial_velocity_mps"},
             {"[camera\n", "line"},
             {"[camera]\nvertical_fov_degrees = 0\n", "camera.vertical_fov_degrees"},
             {"[camera]\nvertical_fov_degrees = nan\n", "camera.vertical_fov_degrees"},
@@ -77,7 +84,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 23 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 26 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

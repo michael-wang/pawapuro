@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-14。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已加入靜態 staging calibration／啟動 Data；交付 2／3 尚未開始。
+更新：2026-09-14。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；交付 3 尚未開始。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 
@@ -24,4 +24,4 @@
 - 具體功能開始實作後，其 native、script、data 與短 README 靠近同一概念；此處保留跨概念決策並連向模組文件，不複製公式、參數清單或 API。
 - 新的獨立決策只有在取捨已無法清楚放進這兩份工作文件時，才新增 decision record。
 - 文件中的數字、控制方式與測試規模若標示「提案」，代表等待本次 review；沒有測試結果時不得宣稱已通過。
-- 目前程式只提供靜態 Windows 3D 參考場景；後續球運動、simulation 與重投須另行授權。
+- 目前程式提供單顆固定步長 reference pitch、pause／single-step；重投與投手動畫仍須另行授權。

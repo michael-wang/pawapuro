@@ -36,9 +36,9 @@
 
 引擎與 game 的分界靠具體函式、資料 ownership、依賴方向和 source location 成立，不要求 interface、factory、DLL 或全專案 C ABI。將來 Jai migration 沿已存在的資料與 library 邊界評估；M1 不建 migration framework。
 
-## 目前靜態場景的 staging／Data 契約
+## 靜態 staging 基準／啟動 Data 契約
 
-本次延伸 delivery 1 做 staging calibration，**不是 delivery 2**。開發顯示固定為 windowed 1920×1080、16:9（原 1280×720 對使用者太小），不提供任意 resize、fullscreen 或解析度選單；保留既有 D3D12 resize 函式。尚不實作 DPI mode switching、letterbox／pillarbox。
+以下保留 delivery 1 校正後的 staging 基準；delivery 2 沿用此構圖與球場 geometry。開發顯示固定為 windowed 1920×1080、16:9（原 1280×720 對使用者太小），不提供任意 resize、fullscreen 或解析度選單；保留既有 D3D12 resize 函式。尚不實作 DPI mode switching、letterbox／pillarbox。
 
 基準情境為 **右投手 vs 左打者**，唯一 preset 為 `right_handed_pitcher_vs_left_handed_batter`。+Z 朝投手、+Y 向上；捕手視角的畫面右側（+X、一壘側）是左打者打擊區，畫面左側（−X、三壘側）是右打者打擊區。Camera 改放在左打者對側（−X、三壘側），為畫面右側的未來左打者 foreground silhouette 預留空間，維持投手／來球視線。右投手的 release reference 仍位於中央軸的 −X 側；打者所在側與 camera framing 是兩件事，不改變真實棒球空間參考。
 
@@ -58,7 +58,22 @@ Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真�
 
 球 marker 仍是刻意放大的視覺參考，不是物理球半徑。Raised mound 保留簡單平頂斜坡與既有高度／半徑；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移，沒有投手模型。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
 
-使用者回饋場景整體稍暗，列為待人物／materials／lighting 進入後再 review 的 presentation issue；本輪不調整顏色或 shader，也不引入 lighting／material system。尚無打者模型，因此 foreground 預留構圖不代表已驗證實際模型／動作不會遮擋。
+使用者回饋場景整體稍暗，列為待人物／materials／lighting 進入後再 review 的 presentation issue；暫不為暗沉感調整顏色或引入 lighting／material system。尚無打者模型，因此 foreground 預留構圖不代表已驗證實際模型／動作不會遮擋。
+
+## Delivery 2：單顆 reference pitch 契約
+
+這是 **Pawapuro Native 的 gravity-only reference fixture**，不是最終棒球模型。`batting/reference_pitch.cpp/.hpp` 擁有 Ready → InFlight → Complete、pause flag、tick、previous/current ball state 與固定步長欠帳；Engine 不知道投球、本壘或 release。沒有 rethrow/reset；要再投需重啟 app。
+
+- 初始位置直接取既有 `release.position_m`。唯一新增 Data 是 `reference_pitch.initial_velocity_mps` 三維向量（m/s），不另存 speed 或 target。預設向量的 X 分量讓基準 release 大致朝本壘中央；更改 release 時不會偷偷重新瞄準。每軸範圍 X/Y=−5～5、Z=−60～−20 m/s，需 finite；這是此 fixture 的安全載入界限，並不保證每個合法組合都投進可見區域。
+- Native 暫定 **240 Hz、dt=1/240 s ≈4.166667 ms**；重力 `(0,−9.80665,0)` m/s²。每 tick 用 constant-acceleration 更新 `p += v*dt + 0.5*g*dt²`、`v += g*dt`，保存 previous/current，不使用 render delta 積分。這個 Hz 尚未證明足以處理 bat-ball contact。
+- App 以 SDL monotonic nanoseconds 提供經過時間。Pawapuro accumulator 使用整數 `ns × Hz` credit（每 tick 消耗 10⁹），保留不足一 tick 的餘額。每 frame 最多 **16 ticks**，為 30 FPS 與短暫延遲保留追趕餘裕；超額欠帳保留並顯示於 title 的 `backlog`，不 clamp／丟棄時間、不放大 dt。持續低 FPS 時會落後 wall time；Complete 後不再需要剩餘欠帳。
+- Ready／Paused／Complete 不累積新 wall time。Pause 保留既有 fractional credit／backlog；單步是額外執行一個固定 tick，仍保持暫停，若跨平面則進入 Complete。App 每圈先推進舊狀態，再處理該 frame 的按鍵；live input 的接受邊界仍依事件輪詢，不宣稱不同 FPS 下相同人類按鍵時刻一定落在同一 tick。
+- **Space** 僅在 Ready release；**P** 暫停／恢復 InFlight；**.** 僅在 Paused 單步；**Esc／window close** 退出。忽略 key repeat，Complete 不接受再次 release。Minimize 時自動暫停進行中的球，restore 後需 P 恢復，不在背景補進最小化期間的時間。
+- Arrival plane 是本壘朝投手的前緣 **Z=0.4318 m**，與畫板共用 Native constant。球心第一次從 `previous.z > plane` 到 `current.z <= plane` 即記錄 tick／tick÷Hz、位置、速度與 previous Z，進入 Complete；保留跨越後位置，不吸附／插值到平面。時間誤差小於一 tick，Z overshoot 小於 `abs(vz)*dt`（不含浮點捨入）。不做 strike-zone、球半徑接觸或 CCD。
+- Rendering 直接讀 `current.position_m`，不產生另一條球路，也不做 render interpolation／extrapolation。`BattingReference` 只保存既有 vertices 與球的尾段起點；Engine 用同一 immutable buffer 做固定區與平移區兩次 draw，以 root constants 設定平移，沒有新增 GPU resource 或 dynamic mesh。GPU fence lifetime 沿用原有 owner。
+- Title 顯示 state、tick、位置及 backlog，只有文字變動才更新；stderr 只在 release／arrival 記錄摘要，不逐 tick logging。重現範圍為同 build／平台與相同初始 state、相同固定 tick 序列；不承諾跨 compiler bit identity，沒有 replay framework。
+
+無 drag、spin、Magnus effect、pitcher animation、碰撞、hot reload 或 delivery 3。場景、camera 與 oversized marker 尺寸維持基準；實測 initial conditions／arrival 與限制記於開發環境文件。
 
 ## Concept locality
 

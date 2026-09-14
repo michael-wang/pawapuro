@@ -28,8 +28,11 @@ D3D12_RESOURCE_BARRIER transition(ID3D12Resource* resource,
 }
 
 void D3D12View::initialize(HWND window, UINT initial_width, UINT initial_height,
-    std::span<const Vertex> vertices)
+    std::span<const Vertex> vertices, UINT translated_start)
 {
+    if (translated_start > vertices.size() || translated_start % 3 != 0)
+        throw std::runtime_error("Invalid translated triangle range.");
+    translated_vertex_start = translated_start;
     width = initial_width;
     height = initial_height;
     UINT factory_flags = 0;
@@ -102,7 +105,7 @@ void D3D12View::initialize(HWND window, UINT initial_width, UINT initial_height,
 
     D3D12_ROOT_PARAMETER camera{};
     camera.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    camera.Constants = {0, 0, 16};
+    camera.Constants = {0, 0, 20};
     camera.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     D3D12_ROOT_SIGNATURE_DESC root_desc{};
     root_desc.NumParameters = 1;
@@ -215,7 +218,7 @@ void D3D12View::resize(UINT new_width, UINT new_height)
     std::fprintf(stderr, "Resized: %u x %u\n", width, height);
 }
 
-void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection)
+void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation)
 {
     // One frame in flight keeps this first slice's ownership explicit. The previous
     // frame's fence has completed before reusing the allocator, depth or constants.
@@ -239,7 +242,13 @@ void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection)
     commands->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1, 0, 0, nullptr);
     commands->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commands->IASetVertexBuffers(0, 1, &vertex_view);
-    commands->DrawInstanced(vertex_count, 1, 0, 0);
+    const float zero_offset[4]{};
+    const float offset[4]{translation.x, translation.y, translation.z, 0};
+    commands->SetGraphicsRoot32BitConstants(0, 4, zero_offset, 16);
+    commands->DrawInstanced(translated_vertex_start, 1, 0, 0);
+    // Root constants are captured per draw; the immutable GPU buffer is never rewritten.
+    commands->SetGraphicsRoot32BitConstants(0, 4, offset, 16);
+    commands->DrawInstanced(vertex_count - translated_vertex_start, 1, translated_vertex_start, 0);
     barrier = transition(back_buffers[index].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     commands->ResourceBarrier(1, &barrier);
     check(commands->Close(), "Close commands");

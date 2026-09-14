@@ -1,6 +1,7 @@
 cbuffer Camera : register(b0)
 {
     row_major float4x4 view_projection;
+    float4 translation;
 };
 
 struct VertexOutput
@@ -12,7 +13,7 @@ struct VertexOutput
 VertexOutput VSMain(float3 position : POSITION, float3 color : COLOR)
 {
     VertexOutput output;
-    output.position = mul(float4(position, 1.0), view_projection);
+    output.position = mul(float4(position + translation.xyz, 1.0), view_projection);
     output.color = color;
     return output;
 }
