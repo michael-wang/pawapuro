@@ -385,3 +385,28 @@ Release fixture 的 world landmarks（公尺，腳底點為鞋底中央，其餘
 - 各 build 的 **21 筆 raw arrival 與 plane evaluation 完整 log 與前版逐行相同**：tick **95**、time **0.395833333 s**、position **(0.005105,1.044226,0.306804)**、velocity **(1.655,−4.481804,−41.667)**。Plane sample **(0.000140,1.057610,0.431800)**、time **0.392833450 s**；prediction／actual plane pixel **(960.042114,662.669617)**、error **0 px**。Raw 球心仍為 **(966.884094,668.182678)**。Camera／球半徑／prediction logic 未改，環與球的尺寸關係也未改。
 - Debug GPU-based validation **0 errors**，未見 corruption，shutdown 無 live child resource（僅供報告使用的 device）。Debug／Release 正常 exit 0，分別完成 **613／616 frames**。
 - Computer-use helper 因 sandbox setup 失敗，沿用只針對 Pawapuro process 的 Windows key messages／SDL event loop／PrintWindow；這是實際 app 自動操作及畫面檢視，不是人類手動試玩。暫存操作腳本移除，候選 Data／截圖／logs 留在忽略的 `build/`。沒有新增 dependency、renderer 或 character／animation framework。
+
+
+## Off-axis batting projection 驗證（2026-09-15）
+
+本次只修改 camera/projection，設計契約見 [Batting Feel](../design/batting-feel.md)。Camera position **(−0.75,1.25,−5)**、target **(−0.75,2.10,16.8)**、vertical FOV **36°**；只改 target X，水平 viewing direction 為 **+Z（yaw=0）**，vertical pitch 約 **2.233°**。人物／球場／好球帶 Data 與 geometry、physics、prediction／控制邏輯均未改。
+
+- 共用 `batting_view_projection()` 改用 `XMMatrixPerspectiveOffCenterLH`，lens shift 從 view-space gameplay focus 推導，沒有新增 authored Data。此候選近面 Z=0.1 m，near-plane horizontal offset 約 **+0.01386535 m**，約為水平半寬的 **0.240036**；正向 frustum offset 將影像往左移，使偏右的 gameplay focus 置中。Native camera fallback 的 target X 同步改為 −0.75，其餘 fallback 不動。
+- Debug／Release build 成功，CTest 各 **2/2**。新增 camera X=−1.25／−0.75／0、aspect=16:9／4:3 的 projection 契約測試：focus 置中、overlay bbox 中心在 1 px 內、兩側打擊區前後 X 向橫線 ΔY<1e−6 NDC。最初把 bbox 中心當成幾何中心的過嚴 tolerance 揭露 vertical pitch 深度差，已改為明確 pixel tolerance；沒有修改幾何或另補 overlay offset。
+- 原有 20 次 deterministic rethrow、30／60／120 FPS chunking、pause／single-step、arrival once、prediction consistency 與 Data／退化 fixture tests 均通過。兩種實際 app 各初投加 **20 次重投**，pause **11→12 tick**，暫停等待畫面逐像素相同。
+
+實際 **1920×1080** Ready 截圖量測（Debug／Release 結果相同）：
+
+| 橫線 | 左端 pixel | 右端 pixel | ΔY |
+|---|---|---|---|
+| 畫面左側打擊區後線 | (323,1076) | (781,1076) | **0 px** |
+| 畫面右側打擊區後線 | (1251,1076) | (1709,1076) | **0 px** |
+
+以上採後線中心掃描列 Y=1076 的可見白色筆畫範圍，包含轉角接合的 rasterization；整條後線的主要厚度在 Y=1073～1078，未被畫面下緣裁切。相同 world endpoints 的解析投影交叉核對：左側約 **(323.772,1075.998)→(782.382,1075.998)**，右側約 **(1250.011,1075.998)→(1708.621,1075.998)**；解析值與實際筆畫端點差約 1 px，沒有把計算值冒充 screenshot pixel。前方橫線也水平，左側解析端點約 **(451.541,927.635)→(765.752,927.635)**，截圖可見水平白線；右前方部分被既有打者遮住。
+
+- 好球帶外框 screenshot bounds **left=826、right=1094、top=604、bottom=898**，**269×295 px**、center X=**960**。維持 axis-aligned、略高於寬，與物理場景使用同一投影來源；沒有將 overlay 變回 world-space draw。
+- Prediction／actual plane evaluation pixel 均 **(959.574707,663.836792)**，**ΔX=0、ΔY=0、Euclidean error=0 px**。Raw tick 球心為 **(966.581604,669.439392)**，既有完整 tick 與 plane sample 的差異仍保留，不吸附 marker。預測環 **52×52 px**，Complete 球 **53×53 px**；差異來自 raw state 深度／faceting／rasterization。
+- 每種 build 的 **21 筆 authoritative raw arrival 與 evaluation world/time/velocity** 與前版相同：tick **95**、time **0.395833333 s**、position **(0.005105,1.044226,0.306804)**、velocity **(1.655,−4.481804,−41.667)**；plane sample **(0.000140,1.057610,0.431800)**、time **0.392833450 s**。只有 projected screen coordinates 改變。
+- Ready／mid-flight（暫停 tick 48）／Complete 圖可見投手仍偏左、打者與 bat 在右側，主要球路／release 不受遮擋，本壘／腳底仍靠近下緣。本次 projection 消除橫線傾斜，但沒有消除正常透視或改人物比例；正式動畫尚未開始。
+- Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource（僅保留供報告的 device）。Debug／Release 均正常 exit 0，各完成 **616 frames**。
+- 原生 computer-use helper 本次啟動失敗；沿用 process-targeted Windows key messages／SDL event loop／DPI-aware PrintWindow。這是實際 app 自動操作／畫面檢視，非人類手動試玩。截圖／logs 留在忽略的 `build/offaxis-debug-*`、`build/offaxis-release-*`；暫存驗證腳本已移除。沒有新增 dependency、renderer abstraction 或 cinematic-camera framework。

@@ -133,3 +133,6 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 
 2026-09-15 pre-animation staging correction：依使用者回饋比較三個較低丘高後選 0.35 m，下移 authoritative zone 並維持其寬高；將站立投手替換為唯一靜態 release pose，對照後腳／跨步／前傾與原 release point。使用者選擇保留 0.30～1.25 m zone，頭身比例關係留待 review。這是正式 rig／animation 前的幾何驗證，沒有開始動畫、打者揮棒或修改投球物理；實測證據見開發環境文件。
+
+
+2026-09-15 off-axis projection correction：正式 animation pipeline 前，將 camera 水平方向對齊 +Z，透過從 gameplay focus 推導的 horizontal lens shift 置中，消除打擊區 X 向橫線的斜視感。Debug／Release、CTest 與三狀態實際擷取完成，兩側後方白線 screenshot ΔY=0 px、zone center X=960；projection 契約與量測見設計／開發環境文件。沒有修改人物、球場、gameplay 或投球物理，也沒有開始 rig／animation。

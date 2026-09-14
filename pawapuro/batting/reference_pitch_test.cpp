@@ -66,6 +66,30 @@ int main()
             require(scene.zone_max_ndc.x > scene.zone_min_ndc.x && scene.zone_max_ndc.y > scene.zone_min_ndc.y,
                 "Projected overlay bounds invalid");
         }
+        // Off-axis composition must centre gameplay while world-X lines stay horizontal.
+        for (float camera_x : {-1.25f, -0.75f, 0.0f}) {
+            for (float aspect : {16.0f / 9, 4.0f / 3}) {
+                BattingStaging s;
+                s.camera_position_m.x = s.camera_target_m.x = camera_x;
+                s.camera_target_m.y = 2.10f;
+                s.strike_zone_bottom_m = 0.30f; s.strike_zone_top_m = 1.25f;
+                const auto focus = project_batting_point(s,
+                    {0, (s.strike_zone_bottom_m + s.strike_zone_top_m) / 2, s.strike_zone_plane_z()}, aspect);
+                require(std::abs(focus.x) < 1e-6f, "Lens shift did not centre gameplay focus");
+                const auto scene = make_batting_reference(s, baseline_prediction.state.position_m, aspect);
+                // Vertical pitch gives top/bottom different depths; allow one pixel of bbox-centre drift.
+                require(std::abs(scene.zone_min_ndc.x + scene.zone_max_ndc.x) * 1920 / 4 < 1,
+                    "Overlay centre disagrees with gameplay focus");
+                for (float side : {-1.0f, 1.0f}) {
+                    const float inside = side * (s.strike_zone_width_m / 2 + 0.18f);
+                    for (float z : {-0.6f, 1.4f}) {
+                        const auto a = project_batting_point(s, {inside, 0.018f, z}, aspect);
+                        const auto b = project_batting_point(s, {inside + side * 1.2f, 0.018f, z}, aspect);
+                        require(std::abs(a.y - b.y) < 1e-6f, "World-X chalk line tilted in projection");
+                    }
+                }
+            }
+        }
         // An independently tuned release must not create a zero-length throwing forearm.
         {
             BattingStaging s;

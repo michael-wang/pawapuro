@@ -309,8 +309,22 @@ XMFLOAT4X4 batting_view_projection(const BattingStaging& staging, float aspect)
     // Left-handed batter framing; camera orientation does not move the rubber or mound.
     const auto view = XMMatrixLookAtLH(XMLoadFloat3(&staging.camera_position_m),
         XMLoadFloat3(&staging.camera_target_m), XMVectorSet(0, 1, 0, 0));
+    // Lateral position avoids the batter; lens shift centres gameplay without yawing the field.
+    // All world draws, overlay points and arrival diagnostics use this same matrix function.
+    const auto focus = XMVector3TransformCoord(XMVectorSet(0,
+        (staging.strike_zone_bottom_m + staging.strike_zone_top_m) / 2,
+        staging.strike_zone_plane_z(), 1), view);
+    const float focus_z = XMVectorGetZ(focus);
+    if (!std::isfinite(focus_z) || focus_z <= 0)
+        throw std::runtime_error("Batting projection focus must be in front of the camera.");
+    constexpr float near_z = 0.1f, far_z = 300;
+    const float half_height = near_z * std::tan(XMConvertToRadians(staging.vertical_fov_degrees) / 2);
+    const float half_width = half_height * aspect;
+    const float shift = near_z * XMVectorGetX(focus) / focus_z;
+    const auto projection = XMMatrixPerspectiveOffCenterLH(shift - half_width, shift + half_width,
+        -half_height, half_height, near_z, far_z);
     XMFLOAT4X4 result;
-    XMStoreFloat4x4(&result, view * XMMatrixPerspectiveFovLH(XMConvertToRadians(staging.vertical_fov_degrees), aspect, 0.1f, 300));
+    XMStoreFloat4x4(&result, view * projection);
     return result;
 }
 

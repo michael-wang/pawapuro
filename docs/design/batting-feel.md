@@ -54,7 +54,7 @@ Gameplay-first 不等於越誇張越好；誇張必須改善 readability／feel�
 
 Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真實眼睛位置；降低 camera 並讓視線接近水平，FOV 本輪維持 36°，以保留既有壓迫感並隔離此次 position／target 的調整效果。沒有 runtime 左右打切換；不移動投手丘／投手板的 X 或 Z 來湊構圖。
 
-為了讓玩家盯住的進壘區位於畫面水平中央，camera position 不變，target X 使水平 viewing direction 通過 arrival plane 的中央軸；本次 presence pass 只提高 target Y，讓本壘與腳底靠近畫面下緣；因此近處本壘／參考框置中，而遠處投手與 release 自然偏左。這是 presentation，沒有移動任何球場參考。實測 camera 值與 pixel 對齊證據見開發環境文件。
+Camera 的 physical lateral offset 與 screen composition 是不同概念：位置留在左打者對側，target X 與 camera X 對齊，水平 optical direction 沿 +Z，不再用向右 yaw 強行置中。保留既有 vertical target／36° FOV，改由 horizontal off-axis perspective 將 gameplay focus 置中；因此世界 X 向橫線保持水平，而投手仍偏左、右側保留打者空間。這是正式 animation pipeline 前的 camera correction，沒有移動任何人物／球場或修改 gameplay truth。實測值與截圖證據見開發環境文件。
 
 唯一的 authored staging 檔是 [pawapuro/batting/staging.toml](../../pawapuro/batting/staging.toml)，與 `staging.cpp/.hpp`、`reference_scene` 位於同一概念目錄。Engine 不接觸 TOML、投手丘、release 或 batter-side 語意；保留既有 `engine::Vertex` coupling，不增加 renderer abstraction。
 
@@ -84,6 +84,10 @@ Gameplay zone 中心 X=0、Z=`strike_zone_plane_z()`。Pawapuro 將四角投影�
 
 橘色空心預測環由初始 state 建立一次獨立的 `ReferencePitch`，呼叫相同 single-step／積分及 crossing evaluation；有 2 秒上限以明確報告未抵達異常。環中心直接投影 prediction 的 world evaluation position；半徑由 evaluation plane 上的預測位置，沿 camera-right 偏移一個 ball visual radius 後投影取得；維持 screen-space 圓形，stroke 向內畫，不另存 marker radius。球的視覺尺寸改變時，環自然跟著改變，空心中央避免遮住球。Prediction 不修改正在玩的 pitch。
 
+所有 world→screen 計算使用同一 `batting_view_projection(staging, aspect)`：world／ball draw 的 matrix、好球帶四角、預測環與 arrival 診斷皆呼叫此函式，沒有 overlay 專用 camera。先用現有 LookAt 得到 view，再將 `(0, (bottom+top)/2, strike_zone_plane_z)` 轉成 view-space focus。近平面的 horizontal offset 為 `near * focus.x / focus.z`，左右界為 offset ± `near * tan(vertical_FOV/2) * aspect`，上下界對稱；使用 DirectXMath `XMMatrixPerspectiveOffCenterLH`。Focus 必須在 camera 前方。Lens shift 由既有 Data／gameplay plane 推導，不另存 authored shift 或 pixel coordinates，不增加 Engine camera primitive／framework。
+
+幾何 focus 精確落在 screen X 中央；vertical pitch 使 zone 上下角深度略有差異，因此四角 bounding-box 中心容許小於約 1 px 的偏差。當前 Data 讓 target X 等於 position X；若日後刻意改 target X 產生 yaw，世界橫線就不再保證水平，不能靠 lens shift 消除該傾斜。
+
 目前固定 camera／啟動 Data，Pawapuro 在建立場景時產生 overlay NDC vertices，與 world／球 vertices 放在既有 immutable buffer。下次以不同 camera Data 啟動會重新投影；沒有 runtime camera 變更或重新配置 overlay 的 framework。Renderer 只增加一個 depth-disabled PSO，沿用既有 shader、root constants 與 buffer，identity matrix 畫 NDC。兩個實際 caller 是好球帶框與 prediction 環，Engine 不知道其棒球語意。
 
 Prediction 環目前在各 phase 都顯示，僅為 development／gameplay exploration tool；正式遊戲是否、何時顯示，或是否依能力模糊，尚未決定。沒有 aiming cursor、好壞球判定或通用 UI。
@@ -102,7 +106,7 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 
 本次只增強投打對決的舞台感：投手以既有 `height_m` 等比例放大，維持 Q 版頭身／四肢比例，不增加尚無需求的比例欄位。Raised mound 的 `height_m` 成為 startup Data，允許 0.125～1 m；平頂 radius 上限放寬到 2 m，仍小於底部 radius 下限。投手板、中央標尺及 release 支柱的落地高度直接使用丘高；投手腳底仍由角色 `position_m` 明示，本次一起調整到板面，單獨調丘高時須同步檢查站位。Release 的世界位置與整條球路不隨丘高移動。後續 pre-animation correction 比較 0.30／0.35／0.40 m 後選 0.35 m；radius／top radius／visual apron 不變，camera 也保留原設定以免破壞近景構圖。
 
-Camera 只抬高 target Y，保留 position、target X/Z 與 36° FOV；以畫面確認本壘／腳底更靠下、好球帶水平置中、投手偏左與打者遮擋。上下 framing 是 presentation，沒有調整好球帶 rule 或球路來配合。
+前次 presence pass 只抬高 camera target Y，保留 position、target X/Z 與 36° FOV；以畫面確認本壘／腳底更靠下、好球帶水平置中、投手偏左與打者遮擋。上下 framing 是 presentation，沒有調整好球帶 rule 或球路來配合。
 
 既有 Vertex path 加入左右打擊區白線、一／三壘低矮白色 blockout、兩側界外線及帶頂緣的初步外野牆。依使用者選擇保留標準 90° diamond 方向，允許一／三壘在窄 FOV 視野外，不壓縮位置換取入鏡；界外白線在打擊區外才開始顯示，避免交叉污染近景方框。這些元素只提供方位、打席尺度與外野邊界，不加入跑壘、界內外／全壘打判定或碰撞。白線尺寸、壘包位置／尺寸、牆距／高度先保留具體 Native fixture，尚無反覆調參證據；不建立 stadium／terrain／animation 系統。
 
