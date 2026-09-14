@@ -33,9 +33,11 @@ visual_dirt_radius_m = 5.5
 radius_m = 2.75
 top_radius_m = 0.9
 
-# Provisional development reference only; calibrate against the actual batter model/stance later.
+# Authoritative Pawapuro gameplay strike zone, not a separate visual guide.
+# First tuning candidate: twice the physical plate width for gameplay readability.
+# Revisit dimensions with the stylized batter model, stance and playtesting.
 # Width and heights above ground in metres; centred on home plate at the arrival plane.
-[strike_zone_reference]
-width_m = 0.4318
+[strike_zone]
+width_m = 0.8636
 bottom_m = 0.5
 top_m = 1.3

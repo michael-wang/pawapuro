@@ -1,6 +1,6 @@
 # Batting Feel：體驗與實作邊界
 
-更新：2026-09-14。使用者已指定的目標與層級決策在此記錄；具體控制、範圍和驗收提案見 [M1](../milestones/01-batting-feel.md)。背景依據是 [Jai 研究](../research/jai-design-adoption-review.md)；本文件不重述語言比較。
+更新：2026-09-15。使用者已指定的目標與層級決策在此記錄；具體控制、範圍和驗收提案見 [M1](../milestones/01-batting-feel.md)。背景依據是 [Jai 研究](../research/jai-design-adoption-review.md)；本文件不重述語言比較。
 
 ## 體驗目標
 
@@ -9,6 +9,12 @@
 玩家應能理解上一球發生了什麼、感到自己能改善，並願意立即試下一次。完美接觸是最重要的瞬間，但之前的判讀、揮空的力量感、之後的飛行與全壘打，都決定這個瞬間是否成立。
 
 先建立完整、可調整的短循環，再針對實際不成立的階段改進。可重現的技術實驗是工具；不能用 debug overlay、數值正確或一段自動擊球影片代替玩家實玩。
+
+## Gameplay-first 原則
+
+**Pawapuro 是遊戲，不是棒球模擬器。** 真實棒球的尺寸、物理與規則是重要起點與可信度來源，但 gameplay rule 由遊戲性決定。當真實規則與可讀性、操作樂趣或遊戲性衝突時，可以有意識地偏離；每項偏離都必須說明 gameplay 理由，不能無意識地產生，也不把「更真實」自動等同於「更好玩」。
+
+好球帶是第一個明確例子：為探索更容易判讀、操作的進壘區，先把遊戲好球帶加寬至本壘板的兩倍，保留真實場地尺度。這是 game-design decision，不是 rendering hack；是否更好玩仍須實玩驗證。
 
 ## 六階段設計
 
@@ -50,7 +56,7 @@ Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真�
 
 | 位置 | 本輪決定與原因 |
 |---|---|
-| Data | Camera position（X 即 lateral offset）、target、vertical FOV；release position、球 marker radius；草地半寬／遠端 Z；投手丘底部／平頂 radius；本壘平面紅土與投手丘外圍視覺紅土 radius；provisional 好球帶框的 width／bottom／top。這些都有實際 staging 調整需求。距離採公尺，FOV 採度。`camera.preset` 目前只接受上述完整對戰名稱，避免標籤與構圖意義不符。 |
+| Data | Camera position（X 即 lateral offset）、target、vertical FOV；release position、球 marker radius；草地半寬／遠端 Z；投手丘底部／平頂 radius；本壘平面紅土與投手丘外圍視覺紅土 radius；authoritative gameplay strike zone 的 width／bottom／top。這些都有實際 staging 調整需求。距離採公尺，FOV 採度。`camera.preset` 目前只接受上述完整對戰名稱，避免標籤與構圖意義不符。 |
 | Native | 本壘尺寸、本壘尖端至投手板 18.4404 m、投手丘高度 0.254 m、投手板尺寸與丘中心位置；它們是空間參考，不能為了讓投手看起來更近而任意調整。2 m 高度標尺／0.5 m 刻度也是固定度量參考；標尺 X=0、Z=投手板中心，直接由既有尺寸推導，不提供會讓中央軸漂移的 Data offset。 |
 | Native | 固定開發視窗尺寸、geometry 拓樸／分段數、顏色、細線厚度、近遠裁切、草地背向延伸至 z=-12 m；目前沒有反覆調整需求。Release 圓環尺寸從球 marker radius 推導，支柱底端依丘面高度計算，避免同一關係有多份可漂移設定。 |
 
@@ -58,7 +64,15 @@ Camera 仍退到本壘後方以容納本壘，不能稱為打者模型內的真�
 
 缺少個別欄位時採 `staging.hpp` 的安全 defaults，並逐項記錄；這些 fallback 不必隨每次 authored Data 調參同步修改。整個檔案缺失、TOML 語法錯誤、型別錯誤、unknown key、非有限數值或超出 `staging.cpp` 的界限時，顯示檔案／欄位或語法位置的錯誤，拒絕啟動並正常回傳 exit code 1，不默默套用另一個完整場景。Camera 與 target 的界限分離，避免零方向或平行 up vector；mound top radius 的上限低於 base radius 下限，避免退化坡面。新增紅土半徑的界限讓兩塊區域保持草地間隔，且投手丘的視覺紅土半徑不小於任何允許的 raised mound 半徑。Camera X 允許 −1.5～1.5 m 的 presentation 調整，不以其符號判定打者慣用手；舊 preset 名稱或錯側 release X 仍拒絕，不建立相容／切換層。
 
-好球帶框僅供開發驗證，未來需依實際打者模型與站姿校正。三個 Data 值皆為公尺：width 範圍 0.2～1、bottom 0.2～1、top 0.8～2，且 top 至少高於 bottom 0.2；沿用 finite／型別／來源診斷及 defaults。Native 固定中心 X=0、Z=arrival plane，以四條 0.01 m 薄幾何畫框，不另存可漂移的 offset，不做好壞球判定或 UI。
+### 單一 authoritative gameplay strike zone
+
+`staging.toml` 的 `[strike_zone]` 是 Pawapuro runtime 唯一的好球帶規則來源，由 Pawapuro Native／Data 擁有，目前保存在既有 `BattingStaging` 啟動快照，沒有另建規則 API。第一個 tuning candidate 為 width **0.8636 m**（2 × 本壘板寬度）、bottom **0.5 m**、top **1.3 m**。本壘板 physical width 仍是 **0.4318 m**，投手丘、場地與球路不因好球帶放大而改變。
+
+Authoritative 指單一規則來源，不代表數值永久定案；尺寸之後可依 Q 版打者模型、站姿與實玩結果調整。藍框直接呈現這一份規則，不畫第二個真實好球帶內框。未來 ball／strike judgement、pitcher targeting、batting aiming、pitch-location feedback 預設都使用同一份 Data；本輪尚未實作這些 consumers。只有實玩證明 called strike zone 與 bat reachable area 必須分開時，才引入第二個概念，不預建 physical／visual／guide／interaction 四套區域。
+
+三值皆為公尺：width 允許 **0.25～1.5**，保留較窄與較寬玩法候選的試驗空間（含 0.75／0.86／0.95）；bottom 0.2～1、top 0.8～2，且 top 至少高於 bottom 0.2。這是有限、非退化的啟動檢查界限，不是正式棒球規則。沿用 finite／型別／來源診斷與 defaults，只在 startup load，沒有 hot reload。舊 `[strike_zone_reference]` 視為 unknown key，沒有外部相容需求或 compatibility layer。
+
+Native 固定中心 X=0、Z=arrival plane，以四條 0.01 m 薄幾何畫框，不另存可漂移的 offset；目前不做好壞球判定或 UI。
 
 球 marker 仍是刻意放大的視覺參考，不是物理球半徑。Raised mound 保留簡單平頂斜坡與既有高度／半徑；外圍較大的紅土圓盤只改變平面顏色與輪廓，不增加隆起高度，不作碰撞或 simulation 地形。本壘另有獨立紅土圓盤，兩者之間主要是草地，移除舊長條走道及其橫向刻線。投手板中央金色標尺提供身體中心軸／高度 context，青色 release 標記表示相對偏移，沒有投手模型。外野草地與稀疏色帶保留，不建立 terrain／stadium 系統。實際採用的 Data 值以 TOML 為準；畫面比較與驗證證據記於開發環境文件。
 

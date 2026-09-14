@@ -118,3 +118,6 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 
 2026-09-14 進壘 framing／同球重投：依本輪授權完成 provisional 好球帶框、水平置中與 Space 在 Complete 後重投。Debug／Release 各 20 次同物件逐 tick 軌跡比較通過，實際 app 各完成初投加 20 次重投，release／arrival 紀錄一致；pause／single-step 未退步。契約見設計文件、設定與畫面量測見開發環境文件；沒有修改球路物理，沒有開始投手動畫、打者或揮棒。這不是完整 replay framework，也不宣告 M1 體驗驗收完成。
+
+
+2026-09-15：依本輪授權將既有框改為單一 authoritative gameplay strike zone，僅放大寬度。Gameplay-first 決策由設計文件維護，畫面量測／建置／重投回歸結果見開發環境文件；沒有新增好壞球判定或推進投手動畫等後續工作，M1 體驗驗收仍未完成。

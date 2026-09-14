@@ -268,3 +268,17 @@ Native UI helper 仍無法啟動；上述是真正 app 的 SDL 按鍵路徑與 P
 操作以設計文件為準：Space 在 Ready 出手、Complete 立即重投；P 暫停／恢復、. 暫停單步、Esc 退出。沒有新增抽象：只有既有具體 staging 欄位、四條框幾何與 initial state 快照；rendering 仍直接讀權威球位置。
 
 以上是實際 app 的自動按鍵／擷取驗證，不是人類手動試玩。真實打者 silhouette 的遮擋、最終好球帶上下界與速度感仍待後續 review；沒有模型、動畫、揮棒或新物理。暗沉感仍延後至人物／lighting 階段。暫存驗證腳本移除，畫面與 logs 留在忽略的 `build/framing-*`。
+
+
+## Authoritative gameplay strike zone 驗證（2026-09-15）
+
+本次依 [gameplay-first／好球帶設計決策](../design/batting-feel.md#gameplay-first-原則)，將 `[strike_zone_reference]` 改為唯一的 `[strike_zone]`；width=**0.8636 m**、bottom=**0.5 m**、top=**1.3 m**。前節的 provisional 用語與窄框數值是歷史紀錄，不是另一份 runtime 規則。Native fallback 同步更新；width validation 採 0.25～1.5 m，可試 0.75／0.86／0.95 等候選。下限使用可精確表示的 0.25，避免原 0.2f 與 TOML double 的邊界比較差異；未改共用數值 parser。
+
+- Debug／Release build 均成功，CTest 各 **2/2**；新增 section／0.8636 載入、可調寬度及上下限測試通過，**32 個非法案例**包含舊 section 與超出寬度上限。既有 20 次 deterministic rethrow、30／60／120 FPS chunking、pause／single-step、arrival once 均通過，simulation 測試與 source 未改。
+- 兩種 app 的實際 **1920×1080** client 擷取均量到藍框外緣：**left=827、right=1089、top=527、bottom=774 px**；以含兩端 pixel 計算為 **263×248 px**，bounding-box center X=**958**，接近 960。前版為 133×247 px，寬度約 **1.98 倍**、比例由狹長變為近方形。世界高度仍為 0.8 m；外框高度多 1 pixel 是寬度延伸後透視／rasterization 的結果，沒有調整上下界。
+- Ready 圖與前版逐像素比較，所有差異都位於新／舊藍框 pixel；本壘、球場、相機構圖、release marker 完全不變。本壘 physical width 仍為 **0.4318 m**。視覺檢視 Ready／Complete：投手偏左、右側仍有空間，球在唯一好球帶中水平近中央、垂直中上，未加第二個內框。
+- Debug／Release 均操作 Space → P → . → P，再連續 **20 次重投**；pause tick **19→20**，等待暫停時畫面逐像素一致，單步後畫面改變。每種 build 的 21 筆 arrival 與前版 log 完全一致：**tick 95、0.395833333 s**，position **(0.005105, 1.044226, 0.306804)** m、velocity **(1.655000, −4.481804, −41.667000)** m/s；仍是跨 arrival plane 後的離散狀態。
+- Debug layer／GPU-based validation **0 errors**，沒有 corruption 或 live child resource；報告只保留供報告使用的 device。Debug／Release 正常退出 0，分別完成 614／628 frames。
+- 原生 UI helper 仍因 sandbox setup 失敗，沿用 process-targeted Windows key messages 經 SDL event loop 與 PrintWindow 擷取；這是實際 app 自動操作，不是人類手動試玩。暫存腳本已移除，擷取與 logs 留在忽略的 `build/gameplay-zone-*`。最終遊戲性與模型遮擋仍待人類 review。
+
+本輪沒有新增 dependency、abstraction、判定、aiming、模型或動畫；camera／FOV／window、release／velocity／gravity／240 Hz、arrival plane、重投邏輯皆未改。

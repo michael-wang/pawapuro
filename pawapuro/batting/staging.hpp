@@ -16,7 +16,8 @@ struct BattingStaging {
     float vertical_fov_degrees = 36;
     DirectX::XMFLOAT3 release_position_m{-0.65f, 2.05f, 16.8f};
     DirectX::XMFLOAT3 reference_velocity_mps{1.655f, -0.6f, -41.667f};
-    float strike_zone_width_m = 0.4318f;
+    // Single authoritative gameplay zone; rendering consumes these same rule values.
+    float strike_zone_width_m = 0.8636f;
     float strike_zone_bottom_m = 0.5f, strike_zone_top_m = 1.3f;
     float ball_marker_radius_m = 0.10f;
     float grass_half_width_m = 85;

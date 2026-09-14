@@ -95,7 +95,7 @@ BattingReference make_batting_reference(const BattingStaging& staging)
         };
         quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
     }
-    // Provisional reference, not strike/ball judgement. Centre and plane are baseball references.
+    // Display the authoritative gameplay zone directly; judgement is not implemented yet.
     const float zone_half = staging.strike_zone_width_m / 2;
     const float bottom = staging.strike_zone_bottom_m, top = staging.strike_zone_top_m;
     constexpr float line_half = 0.005f, zone_z = plate_front_z_m;

@@ -42,10 +42,16 @@ int main(int argc, char** argv)
         write("[reference_pitch]\ninitial_velocity_mps = [1, -1, -40]\n");
         if (pawapuro::load_batting_staging(fixture).reference_velocity_mps.z != -40)
             throw std::runtime_error("Reference velocity override was not applied.");
-        write("[strike_zone_reference]\nwidth_m = 0.5\nbottom_m = 0.6\ntop_m = 1.4\n");
+        write("[strike_zone]\nwidth_m = 0.8636\nbottom_m = 0.6\ntop_m = 1.4\n");
         const auto zone = pawapuro::load_batting_staging(fixture);
-        if (zone.strike_zone_width_m != 0.5f || zone.strike_zone_bottom_m != 0.6f || zone.strike_zone_top_m != 1.4f)
-            throw std::runtime_error("Provisional zone overrides were not applied.");
+        if (zone.strike_zone_width_m != 0.8636f || zone.strike_zone_bottom_m != 0.6f || zone.strike_zone_top_m != 1.4f)
+            throw std::runtime_error("Gameplay strike-zone overrides were not applied.");
+        for (float width : {0.25f, 0.75f, 0.86f, 0.95f, 1.5f}) {
+            const auto text = "[strike_zone]\nwidth_m = " + std::to_string(width) + "\n";
+            write(text.c_str());
+            if (pawapuro::load_batting_staging(fixture).strike_zone_width_m != width)
+                throw std::runtime_error("Gameplay width candidate was not loaded.");
+        }
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -59,10 +65,12 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
-            {"[strike_zone_reference]\nwidth_m = -1\n", "strike_zone_reference.width_m"},
-            {"[strike_zone_reference]\nbottom_m = 'low'\n", "strike_zone_reference.bottom_m"},
-            {"[strike_zone_reference]\ntop_m = nan\n", "strike_zone_reference.top_m"},
-            {"[strike_zone_reference]\nbottom_m = 1\ntop_m = 0.9\n", "strike_zone_reference.top_m"},
+            {"[strike_zone_reference]\nwidth_m = 0.8636\n", "Unknown staging key: strike_zone_reference"},
+            {"[strike_zone]\nwidth_m = 1.6\n", "strike_zone.width_m"},
+            {"[strike_zone]\nwidth_m = -1\n", "strike_zone.width_m"},
+            {"[strike_zone]\nbottom_m = 'low'\n", "strike_zone.bottom_m"},
+            {"[strike_zone]\ntop_m = nan\n", "strike_zone.top_m"},
+            {"[strike_zone]\nbottom_m = 1\ntop_m = 0.9\n", "strike_zone.top_m"},
             {"[reference_pitch]\ninitial_velocity_mps = [1, 0, 0]\n", "reference_pitch.initial_velocity_mps[2]"},
             {"[reference_pitch]\ninitial_velocity_mps = [nan, 0, -40]\n", "reference_pitch.initial_velocity_mps[0]"},
             {"[reference_pitch]\ninitial_velocity_mps = [1, 0]\n", "reference_pitch.initial_velocity_mps"},
@@ -92,7 +100,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 30 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 32 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
