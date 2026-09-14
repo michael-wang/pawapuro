@@ -62,6 +62,8 @@ int main(int argc, char** argv)
                 if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
                     if (event.key.scancode == SDL_SCANCODE_SPACE && pitch.release()) {
+                        // Idle time before this release belongs to the previous phase.
+                        last_time = SDL_GetTicksNS();
                         const auto& p = pitch.current.position_m;
                         const auto& v = pitch.current.velocity_mps;
                         std::fprintf(stderr, "Reference release: InFlight tick=0 position=[%.6f, %.6f, %.6f] m "
@@ -87,7 +89,7 @@ int main(int argc, char** argv)
             const auto& p = pitch.current.position_m;
             char title[512];
             std::snprintf(title, sizeof(title), "Pawapuro | Right-handed pitcher vs left-handed batter | %s | tick=%llu | "
-                "ball=(%.3f, %.3f, %.3f) m | backlog=%llu | Space:release P:pause .:step Esc:quit",
+                "ball=(%.3f, %.3f, %.3f) m | backlog=%llu | Space:release/rethrow P:pause .:step Esc:quit",
                 pitch.state_name(), pitch.tick, p.x, p.y, p.z, pitch.pending_ticks);
             if (last_title != title) {
                 if (!SDL_SetWindowTitle(window.get(), title)) throw std::runtime_error(SDL_GetError());

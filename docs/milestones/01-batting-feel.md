@@ -1,6 +1,6 @@
 # M1：Batting Feel
 
-更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2 的 reference flight／pause／single-step 已完成，交付 3 尚未開始，Step 1 整體與 M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
+更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2 的 reference flight／pause／single-step 已完成，本輪已加入交付 3 的同球重投及進壘驗證畫面，Step 1 整體仍待使用者 review，M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
 
 ## 完成的定義
 
@@ -115,3 +115,6 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 2026-09-14 後續 staging 校正：已完成右投 vs 左打構圖、1080p 固定視窗、獨立紅土分區與中央標尺；仍是交付 1 延伸，沒有開始交付 2。當前契約與實測設定分別由設計／開發環境文件維護。
 
 2026-09-14 交付 2：已驗證 Ready → release → fixed-tick flight → Complete、pause／single-step、不同 render chunking 的權威 state 一致及單次 arrival。控制／時間／ownership 契約見設計文件，數值與實測證據見開發環境文件。交付 3 的 rethrow／replay loop、20 次重投紀錄與投手動畫均未開始。
+
+
+2026-09-14 進壘 framing／同球重投：依本輪授權完成 provisional 好球帶框、水平置中與 Space 在 Complete 後重投。Debug／Release 各 20 次同物件逐 tick 軌跡比較通過，實際 app 各完成初投加 20 次重投，release／arrival 紀錄一致；pause／single-step 未退步。契約見設計文件、設定與畫面量測見開發環境文件；沒有修改球路物理，沒有開始投手動畫、打者或揮棒。這不是完整 replay framework，也不宣告 M1 體驗驗收完成。

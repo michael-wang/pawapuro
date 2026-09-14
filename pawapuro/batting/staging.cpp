@@ -59,8 +59,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch"}, "");
-        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch"}) {
+        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch", "strike_zone_reference"}, "");
+        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch", "strike_zone_reference"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
@@ -69,6 +69,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (prefix == "release.") only_keys(fields, {"position_m", "ball_marker_radius_m"}, prefix);
                 if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m", "home_dirt_radius_m"}, prefix);
                 if (prefix == "reference_pitch.") only_keys(fields, {"initial_velocity_mps"}, prefix);
+                if (prefix == "strike_zone_reference.") only_keys(fields, {"width_m", "bottom_m", "top_m"}, prefix);
                 if (prefix == "mound.") only_keys(fields, {"radius_m", "top_radius_m", "visual_dirt_radius_m"}, prefix);
             }
         }
@@ -88,6 +89,11 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
             {-1.5f, 1.4f, 15}, {-0.1f, 3, rubber_distance_m});
         candidate.reference_velocity_mps = vector(table, "reference_pitch.initial_velocity_mps", candidate.reference_velocity_mps,
             {-5, -5, -60}, {5, 5, -20});
+        candidate.strike_zone_width_m = number(table, "strike_zone_reference.width_m", candidate.strike_zone_width_m, 0.2f, 1);
+        candidate.strike_zone_bottom_m = number(table, "strike_zone_reference.bottom_m", candidate.strike_zone_bottom_m, 0.2f, 1);
+        candidate.strike_zone_top_m = number(table, "strike_zone_reference.top_m", candidate.strike_zone_top_m, 0.8f, 2);
+        if (candidate.strike_zone_top_m - candidate.strike_zone_bottom_m < 0.2f)
+            throw std::runtime_error("strike_zone_reference.top_m must exceed bottom_m by at least 0.2 m.");
         candidate.ball_marker_radius_m = number(table, "release.ball_marker_radius_m", candidate.ball_marker_radius_m, 0.03f, 0.15f);
         candidate.grass_half_width_m = number(table, "field.grass_half_width_m", candidate.grass_half_width_m, 40, 120);
         candidate.grass_end_z_m = number(table, "field.grass_end_z_m", candidate.grass_end_z_m, 90, 180);

@@ -3,7 +3,10 @@
 namespace pawapuro {
 bool ReferencePitch::release()
 {
-    if (phase != PitchPhase::Ready) return false;
+    if (phase == PitchPhase::InFlight) return false;
+    previous = current = initial;
+    tick = pending_ticks = fractional_credit = 0;
+    paused = false;
     phase = PitchPhase::InFlight;
     return true;
 }

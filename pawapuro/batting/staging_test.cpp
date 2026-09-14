@@ -6,13 +6,13 @@
 #include <string>
 
 namespace {
-std::array<float, 20> values(const pawapuro::BattingStaging& s)
+std::array<float, 23> values(const pawapuro::BattingStaging& s)
 {
     return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
         s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m,
-        s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z};
+        s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m};
 }
 }
 int main(int argc, char** argv)
@@ -42,6 +42,10 @@ int main(int argc, char** argv)
         write("[reference_pitch]\ninitial_velocity_mps = [1, -1, -40]\n");
         if (pawapuro::load_batting_staging(fixture).reference_velocity_mps.z != -40)
             throw std::runtime_error("Reference velocity override was not applied.");
+        write("[strike_zone_reference]\nwidth_m = 0.5\nbottom_m = 0.6\ntop_m = 1.4\n");
+        const auto zone = pawapuro::load_batting_staging(fixture);
+        if (zone.strike_zone_width_m != 0.5f || zone.strike_zone_bottom_m != 0.6f || zone.strike_zone_top_m != 1.4f)
+            throw std::runtime_error("Provisional zone overrides were not applied.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -55,6 +59,10 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[strike_zone_reference]\nwidth_m = -1\n", "strike_zone_reference.width_m"},
+            {"[strike_zone_reference]\nbottom_m = 'low'\n", "strike_zone_reference.bottom_m"},
+            {"[strike_zone_reference]\ntop_m = nan\n", "strike_zone_reference.top_m"},
+            {"[strike_zone_reference]\nbottom_m = 1\ntop_m = 0.9\n", "strike_zone_reference.top_m"},
             {"[reference_pitch]\ninitial_velocity_mps = [1, 0, 0]\n", "reference_pitch.initial_velocity_mps[2]"},
             {"[reference_pitch]\ninitial_velocity_mps = [nan, 0, -40]\n", "reference_pitch.initial_velocity_mps[0]"},
             {"[reference_pitch]\ninitial_velocity_mps = [1, 0]\n", "reference_pitch.initial_velocity_mps"},
@@ -84,7 +92,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 26 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 30 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

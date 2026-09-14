@@ -14,10 +14,11 @@ struct BallState {
     DirectX::XMFLOAT3 velocity_mps;
 };
 
-// One gravity-only reference pitch. No reset/rethrow; create once at app startup.
+// Retain the startup fixture so each completed pitch can be repeated exactly.
 struct ReferencePitch {
     ReferencePitch(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 velocity)
-        : previous{position, velocity}, current(previous) {}
+        : initial{position, velocity}, previous(initial), current(initial) {}
+    const BallState initial;
     BallState previous, current;
     PitchPhase phase = PitchPhase::Ready;
     bool paused = false;

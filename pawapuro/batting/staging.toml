@@ -5,7 +5,8 @@ preset = "right_handed_pitcher_vs_left_handed_batter"
 # Frame from third-base (-X), opposite the future left-handed batter at +X.
 # This presentation camera leaves catcher-view right for the foreground batter.
 position_m = [-0.75, 1.25, -5.0]
-target_m = [0.0, 1.30, 16.8]
+# Aim horizontally through (0, arrival_plane_z), keeping the distant pitcher left.
+target_m = [2.260052, 1.30, 16.8]
 vertical_fov_degrees = 36.0
 
 [release]
@@ -31,3 +32,10 @@ visual_dirt_radius_m = 5.5
 # Silhouette tuning only; rubber distance and mound height remain Native references.
 radius_m = 2.75
 top_radius_m = 0.9
+
+# Provisional development reference only; calibrate against the actual batter model/stance later.
+# Width and heights above ground in metres; centred on home plate at the arrival plane.
+[strike_zone_reference]
+width_m = 0.4318
+bottom_m = 0.5
+top_m = 1.3

@@ -240,3 +240,31 @@ Debug／Release build 與 CTest 均通過；實際 client area 1920×1080、固�
 - Debug D3D12 debug layer／GPU-based validation error/corruption **0**；shutdown 只列出報告當下保留的 device，沒有 live child resource。沒有新增 GPU resource，原單一 frame-in-flight fence ownership 沿用。
 
 Native UI helper 仍無法啟動；上述是真正 app 的 SDL 按鍵路徑與 PrintWindow 檢查，不是人類手動鍵盤測試。暫存檢查腳本移除，logs／擷取留在忽略的 `build/flight-*`。本例飛行約 0.4 秒與畫面可見性已核對，最終速度感／打擊體驗仍需使用者 review。無 drag／spin／Magnus、投手動畫、collision／CCD、rethrow／replay 或 hot reload；240 Hz 不構成未來 bat-ball contact 精度保證。其他 GPU、全部合法初始向量與低 FPS 的視覺平順度尚未驗證。
+
+
+## 進壘 framing／同球重投驗證（2026-09-14）
+
+前節保留 delivery 2 當時的單球結果；本節記錄目前新增的驗證畫面與操作迴圈。沒有新增依賴，Engine／HLSL／球路積分未改。固定 1920×1080、16:9 windowed、不可任意 resize；preset 仍是右投手 vs 左打者。
+
+| 本次設定 | 實際採用值與作用 |
+|---|---|
+| Camera | position **(-0.75, 1.25, -5.0)** m 未變；target **(2.260052, 1.30, 16.8)** m，只改 X；vertical FOV **36°** 未變 |
+| 水平對齊 | target X 由 `-0.75 + 0.75 × (16.8 + 5) / (0.4318 + 5)` 選定，使水平視線通過 arrival plane 的 X=0；沒有 camera tracking 系統 |
+| 新增 Data | `strike_zone_reference.width_m=0.4318`、`bottom_m=0.5`、`top_m=1.3`；高 0.8 m、中心高 0.9 m，只是 provisional reference，需待打者模型／站姿校正 |
+| Native reference | 框中心 X=0、Z=0.4318 m 共用 arrival plane；四條薄幾何的線寬 0.01 m 留在 Native，沒有目前的調參需求 |
+| 保留值 | 其餘既有 TOML 值逐項比較均未變；initial velocity、release、gravity、240 Hz、投手丘／紅土／草地與顏色均未改 |
+
+驗證：
+
+- 沿用前述 x64 developer environment／UTF-8 命令，`cmake --build build/debug`、`cmake --build build/release` 成功；兩者的 `ctest --test-dir build/<configuration> --output-on-failure` 均 **2/2 通過**。Staging 測試涵蓋三值 override／default、錯誤型別／範圍／非有限值及上下界反轉（共 30 個非法案例）。
+- 投球測試在同一個物件重投 **20 次**，每次檢查 initial state／tick／pending／pause 重置及新 fractional credit，逐 tick 與相同初始 fixture 精確比較，arrival 每球只發生一次；原 30／60／120 FPS chunking、catch-up、pause／single-step 測試保留並通過。這是同 build／平台比較，不是跨平台 bit identity 保證。
+- 原生 computer-use helper 仍因 sandbox setup 失敗而無法啟動；改用只針對本次 app process 的 Windows key messages 經 SDL event loop 操作及 PrintWindow 擷取。Debug／Release client 實測皆 **1920×1080**，resize／maximize style 關閉；兩者各完成初投加 **20 次 Space 重投**，21 筆 release 與 21 筆 arrival 各自一致，不需重啟。
+- Ready 截圖量測：藍框 X 範圍 **893～1025**，外框 bounding-box 中心 **959 px**；白色本壘 X 範圍 **895～1035**，bounding-box 中心 **965 px**；release 標記 X 範圍 **717～759**，中心 **738 px**。兩種 build 結果相同。框的幾何中心投影目標為 X=960；bbox 中心受透視及 rasterization 影響。本壘位於地面且 Z 範圍不同，因此容許此數個 pixel 差異。
+- 實際檢視 Ready／Complete 擷取：參考框清楚置中，投手丘中央標尺與出手標記偏左，右側保留 foreground 空間，外野與草地仍延伸。Complete 的球位於框內中上部、水平接近中央；沒有以此實作好壞球規則。
+- Debug pause **19→20 tick**、Release **15→16 tick** 的 single-step 成功；暫停等待期間 state 與 client 畫面逐像素相同，單步後畫面改變，P 恢復後抵達 Complete。
+- 每球 arrival 仍為 **tick 95、0.395833333 s**；球心 **(0.005105, 1.044226, 0.306804)** m，速度 **(1.655000, -4.481804, -41.667000)** m/s。相對框中心約向 +X **0.51 cm**、高 **14.42 cm**，即水平近中、垂直中上；這是跨平面後的離散狀態，並非精確交平面位置。既有 overshoot 限制仍成立。
+- Debug layer／GPU-based validation 啟用，**0 validation errors**；釋放後只列仍供報告使用的 Live ID3D12Device，沒有 live child resource。兩種 build 正常退出 **0**，各完成 572 frames。
+
+操作以設計文件為準：Space 在 Ready 出手、Complete 立即重投；P 暫停／恢復、. 暫停單步、Esc 退出。沒有新增抽象：只有既有具體 staging 欄位、四條框幾何與 initial state 快照；rendering 仍直接讀權威球位置。
+
+以上是實際 app 的自動按鍵／擷取驗證，不是人類手動試玩。真實打者 silhouette 的遮擋、最終好球帶上下界與速度感仍待後續 review；沒有模型、動畫、揮棒或新物理。暗沉感仍延後至人物／lighting 階段。暫存驗證腳本移除，畫面與 logs 留在忽略的 `build/framing-*`。

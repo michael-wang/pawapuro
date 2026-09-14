@@ -95,6 +95,17 @@ BattingReference make_batting_reference(const BattingStaging& staging)
         };
         quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
     }
+    // Provisional reference, not strike/ball judgement. Centre and plane are baseball references.
+    const float zone_half = staging.strike_zone_width_m / 2;
+    const float bottom = staging.strike_zone_bottom_m, top = staging.strike_zone_top_m;
+    constexpr float line_half = 0.005f, zone_z = plate_front_z_m;
+    const XMFLOAT3 zone_color{0.55f, 0.72f, 1.0f};
+    for (float x : {-zone_half, zone_half})
+        quad({x - line_half, bottom, zone_z}, {x - line_half, top, zone_z},
+            {x + line_half, top, zone_z}, {x + line_half, bottom, zone_z}, zone_color);
+    for (float y : {bottom, top})
+        quad({-zone_half, y - line_half, zone_z}, {-zone_half, y + line_half, zone_z},
+            {zone_half, y + line_half, zone_z}, {zone_half, y - line_half, zone_z}, zone_color);
     scene.ball_vertex_start = static_cast<unsigned>(vertices.size());
     // A small faceted sphere, generated only for this one fixture, not a primitive API.
     const auto ball_point = [&](int latitude, int longitude) -> XMFLOAT3 {
