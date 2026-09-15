@@ -30,7 +30,7 @@ struct BattingStaging {
     DirectX::XMFLOAT3 batter_blockout_position_m{1.25f, 0.008f, 0};
     float batter_blockout_height_m = 1.7f;
     // Shared presentation multipliers for the two static Character Style v1 fixtures.
-    float blockout_head_scale = 1.08f, blockout_foot_scale = 1.6f;
+    float blockout_head_scale = 1.08f, blockout_foot_planar_scale = 1.9f, blockout_foot_height_scale = 0.9f;
     float blockout_hand_scale = 1.3f, blockout_bat_thickness_scale = 1.25f;
     // Preserve the original pentagon proportions: depth equals width, tip stays at Z=0.
     float home_plate_depth_m() const { return strike_zone_width_m; }

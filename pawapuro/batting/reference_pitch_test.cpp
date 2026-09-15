@@ -14,9 +14,10 @@ bool equal(const ReferencePitch& a, const ReferencePitch& b)
     return a.tick == b.tick && a.phase == b.phase && equal(a.current.position_m, b.current.position_m)
         && equal(a.current.velocity_mps, b.current.velocity_mps);
 }
+BattingStaging fixture_staging;
 ReferencePitch fixture()
 {
-    const BattingStaging s;
+    const auto& s = fixture_staging;
     return ReferencePitch(s.release_position_m, s.reference_velocity_mps, s.strike_zone_plane_z());
 }
 ReferencePitch ticks(unsigned count)
@@ -28,9 +29,11 @@ ReferencePitch ticks(unsigned count)
     return p;
 }
 }
-int main()
+int main(int argc, char** argv)
 {
     try {
+        require(argc == 2, "Expected authored staging path");
+        fixture_staging = load_batting_staging(argv[1]);
         BattingStaging geometry;
         require(geometry.home_plate_depth_m() == geometry.strike_zone_width_m
             && geometry.strike_zone_plane_z() == geometry.home_plate_depth_m() / 2, "Plate proportions/centre differ");
@@ -90,12 +93,12 @@ int main()
                 }
             }
         }
-        // An independently tuned release must not create a zero-length throwing forearm.
+        // An independently tuned release must not create a zero-length shoulder-to-hand limb.
         {
             BattingStaging s;
             const float h = s.pitcher_blockout_height_m;
             const auto o = s.pitcher_blockout_position_m;
-            s.release_position_m = {o.x - 0.30f*h, o.y + 0.66f*h + 0.035f, o.z - 0.54f*h - 0.13f};
+            s.release_position_m = {o.x - 0.16f*h, o.y + 0.57f*h + 0.035f, o.z - 0.40f*h - 0.13f};
             bool rejected = false;
             try { (void)make_batting_reference(s, {0, 1, s.strike_zone_plane_z()}, 16.0f / 9); }
             catch (const std::runtime_error&) { rejected = true; }
@@ -170,11 +173,22 @@ int main()
         require(equal(baseline_prediction.state.position_m, baseline_actual.state.position_m)
             && equal(baseline_prediction.state.velocity_mps, baseline_actual.state.velocity_mps)
             && baseline_prediction.time_s == baseline_actual.time_s, "Baseline prediction differs");
-        const BattingStaging s;
+        const auto& s = fixture_staging;
+        const DirectX::XMFLOAT3 centre{0, (s.strike_zone_bottom_m + s.strike_zone_top_m) / 2, s.strike_zone_plane_z()};
+        const auto evaluated = baseline_actual.state.position_m;
+        require(std::abs(evaluated.x - centre.x) < 0.0001f
+            && std::abs(evaluated.y - centre.y) < 0.0001f && evaluated.z == centre.z,
+            "Authored reference pitch misses slot 5 (0.1 mm tolerance)");
         const auto predicted_screen = project_batting_point(s, baseline_prediction.state.position_m, 16.0f / 9);
         const auto actual_screen = project_batting_point(s, baseline_actual.state.position_m, 16.0f / 9);
         require(predicted_screen.x == actual_screen.x && predicted_screen.y == actual_screen.y,
             "Prediction and evaluation screen coordinates differ");
+        const auto centre_screen = project_batting_point(s, centre, 16.0f / 9);
+        require(std::abs(predicted_screen.x - centre_screen.x) * 960 < 0.05f
+            && std::abs(predicted_screen.y - centre_screen.y) * 540 < 0.05f, "Slot 5 screen alignment differs");
+        std::printf("Centre evaluation: p=[%.9f, %.9f, %.9f] centre pixel=[%.6f, %.6f] prediction pixel=[%.6f, %.6f]\n",
+            evaluated.x, evaluated.y, evaluated.z, (centre_screen.x+1)*960, (1-centre_screen.y)*540,
+            (predicted_screen.x+1)*960, (1-predicted_screen.y)*540);
         const auto& p = last.current.position_m;
         const auto& v = last.current.velocity_mps;
         std::printf("PASS: deterministic ticks, 30/60/120 FPS, catch-up, pause, single-step, one-shot arrival, 20 rethrows with identical per-tick trajectories.\n"

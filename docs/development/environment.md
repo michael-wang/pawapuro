@@ -425,3 +425,40 @@ Release fixture 的 world landmarks（公尺，腳底點為鞋底中央，其餘
 - 實際圖可見兩者共用大頭／大鞋／簡單手與緊湊軀幹語言；打者雙手、粗 bat 與身腳間距清楚，仍在右側，沒有遮住 zone、release 或主要球路。投手跨步 Z 深度仍受正面透視壓縮；這是靜態 silhouette review，不能代替未來動作驗收。Zone 與打者大頭的高度關係保留待 review，未為配合人物修改規則。
 - Camera／field／zone／ball Data 未改，simulation、prediction 與 renderer source 未改。兩種 build 各 21 筆 release／arrival／evaluation 紀錄與前版完全一致：arrival tick **95**、t=**0.395833333 s**、position **(0.005105,1.044226,0.306804)**、velocity **(1.655,−4.481804,−41.667)**；plane prediction／actual pixel **(959.574707,663.836792)**，error **0 px**。
 - Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource（僅供報告使用的 device）。Debug／Release 分別完成 **609／608 frames**。原生 computer-use helper 啟動失敗，沿用僅針對 app process 的 Windows key messages／SDL event loop／DPI-aware PrintWindow，非人類手動試玩。暫存操作腳本已移除；沒有新增 dependency、renderer／character／animation architecture。
+
+
+## 扁腳／帽冠／單段手臂與紅中 fixture（2026-09-15）
+
+本次規則見 [Character Style v1](../design/batting-feel.md)。沒有 rig／skeleton／animation 或新投球物理。
+
+- 實際 1920×1080 比較 foot planar／height **1.9／0.9** 與 **2.1／0.7**，擷取於 `build/calibration-feet-a-ready.png`／`calibration-feet-b-ready.png`。選 **1.9／0.9**：X/Z 各比前版增大 **18.75%**、Y 減少 **43.75%**；第二組近景更像薄片，第一組仍保有鞋的體積。投手單鞋 XYZ 約 **0.79135×0.19845×0.931 m**，打者 **0.5491×0.1377×0.7752 m**，鞋底 Y 與角色原點不變。
+- `[character_style]` 以 `foot_planar_scale`（1～2.5）、`foot_height_scale`（0.5～1.5）取代單一 `foot_scale`；舊 key 拒絕，不建相容層。Head=1.08、hand=1.3、bat thickness=1.25 均未改。只新增一個必要自由度，仍沿用 startup load／default／finite／range validation。
+- 帽子沿用橢球：crown radii 為 **(0.255,0.155,0.235)×head_scale×角色 scale**，中心高於頭中心 **0.12×head_scale×角色 scale**，與頭上半部相交；帽簷 radii **(0.23,0.022,0.16)×head_scale×角色 scale**，高度在頭中心上方 0.075 倍、向前偏 0.22 倍。投手朝 −Z、打者朝 +Z，沿用其既有小幅 lateral offset。Crown／brim 比例留 Native，未新增帽子 Data 或 accessory API。投手 crown 完整 XYZ 約 **1.349×0.820×1.244 m**，打者 **0.936×0.569×0.863 m**。
+- 所有手臂改為 shoulder-to-hand／glove 的單一 tapered segment，去除肘端點與兩段接合。Throwing arm／batter arm 半徑為角色 scale 的 **0.055→0.04**，glove arm **0.055→0.045**；手與 bat 端點不變。這是 rubber-like 視覺規則的靜態近似，尚無 bending、curve 或 deformation。
+
+紅中初速推導（只算一次寫回既有 velocity Data，不加入 runtime solver）：
+
+- 目標 **(0,0.775,0.4318) m**；release **(−0.65,2.05,16.8) m**，保留 `vz=−41.667 m/s`、`g=−9.80665 m/s²`、`dt=1/240 s`。
+- `t=(target_z-release_z)/vz=0.3928336573307414 s`；`a=fract(t/dt)=0.28007775937793156`。現有 evaluation 在相鄰 constant-acceleration ticks 間做線性 interpolation，因此重力位移為 `0.5*g*(t²+a*(1-a)*dt²)`；保留這個小項，而非假裝 evaluation 已是精確連續拋物線。
+- `vx=(target_x-release_x)/t`，`vy=(target_y-release_y-重力位移)/t`。寫入 **(1.654644371,−1.319413788,−41.667) m/s**，總速 **150.194554 km/h**。Runtime 只有這份 velocity，沒有第二份 target／speed Data；TOML 浮點與逐 tick float rounding 的殘差交由實際 simulation 測試。
+- CTest 現在讀正式 staging TOML；中心誤差容許每軸 **0.1 mm**、投影中心誤差每軸 **0.05 px**，不是測死某組 velocity。保留全部 20 rethrows、30／60／120 FPS chunking、pause／single-step、arrival once、prediction／projection tests；退化 arm 測試改檢查 shoulder／hand 重合。Debug／Release build 成功，CTest 各 **2/2**；staging 的 **44 個非法案例**通過。
+
+實際與預測結果（兩種 build 一致）：
+
+| 項目 | 結果 |
+|---|---|
+| Prediction／actual interpolated evaluation XYZ | **(−0.000000450,0.775000632,0.431800008) m**，兩者相同 |
+| 對設計中心 world error | 約 **0.00000078 m**；prediction vs actual error=0 |
+| Evaluation time／velocity | **0.392833450 s**／**(1.654644,−5.171800,−41.667) m/s** |
+| Raw Complete state | tick **95**、t=**0.395833333 s**、p=**(0.004963,0.759459,0.306804)**、v=**(1.654644,−5.201219,−41.667)** |
+| Gameplay centre 投影 | **(959.999939,750.853821) px** |
+| Prediction／actual evaluation 投影 | **(959.999817,750.853638) px**，兩者 ΔX=ΔY=distance=**0 px** |
+| Prediction 對 gameplay centre 投影誤差 | 約 **0.000220 px** |
+| Screenshot zone bounds／centre | **X=826～1094、Y=604～898**／**(960,751) px**，與前版相同 |
+| Screenshot 橘環 bounds | **X=934～985、Y=725～776**；raster 外緣中心 (959.5,750.5)，與解析球心的 subpixel／筆畫取樣差小於 1 px |
+
+Complete 畫面仍畫完整 crossing tick 的球，球心 **(967.034790,759.215210) px**，不是 interpolated evaluation sample。它比紅中環約前移一小段；未修改 rendering 或 physics 使其吸附。此差異與真正 evaluation error 分開回報。
+
+- Debug／Release 實際 app 各完成初投加 **20 次重投**，每次 release／arrival／evaluation 紀錄各自相同。Pause 等待畫面逐像素不變，single-step **11→12 tick**，正常 exit 0，各完成 **608 frames**。Ready／暫停 tick 48 的 Mid-flight／Complete 三張 1920×1080 擷取在 `build/calibration-debug-*.png`／`calibration-release-*.png`，log 同前綴。
+- 實際圖可見更扁的鞋底、包住頭頂的帽冠與單段手臂；兩手握棒、release 球及主要球路仍可辨。帽冠與手臂仍是低細節 static fixture，不宣稱完成動態可讀性。Camera／projection、好球帶、場地、人物原點與 ball radius Data 逐項比對未改；reference_pitch.cpp/.hpp、renderer、main loop 均未改。
+- Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource（僅供報告的 device）。原生 computer-use helper 啟動失敗，沿用 process-targeted Windows key messages／SDL event loop／DPI-aware PrintWindow；這是實際 app 自動操作與畫面檢視。候選／截圖／logs 留在忽略的 build，暫存驗證腳本移除。沒有新增 dependency 或 animation architecture。

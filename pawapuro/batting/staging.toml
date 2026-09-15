@@ -16,9 +16,10 @@ position_m = [-0.65, 2.05, 16.8]
 ball_marker_radius_m = 0.085
 
 # Gravity-only fixture, approximately 150 km/h; not a tuned pitch model.
-# Lateral velocity approximately aims the baseline release toward the plate centre.
+# Centre (slot 5) fixture: retain Z speed; solve X/Y for the zone centre with fixed-tick crossing interpolation.
+# Derivation and tolerance are recorded in docs/development/environment.md; velocity is the only runtime input.
 [reference_pitch]
-initial_velocity_mps = [1.655, -0.6, -41.667]
+initial_velocity_mps = [1.654644371, -1.319413788, -41.667]
 
 [field]
 grass_half_width_m = 85.0
@@ -57,6 +58,7 @@ height_m = 1.7
 # Height remains the overall proportion scale; feet stay grounded as their size changes.
 [character_style]
 head_scale = 1.08
-foot_scale = 1.6
+foot_planar_scale = 1.9
+foot_height_scale = 0.9
 hand_scale = 1.3
 bat_thickness_scale = 1.25

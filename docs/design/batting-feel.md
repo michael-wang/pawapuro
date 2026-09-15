@@ -101,9 +101,11 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 **角色不是要像真人，而是要讓玩家一眼讀懂力量、節奏與情緒。** 真實人體只作參考，重心與動作方向的可讀性優先。
 
 - **Large head**：放大頭部，讓遠距離注意力、帽簷方向與未來眼神／情緒容易辨識。
-- **Large feet**：大腳表達站穩、踩地、跨步、煞車與重心轉移，形成有重量的輪廓。
+- **Large, flat feet**：腳的 X/Z footprint 偏大、Y 偏扁，強調踩住地面的底盤感；以站穩、跨步、煞車與重心轉移的可讀性優先，不追求真實鞋型。
+- **Oversized cap**：帽冠包覆大頭上半部，寬帽簷從前方伸出並表達朝向；不能像浮空圓盤。
 - **Detached / simplified body-foot relationship**：身體與腳可分離或簡化連接；間距是風格特徵，並非待修的解剖缺陷。
 - **Simple spherical hands**：球形／橢球手即可表達握球、握棒與移動方向，不做手指細節或 finger rig。
+- **Continuous rubber-like arms**：手臂是 shoulder 直接連到球形手的連續簡化肢體，不要求可見 upper arm／forearm 或 elbow anatomy，除非日後 gameplay readability 證明必要。目前用單一直線 segment，沒有 deformation 或彎曲系統。
 - **Silhouette first**：未來投手的 ready、抬腿、跨步、旋轉、release、follow-through，以及打者的 ready、load、啟動、通過 zone、follow-through／失衡，都應能快速區分；不為靜態漂亮犧牲動作輪廓。
 - **Exaggerated equipment allowed**：球、bat、glove、鞋、帽／頭盔可誇張，以提升 readability、impact 與 motion clarity，並保持世界內部一致。
 - **Simple face first**：先用簡單眼睛、眉毛或帽簷／頭部方向；有實際情緒需求才擴充，不預建 facial animation。
@@ -115,7 +117,7 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 
 右投手與左打者使用同一組簡單橢球／短圓柱比例，在既有 Vertex path 產生固定幾何，只驗證 composition、人物尺度與遮擋。投手現改為唯一的靜態 release pose：後腳在投手板區域、前腳跨向本壘，pelvis／chest 前移前傾，右臂展開至既有 release 附近，左手手套收在身前。打者仍位於捕手視角右側、身體朝本壘，球棒斜向後上方；Character Style v1 校正造型比例，保留 ready stance 與球棒端點。姿勢在 Ready／flight／Complete 都固定，沒有動作或揮棒軌跡，release reference 不隨人物移動。
 
-`[pitcher_blockout]` 與 `[batter_blockout]` 各保留 `position_m` 與 `height_m`；height 是站立比例 scale，頭／帽放大後不再等於精確總高。投手原點是投手板附近後腳參考，打者原點是腳底高度參考。新增一份共用 `[character_style]`，只提供 head／foot／hand scale 與 bat thickness scale，因本次需要反覆比較且兩個角色應採同一造型語言。沿用 startup defaults／validation；軀幹、短褲、帽簷與 pose 端點的固定比例留 Native，不把每個部位變成 Data。角色只是 Pawapuro scene fixture，沒有新增 Engine API 或正式人物 pipeline。
+`[pitcher_blockout]` 與 `[batter_blockout]` 各保留 `position_m` 與 `height_m`；height 是站立比例 scale，頭／帽放大後不再等於精確總高。投手原點是投手板附近後腳參考，打者原點是腳底高度參考。新增一份共用 `[character_style]`，只提供 head／hand scale、foot planar／height scale 與 bat thickness scale，因本次需要反覆比較且兩個角色應採同一造型語言。沿用 startup defaults／validation；軀幹、短褲、帽簷與 pose 端點的固定比例留 Native，不把每個部位變成 Data。角色只是 Pawapuro scene fixture，沒有新增 Engine API 或正式人物 pipeline。
 
 ### Field readability／presence pass
 
@@ -125,13 +127,13 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 
 既有 Vertex path 加入左右打擊區白線、一／三壘低矮白色 blockout、兩側界外線及帶頂緣的初步外野牆。依使用者選擇保留標準 90° diamond 方向，允許一／三壘在窄 FOV 視野外，不壓縮位置換取入鏡；界外白線在打擊區外才開始顯示，避免交叉污染近景方框。這些元素只提供方位、打席尺度與外野邊界，不加入跑壘、界內外／全壘打判定或碰撞。白線尺寸、壘包位置／尺寸、牆距／高度先保留具體 Native fixture，尚無反覆調參證據；不建立 stadium／terrain／animation 系統。
 
-靜態 release fixture 只在 `reference_scene.cpp` 直接列出比例化的腳、pelvis、chest、肩、肘與手部端點，沿用橢球／短圓柱。手心在 release 後方 0.13 m、下方 0.035 m，端點從既有 release Data 推導，只有 presentation 依賴 simulation 初始位置，反向沒有依賴；不是 IK。對重合端點拒絕建立幾何，避免零向量 normalization。沒有新增 pose Data schema、joints、骨架、hierarchy 或 interpolation。前跨深度在 batting 視角受透視縮短，靜態對齊不代表動態 body mechanics 已驗收；正式 rig／animation pipeline 尚未開始。
+靜態 release fixture 只在 `reference_scene.cpp` 直接列出比例化的腳、pelvis、chest、肩與手部端點，沿用橢球／短圓柱。手心在 release 後方 0.13 m、下方 0.035 m，端點從既有 release Data 推導，只有 presentation 依賴 simulation 初始位置，反向沒有依賴；不是 IK。對重合端點拒絕建立幾何，避免零向量 normalization。沒有新增 pose Data schema、joints、骨架、hierarchy 或 interpolation。前跨深度在 batting 視角受透視縮短，靜態對齊不代表動態 body mechanics 已驗收；正式 rig／animation pipeline 尚未開始。
 
 ## Reference pitch：固定步長與同球重投契約
 
 這是 **Pawapuro Native 的 gravity-only reference fixture**，不是最終棒球模型。`batting/reference_pitch.cpp/.hpp` 擁有 Ready → InFlight → Complete、pause flag、tick、previous/current ball state 與固定步長欠帳；Engine 不知道投球、本壘或 release。保存唯讀 initial state，讓 Complete 後可重投相同 fixture。
 
-- 初始位置直接取既有 `release.position_m`。投球初始條件 Data 是 `reference_pitch.initial_velocity_mps` 三維向量（m/s），不另存 speed 或 target。預設向量的 X 分量讓基準 release 大致朝本壘中央；更改 release 時不會偷偷重新瞄準。每軸範圍 X/Y=−5～5、Z=−60～−20 m/s，需 finite；這是此 fixture 的安全載入界限，並不保證每個合法組合都投進可見區域。
+- 初始位置直接取既有 `release.position_m`。投球初始條件 Data 是 `reference_pitch.initial_velocity_mps` 三維向量（m/s），不另存 speed 或 target。目前正式 TOML fixture 的設計目標為 **5 號位／紅中**，即 `(0, (bottom+top)/2, strike_zone_plane_z)`。保留 Z 速度，由既有 constant-gravity 固定 tick 與 crossing interpolation 反推 X/Y 後寫回 velocity Data；推導與實測見開發環境文件。Runtime 不另存 target，也不會在更改 release／zone 後偷偷重新瞄準；要維持紅中 fixture 時須重新計算並通過中心契約測試。省略欄位的舊安全 fallback 不保證紅中，沒有通用 targeting system。每軸範圍 X/Y=−5～5、Z=−60～−20 m/s，需 finite；這是此 fixture 的安全載入界限，並不保證每個合法組合都投進可見區域。
 - Native 暫定 **240 Hz、dt=1/240 s ≈4.166667 ms**；重力 `(0,−9.80665,0)` m/s²。每 tick 用 constant-acceleration 更新 `p += v*dt + 0.5*g*dt²`、`v += g*dt`，保存 previous/current，不使用 render delta 積分。這個 Hz 尚未證明足以處理 bat-ball contact。
 - App 以 SDL monotonic nanoseconds 提供經過時間。Pawapuro accumulator 使用整數 `ns × Hz` credit（每 tick 消耗 10⁹），保留不足一 tick 的餘額。每 frame 最多 **16 ticks**，為 30 FPS 與短暫延遲保留追趕餘裕；超額欠帳保留並顯示於 title 的 `backlog`，不 clamp／丟棄時間、不放大 dt。持續低 FPS 時會落後 wall time；Complete 後不再需要剩餘欠帳。
 - Ready／Paused／Complete 不累積新 wall time。Pause 保留既有 fractional credit／backlog；單步是額外執行一個固定 tick，仍保持暫停，若跨平面則進入 Complete。App 每圈先推進舊狀態，再處理該 frame 的按鍵；live input 的接受邊界仍依事件輪詢，不宣稱不同 FPS 下相同人類按鍵時刻一定落在同一 tick。
