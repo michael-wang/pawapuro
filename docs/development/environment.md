@@ -666,3 +666,23 @@ Evidence：`build/pitcher-s0/pitcher-normal.mp4`、`pitcher-slow.mp4`、`pitcher
 正式替換的自動審核拒絕覆寫未經 human review 的 source，建議隔離候選。其後發現正式三檔已與候選 bytes 相同，與拒絕回報不一致；逐檔確認候選 hash 與備份 HEAD blob 後，已恢復原三檔，沒有 reset／改歷史。最終交付 `review/s02b/pitcher.blend`／GLB／TOML，正式資產仍為 S0.2A。Candidate source hash `b3dcccd38ad7c216b18ccb69b4a664240051de0b988618f449737611748dd366`，export 沒有保存／重建 source。升為正式資產仍待 review 後確認。
 
 限制：低面數彎肘仍帶稜角，部分收勢手臂被身體遮擋；全段 ring／proxy 數值不保證所有 self-intersections 都已排除。沒有改 C、camera／深色鞋／lighting；沒有 production C++／HLSL／CMake／staging 或 runtime／GPU 測試。停在 Michael＋Julia review，未宣告整支投球通過。
+
+
+### S0.2B Promotion to Official Pitcher Asset（2026-09-15）
+
+Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。
+
+基準 HEAD／main／origin/main 與 live remote main 均為 `4dc9569de51a7b7b099f6259dbafd05310c62352`，工作樹乾淨。核對接受候選 Git blobs 後，將 review/s02b 三檔明確複製至正式路徑，保留歷史 artifact；未執行 motion edit。
+
+先對忽略目錄 `build/pitcher-s02b-promotion/export-check/` 的精確來源副本執行既有 exporter，取得全 205 格 source samples；重匯出的 GLB／TOML 與接受候選逐 byte 相同。正式三檔未經 Blender 重新保存或匯出。Promotion 後執行既有 validator、`verify_sample.py --asset-dir`、`inspect_motion.py`、`check_ready_lift.py --scope arm-glove`，全部 exit 0／PASS，未改腳本、assert 或容差。
+
+- Validator：0 errors／warnings／infos／hints。
+- 全 205 格 source／GLB mesh 最大差 1.283923e-6 m；round-trip mesh 1.567953e-6 m；release alignment 5.454740e-7 m，均在原 0.1 mm 容差內。
+- 固定骨長、grip binding、四段 contacts、motion checks 通過；60 fps／1–205／release 97 不變。
+- A／B 回歸以 S0.2A before（18894d26…）比較：body／head／feet 全段矩陣差 0；左臂 50–96 外、右臂 50–109 外矩陣差 0。Ready／coil 藏球 q 最大 0.416656 < 原 0.8，預設 frame 1；全段右 tube 半徑比最小 0.347050 > 原 0.25；f79 手套朝本壘 cosine 0.999962 > 原 0.98。既有 B scope 保護 A 的身體／腳／合手，不套用 A 的全 mesh 不變規則。
+- 驗證後正式三檔與接受候選逐 byte 相同，evaluated animation、weights、marker、metadata 均未改變。SHA256：
+  - `pitcher.blend`：`b3dcccd38ad7c216b18ccb69b4a664240051de0b988618f449737611748dd366`
+  - `pitcher.glb`：`1ce3f915a5f869d85f6e267b44b0534449c8f9f48e95e82bea2d2db7b8b9eb1f`
+  - `pitcher.toml`：`f5206448621d7bcd5cb1e43c2327ff23bbc4815801eb2789e93cbaf4712aeaf0`
+
+證據 JSON／logs 留在忽略的 `build/pitcher-s02b-promotion/`。本次未新增影片觀看、正常速度播放自看、runtime／GPU／C++ 測試，不把此前未完成項目補寫為完成。沒有 production C++／renderer／staging 變更。完成後停止，等待下一個授權。

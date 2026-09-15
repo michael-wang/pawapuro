@@ -171,6 +171,6 @@ S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app�
 
 ### S0.2B：Arm Deformation Fix＋Glove Direction
 
-已交付獨立右臂／手套 candidate、f77／79／81 兩角度比較、Ready／coil 回歸、手套姿勢與正常速度預覽。Michael 對左腳抬起／蓄力連動的接受已記錄，逐格保護未改。正式三檔保留 S0.2A，候選位於 `pawapuro/batting/pitcher/review/s02b/`，等待 review 後另行確認升版；不是整支動畫通過。
+已交付獨立右臂／手套 candidate、f77／79／81 兩角度比較、Ready／coil 回歸、手套姿勢與正常速度預覽。Michael 對左腳抬起／蓄力連動的接受已記錄，逐格保護未改。Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。
 
-既有匯出／motion 檢查與 B 的區段保護均通過；正常速度播放自看與 runtime／GPU 測試未完成。證據入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md)，實測見 environment。完成後停在 Michael＋Julia review gate，不自行進入 C 或 S1。
+既有匯出／motion 檢查與 B 的區段保護均通過；正常速度播放自看與 runtime／GPU 測試未完成。證據入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md)，實測見 environment。Promotion 後既有驗證再次通過，保留 review/s02b 作為歷史驗收 artifact。完成後停止，等待下一個授權。

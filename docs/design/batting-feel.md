@@ -274,4 +274,4 @@ Authoring 使用分開的 shape-preserving 曲線；投球階段以 FK 方向的
 
 Michael 接受「抬腳尤其左腳現在很棒」：保留該左腳／蓄力連動，不擴大解讀為整支投球通過。本輪固定整段 body／head／feet 與右手／grip 軌跡，僅修右臂 tube 的 pose roll／局部 weights，以及左臂 50–96 的展開／指向／回收。手套指向以 world game −Z 為準，不用 chest-local forward；97 起接回既有左臂。LBS／rest／hierarchy／topology、唯一 release marker、camera、staging／Native 物理均不變。
 
-兩個局部策略比較後，選用協調 roll 加肘附近有限混合 weights；不新增骨骼／solver／corrective shapes，也不換 skinning。Saved source candidate 與操作入口由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。此版停在 Michael＋Julia review；正式來源仍保留 S0.2A，C 與 S1 未授權實作。
+兩個局部策略比較後，選用協調 roll 加肘附近有限混合 weights；不新增骨骼／solver／corrective shapes，也不換 skinning。Saved source candidate 與操作入口由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。 `review/s02b/` 保留驗收基準。

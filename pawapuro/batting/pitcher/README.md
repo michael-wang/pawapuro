@@ -1,6 +1,6 @@
-# 右投手 Authoring Sample（S0.2B review candidate）
+# 右投手 Authoring Sample（正式資產 S0.2B）
 
-2026-09-15：Michael 明確接受「抬腳尤其左腳現在很棒」；這只代表左腳抬起／蓄力連動接受，不擴大為所有 A 項目、整支動畫或 gameplay 通過。本輪只交付右臂 deformation 與 stride 手套朝本壘的 **S0.2B candidate，等待 Michael＋Julia review；C／S1 未開始**。
+2026-09-15：Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。
 
 ## S0.2B：先看這些
 
@@ -12,7 +12,7 @@
 - `before-batting-45-105.mp4`／`after-batting-45-105.mp4`：45–105、61 frames、60 fps／1×、1.016667 s。Before 使用已核對來源 hash 的 S0.2A renders，沒有重渲整段。
 - `transition-continuous.jpg`、`deformation-overview.jpg`、`final/arm-diagnosis/`：分手／接回、整段抽樣與局部診斷。影格檢視不等於正常速度播放自看。
 
-**候選 authoring truth 是 `review/s02b/pitcher.blend`**，同目錄有 GLB／TOML，預設 frame 1。正式 `pitcher.blend`／GLB／TOML 仍保持 45305e36 的 S0.2A，等待 review 後另行確認升版。自動審核拒絕直接覆寫正式來源，因此本次以獨立候選交付，沒有改變日常 export 的來源語義。S0.2B before 副本在 `build/pitcher-s02b/before/`；不要誤用 `build/pitcher-s02a/before/`，那是 S0.1。
+**正式 authoring truth 是 `pitcher.blend`**，同目錄 GLB／TOML 同步升版，預設 frame 1。三檔與 commit `4dc9569de51a7b7b099f6259dbafd05310c62352` 的接受候選逐 byte 相同；`review/s02b/` 保留歷史驗收 artifact。Promotion 未重新保存正式 source，隔離副本重匯出亦完全一致。驗證見 [environment](../../../docs/development/environment.md#s02b-promotion-to-official-pitcher-asset2026-09-15)。B before 位於 `build/pitcher-s02b/before/`，是 S0.2A；`build/pitcher-s02a/before/` 是 S0.1。
 
 ### 修法與驗證入口
 
@@ -22,23 +22,27 @@
 
 全 205 frames：body／head／feet matrices 差 0，左臂授權區間外差 0；右臂關節位置最大差約 3.19 μm、右手／grip matrix 最大絕對差 7.63e-6，屬 parent compensation 浮點誤差。只改 144 個右臂 tube vertices 的 weights；deformation 差異與 trajectory 分開量測。原 source／GLB／round-trip／release 容差不變，詳見 [environment](../../../docs/development/environment.md#s02b-arm-deformationglove-direction2026-09-15)。
 
-沿用下方 `$Blender`／`$Pitcher` 工具路徑，對候選請明確指定：
+日常匯出／驗證使用正式資產；export 僅供有意匯出已存檔來源時執行，promotion 本身不重寫正式匯出檔：
 
 ```powershell
-$Candidate = "$Pitcher/review/s02b"
+$Blender = 'C:/astra-dev/tools/blender-4.5.13-windows-x64/blender.exe'
+$Pitcher = 'C:/astra-dev/pawapuro/pawapuro/batting/pitcher'
+$Asset = $Pitcher
 $Evidence = 'C:/astra-dev/pawapuro/build/pitcher-s02b'
-& $Blender --background --factory-startup "$Candidate/pitcher.blend" --python-exit-code 1 --python "$Pitcher/export_sample.py" -- --evidence $Evidence
-& 'C:/astra-dev/tools/gltf-validator-2.0.0-dev.3.10/gltf_validator.exe' -o -a "$Candidate/pitcher.glb" > "$Evidence/validator.json"
-& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/verify_sample.py" -- --asset-dir $Candidate --evidence $Evidence
-& $Blender --background --factory-startup "$Candidate/pitcher.blend" --python-exit-code 1 --python "$Pitcher/inspect_motion.py" -- --output "$Evidence/motion-audit.json"
-& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/check_ready_lift.py" -- --scope arm-glove --before "$Evidence/before/pitcher.blend" --after "$Candidate/pitcher.blend" --output "$Evidence/local-comparison.json"
+& $Blender --background --factory-startup "$Asset/pitcher.blend" --python-exit-code 1 --python "$Pitcher/export_sample.py" -- --evidence $Evidence
+& 'C:/astra-dev/tools/gltf-validator-2.0.0-dev.3.10/gltf_validator.exe' -o -a "$Asset/pitcher.glb" > "$Evidence/validator.json"
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/verify_sample.py" -- --asset-dir $Asset --evidence $Evidence
+& $Blender --background --factory-startup "$Asset/pitcher.blend" --python-exit-code 1 --python "$Pitcher/inspect_motion.py" -- --output "$Evidence/motion-audit.json"
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/check_ready_lift.py" -- --scope arm-glove --before "$Evidence/before/pitcher.blend" --after "$Asset/pitcher.blend" --output "$Evidence/local-comparison.json"
 ```
 
 `verify_sample.py --asset-dir` 只選擇待檢資產，不改 staging；`check_ready_lift.py --scope arm-glove` 保留 B 的逐格保護，原 A 規則仍可單獨執行。`inspect_motion.py` 對 S0.2B 仍執行原 checks。Renderer 可用既有 `--frames` 渲染 45–105；encoder 核對 manifest 的連續範圍與實際檔案，再解碼驗證 FPS／frames。Sheets 使用 `assemble_ready_lift.py --scope arm-glove --evidence ... --before-renders .../build/pitcher-s02a`，不建立新 preview framework。
 
-目前已檢視局部、連續影格與整段抽樣，未完成正常速度播放自看，未重試已知失敗的播放器；沒有新參考影片觀看。沒有 runtime／GPU／C++ build 測試。低面數肘彎與部分收勢遮擋仍待 human review，數值不代表完整 self-collision 保證；C 的追加左旋／右腳跨前維持待處理。
+目前已檢視局部、連續影格與整段抽樣，未完成正常速度播放自看，未重試已知失敗的播放器；沒有新參考影片觀看。沒有 runtime／GPU／C++ build 測試。右臂 deformation 已獲 human acceptance；收勢遮擋仍須隨 C review，數值不代表完整 self-collision 保證；C 的追加左旋／右腳跨前維持待處理。
 
-## S0.2A 正式基準與既有操作
+## S0.2A 歷史基準與操作紀錄
+
+以下保留 A 交付當時的 scope、限制與命令；目前 A／B 已接受，正式 S0.2B 請使用上方入口。舊 A 的 72–205 全 mesh 不變檢查不適用於 B 的局部 deformation。
 
 2026-09-15：本版只修正 Closed Ready、合手藏球與連動抬左腳，**等待 Michael＋Julia review／可能再修正，並非整支投球已通過**。S0.1 同樣是未驗收 candidate；本輪沒有進入 B、C 或 S1。
 
