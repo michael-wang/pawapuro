@@ -1,10 +1,10 @@
-# 右投手 Authoring Sample（正式資產 S0.2C）
+# 右投手 Authoring Sample（正式 Style Feet v1A；motion S0.2C）
 
-2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A feet candidate 待 style review、未 promotion。正式三檔沒有修改；球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× planar footprint 已通過 human review 並原樣 promotion 為正式三檔；接受限於支撐尺寸，Foot Shape／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
 
 ## Style Polish v1A：1.25× planar feet candidate
 
-只改 `review/style-feet-v1a/pitcher.blend` 的 440 個 rigid foot vertices：Blender local X／Y（game X／Z）繞各 foot rest anchor 放大 1.25×，local Z／厚度不變。實際 398 個位置改變，中心軸 42 個不動；1922 個非腳部 vertices、全 weights／topology／colors／骨架／全部 animation channels／grip／marker 完全保留。正式本目錄三檔未覆寫，rubber arm 未改。
+只改 `review/style-feet-v1a/pitcher.blend` 的 440 個 rigid foot vertices：Blender local X／Y（game X／Z）繞各 foot rest anchor 放大 1.25×，local Z／厚度不變。實際 398 個位置改變，中心軸 42 個不動；1922 個非腳部 vertices、全 weights／topology／colors／骨架／全部 animation channels／grip／marker 完全保留。現已將此接受版本 byte-preserving promotion 到正式本目錄三檔，rubber arm 未改；`review/style-feet-v1a/` 保留歷史 review artifact。
 
 | 尺寸，m | S2 baseline | v1A candidate |
 |---|---:|---:|
@@ -20,17 +20,17 @@ Ready 的右腳 world X／Z extent 即上表寬／長；左腳朝向不同，wor
 - `baseline-vs-125-runtime.jpg`：六個 poses、同 camera／1920×1080 raster、每組左右相同 crop／倍率。上方為固定角色 crop 1×，下方腳部 crop 1.4×。
 - `candidate-runtime-1x.mp4`：實際 Release app 的 tick 0–816，每 4 ticks 擷取一格，以 60 fps 重組 1×。解碼 205 frames／3.416667 s，clip 本身仍 3.4 s，最後一格顯示 1/60 s；不是 wall-clock 螢幕錄影。Codex 已看截圖／跨全段的 sequence，未連續觀看正常速度影片；另外實測 app 正常速度播放完成。
 - `ready-contact-landing-feet.jpg`：Ready／front-contact／rear-landing 的固定 3× 腳部對照。
-- `candidate-release/pawapuro.exe`：獨立 app copy，Space 看完整正常速度；P 暫停、`.` 單步。Executable／DLL／staging 與正式 Release build 相同，只在此 ignored copy 放 candidate GLB／TOML。一般 `build/debug`／`build/release` 的 launch assets 始終保持正式 S2 baseline。
+- `candidate-release/pawapuro.exe`：獨立 app copy，Space 看完整正常速度；P 暫停、`.` 單步。Executable／DLL／staging 與正式 Release build 相同，只在此 ignored copy 放 candidate GLB／TOML。這是 v1A review 當時的隔離副本；promotion 後一般 `build/debug`／`build/release` 的正式 launch assets 已由 configure 更新為同一 v1A。
 
-檢視可見更寬的鞋部輪廓；Ready／front-contact／final 的深色雙鞋更容易連成一片，跨步展開 frame 65 有鞋面與衣襬投影重疊。這些留給 human review，不縮回候選、不改 pose／camera。已查看 full-scene startup，六個 paired review ticks 的畫面差分只落在鞋部區域，未新增畫面邊緣或打者遮擋；不是完整 collision 證明。Hard-elbow debt 保持原樣。
+檢視可見更寬的鞋部輪廓；Ready／front-contact／final 的深色雙鞋更容易連成一片，跨步展開 frame 65 有鞋面與衣襬投影重疊。Michael＋Julia 已接受這版 footprint 尺寸；這些歷史觀察不代表 foot visual style 已完成，本次不改 pose／camera。已查看 full-scene startup，六個 paired review ticks 的畫面差分只落在鞋部區域，未新增畫面邊緣或打者遮擋；不是完整 collision 證明。Hard-elbow debt 保持原樣。
 
-`revise_footprint.py` 是固定本次 baseline 的小型 source 操作／保護 script，拒絕覆寫現有 candidate；日常 export 不呼叫它。Candidate 使用既有 `export_sample.py`／`verify_sample.py`／`inspect_motion.py`。`review/style-feet-v1a/motion_expected.txt` 只相對正式 fixture 更新 7 格受影響 bounds、16 個腳部點及 provenance；grip／非腳部點保持原文。可直接用未修改的測試：
+`revise_footprint.py` 是固定升版前 S2 baseline 的小型 source 操作／保護 script，拒絕覆寫現有 candidate；日常 export 不呼叫它。Candidate 使用既有 `export_sample.py`／`verify_sample.py`／`inspect_motion.py`。`review/style-feet-v1a/motion_expected.txt` 只相對正式 fixture 更新 7 格受影響 bounds、16 個腳部點及 provenance；grip／非腳部點保持原文。可直接用未修改的測試：
 
 ```powershell
 & ./build/debug/pitcher_motion_test.exe ./pawapuro/batting/pitcher/review/style-feet-v1a/pitcher.glb ./pawapuro/batting/pitcher/review/style-feet-v1a/pitcher.toml ./pawapuro/batting/staging.toml ./pawapuro/batting/pitcher/review/style-feet-v1a/motion_expected.txt
 ```
 
-Release 同命令換 build 目錄。正式 fixture／CTest target 不變。驗證結果見 [environment](../../../docs/development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16)。Candidate 待 Michael＋Julia review，未 promotion；不進入 rubber-arm polish 或 S3。
+Release 同命令換 build 目錄。Promotion 同步採用此已驗證 fixture 的數值，只更新正式檔的 acceptance 註解；CTest target／assert／tolerance 不變。驗證結果見 [environment](../../../docs/development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16)。正式三檔與 `701a780` 接受 candidate 的 bytes／SHA256 完全相同；沒有重新保存或匯出 `.blend`。Foot Shape（toe／upper／sole）、material／highlight、articulation／sole／cleats、rubber-arm debts 見 [Character Motion Rules](../../../docs/design/character-motion.md#runtime-character-style-polish-v1alarger-grounded-feet)，本次不開始任何下一 task 或 S3。
 
 ## S2 runtime animation preview
 

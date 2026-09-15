@@ -108,6 +108,15 @@ Michael＋Julia 的 S2 runtime human review 已確認：S0 已接受的 motion �
 
 ### Runtime Character Style Polish v1A：Larger Grounded Feet
 
-依 Rule 1「Support is authoritative」，本輪只調 Visual Representation：從正式 S2 baseline 的 source shape，繞各 foot rest anchor 將水平兩軸放大 1.25×，厚度、骨骼／keys、接地 timing、grip 與其餘角色保持不變。1.25 是單一 review candidate，不是永久 style constant，沒有新的 Motion Truth／motion law，也沒有 runtime style parameter。
+依 Rule 1「Support is authoritative」，本輪只調 Visual Representation：從正式 S2 baseline 的 source shape，繞各 foot rest anchor 將水平兩軸放大 1.25×，厚度、骨骼／keys、接地 timing、grip 與其餘角色保持不變。Michael＋Julia 已接受這名投手的 1.25× support footprint 尺寸與原厚度；沒有新的 Motion Truth／motion law，也沒有 runtime style parameter。
 
-Candidate 存於 `review/style-feet-v1a/`，正式資產仍是 S2 baseline。Michael＋Julia 將以實際 batting camera review 支撐感、尺寸與新 overlap；Codex 不宣告 style 通過。Hard-elbow／rubber-arm debt 留給獨立 task，本輪未修改。操作與證據見 [pitcher README](../../pawapuro/batting/pitcher/README.md#style-polish-v1a125-planar-feet-candidate)，技術結果由 [environment](../development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16) 擁有。S3 未開始、M1 未完成；六條 rules 原文不變。
+已接受的 `review/style-feet-v1a/` 三檔 byte-preserving promotion 為正式資產，review artifact 保留。接受的是 footprint 尺寸，並不代表 foot visual style 完成；本次沒有改 geometry、motion 或 runtime。
+
+仍保留以下獨立 Character Style debts：
+
+- **Foot Shape**：目前仍像扁橢圓，下一個獨立 task 才處理明確 toe／upper／sole 的立體球鞋造型。
+- **Material／highlight**：參考鞋面的 specular／highlight 延後，目前沒有 material／lighting framework。
+- **Articulation／sole／cleat detail**：彈性形變與鞋底細節延後，目前沒有真實 caller 要求 implementation。
+- **Rubber arm**：animated hard-elbow debt 保留，等待另一個獨立 polish task。
+
+操作與證據見 [pitcher README](../../pawapuro/batting/pitcher/README.md#style-polish-v1a125-planar-feet-candidate)，技術結果由 [environment](../development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16) 擁有。S3 未開始、M1 未完成；六條 rules 原文不變。

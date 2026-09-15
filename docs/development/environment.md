@@ -896,3 +896,22 @@ Candidate SHA256：
 - `.blend`：`3fbd587e767c4a154a702bdeeca742d871b7ed16a1647e283c76746e00d1fb5a`
 - `.glb`：`c5582de513ebb4163566a41225507bf39829bea58f003446a80871e82ca6c291`
 - `.toml`：`f65220513d2f3727b225f380c693e7926e61a8f606e9ddc89023b1cb76f5a3d4`
+
+
+## Style Feet v1A Promotion（2026-09-16）
+
+起始 HEAD／main／origin/main／live remote 均為 `701a780888aa58f6d12c3684c1f2707b4bbd5e8e`，workspace 乾淨。先核對接受 candidate 與該 commit 的三檔 bytes、上節 SHA256、TOML source／GLB provenance，再直接複製至正式路徑。正式三檔 hashes 即上節 candidate hashes，promotion 與全部檢查後逐 byte 相同；未重新保存／匯出 `.blend`、未執行 revision script。`review/style-feet-v1a/` 保留。正式 S2 fixture 採已驗證 candidate 數值（只改 acceptance 註解），不改測試規則。
+
+| 本輪回歸 | 結果 |
+|---|---|
+| Khronos GLB validator | 0 errors／warnings／infos／hints。 |
+| Source → GLB → Blender round-trip | 唯讀重取正式 source 全 205 格，再跑既有 verify_sample：PASS，原 0.1 mm 容差不變。 |
+| Motion／fixed bones／grip／contacts | 既有 inspect_motion PASS，revision／marker／接觸區間不改；正式與接受 candidate 的全 205 格 evaluated mesh／grip samples 完全相同。 |
+| A／B／C 行為門檻 | Ready front X −0.99999994；clasp q max 0.416655605 <0.8；f79 glove home cosine 0.999961792 >0.98；right tube minimum ring ratio 0.347049298 >0.25；後腳落地 slide 0、落點較前腳靠本壘，chest yaw release −25° → minimum −108.964935°，保留原門檻。 |
+| Promotion 幾何保護 | 與忽略目錄保存的升版前正式檔比較：1922 non-foot vertices、animation／inverse binds／skeleton／weights／colors／indices exact；440 foot vertices 符合原 1.25× planar edit，398 個實際座標改變，vertical rest coordinates 不變。接地／airborne 行為由既有 motion checks 與 candidate 全格一致性確認，沒有再次放大。 |
+| Debug／Release build＋CTest | 各 4/4 PASS，production code 無 build 工作；正式 GLB／TOML 已由 configure 複製至兩種正常 launch 目錄並核對 bytes。 |
+| S2 runtime diagnostic | Release tick 384 grip error 4.9151248e-7 m；八格 source sample 最大 1.35952e-6 m，與接受版相同；全部 tick、骨長、contacts、pause／step／replay tests 通過。 |
+
+歷史 `check_ready_lift.py --scope ready-lift` 因其硬編碼的 pre-A baseline hash 拒絕 v1A 輸入，未執行該歷史 edit-comparison；B／C modes 也各鎖定當年的 pre-edit source，故不誤用。沒有刪 assert 或更換它的預期 hash。Promotion 另以忽略目錄的唯讀 `check_abc.py` 重用原 A／B／C absolute 門檻，並比較接受 candidate／正式來源全格一致性；這是 promotion audit，不新增 framework。歷史 checker 拒絕與替代檢查結果均保留在 `build/style-feet-v1a-promotion/`。
+
+本次沒有重製影片／screenshots，沒有重跑 app 視覺／GPU smoke；不把上一輪 GPU 通過寫成本輪重跑。接受限於 1.25× support footprint 與原厚度；Foot Shape、material／highlight、articulation／sole／cleats、rubber-arm 仍待獨立 task，S3 未開始。舊正式備份／logs／JSON 留在忽略目錄，不提交。
