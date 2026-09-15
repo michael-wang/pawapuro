@@ -232,7 +232,7 @@ M1 重現目標是同一 build、相同平台／資產、相同 tick 輸入；�
 
 ## 右投手 S0：authoring 與匯出邊界
 
-2026-09-15，Michael 在 Julia review 後授權最低右投手 authoring sample、Blender 工具準備、GLB／metadata 匯出與預覽。第一版已製作，**等待 Michael＋Julia review**；本節不授權 S1 的 C++ importer 或後續 runtime。
+2026-09-15，Michael 在 Julia review 後授權最低右投手 authoring sample、Blender 工具準備、GLB／metadata 匯出與預覽。第一版已製作，但 Michael 判定 motion 未通過；目前只授權下述 S0.1 reblocking，**不進入 S1**。本節不授權 C++ importer 或後續 runtime。
 
 本次選擇原創低細節 mesh／一副必要 armature／一段不循環 pitch clip，以既有大頭、扁腳、detached feet、球形手、連續簡化手臂及衣襬風格建立動作。隱藏 bend 與 weights 只解決目前肢體彎曲、衣襬連續性的實際需求，不引入真人完整骨架或 generic character。共同 tick／CPU skinning 是後續原則接受的方向，尚未實作。
 
@@ -241,3 +241,23 @@ M1 重現目標是同一 build、相同平台／資產、相同 tick 輸入；�
 角色比例 scale 在 authoring 時換成公尺，placement 不重複縮放；asset 必須對照既有 release Data，不能為取得對齊修改 staging／camera／球路。S0 的 source 與 GLB round-trip 誤差只代表 authoring 交付，**不等於 Native release 已對齊**。後續 Native sampled initial state 若與 regression baseline 不同，仍須另列差異 review，不隱藏 snap 或重算球速。
 
 本次輔助球只在出手前跟隨 grip，marker 後隱藏；不製造第二條球路。Authoring camera 對照同一 staging 參數，但不包含 app 打者／球場，不能代替動態遮擋／early-flight 對比驗收。既有 horizontal off-axis camera、strike-zone truth、pitch sightline 與 deterministic Native simulation 邊界保留。
+
+### S0.1 Motion reblocking
+
+本次只修改同一名右投手的一段粗動作；原 S0 的 source 與預覽保留比較。沿用 mesh／weights／骨架／grip，改正肩部跟隨軀幹、固定骨段長度與分開的發動節奏。右投手 coil 讓右肩向後保留、左肩較靠本壘；開轉再帶動投球臂，不把原本一條 yaw 曲線乘大。這是本角色選定的動作方向，不宣稱所有真人投手都必須使用同一投法。
+
+**研究範圍與可信度**：本輪讀了兩篇原始研究的 PubMed **摘要**：[Oyama et al., 2014](https://pubmed.ncbi.nlm.nih.gov/24944296/) 比較骨盆與上軀幹旋轉峰值的先後；[Fleisig et al., 2013](https://pubmed.ncbi.nlm.nih.gov/24466645/) 量測 pelvis／upper trunk 相對軸向轉動，投球的重要變化在前腳接觸附近。只用於理解相對時序，不抄角度／角速度，也不把群體研究當成此 Q 版資產的數值規格。[Drew Adams／Animation Mentor](https://www.animationmentor.com/blog/splining-made-easy-with-animator-drew-adams/) 的教學用於先決定 blocking、部位順序與 spacing，再檢查曲線是否沖淡節奏；不是投球影片觀察證據。
+
+主要 motion video reference **尚未建立**。找到的可追查候選為 Paradigm Pitching 的 [Justin Verlander Slow Motion Pitching Mechanics (Third Base Line View)](https://www.youtube.com/watch?v=YWpc7tI74Hg)；瀏覽器工具啟動失敗，沒有觀看任何區段／逐格取樣。三壘側、慢動作僅來自標題；實際視角、完整收勢覆蓋、拍攝 FPS、播放 FPS 與慢放倍率均未確認。沒有用播放秒數換算真人時間，也沒有下載參考資產。本次 attachments 只有先前的文字，未收到 Michael 提到的遊戲參考圖，無法將其列為直接視覺觀察。
+
+下表因此是**依 Michael feedback 與上述原則提出的 authoring 推論／Q 版誇張**，不是 reference-verified timing；實際 source 的姿勢與變化已有 evaluated transforms／影格證據，時間數值由局部 asset 文件維護。
+
+| 區段 | 本版 motion brief |
+|---|---|
+| Ready → coil／抬左腳 | 右腳維持支撐，pelvis 向右腳上方偏移；左腳抬高，胸口／肩線轉成側身，持球手與手套在胸前下方折合。頭部小幅延遲，保持本壘方向。準備較慢；手臂拆開前仍繼續前移，不以全身定格分段。 |
+| Stride／opening | 左腳向本壘跨出時 pelvis 一起前移並先打開；chest／右手保留落後，肩線尚未完全打開。手套向前後再回收，接到左腳支撐。 |
+| Acceleration／release | 左腳接住前移；pelvis 開轉峰值早於 chest，胸口前傾帶動肩部；固定長度右臂在短區間沿弧線追上。Grip 隨右手穿過原世界 release reference，marker 是中途事件，手不在此停住。 |
+| Early follow-through | 左腳支撐，胸口繼續開轉／前折，右臂往前下跨身；頭的前折較晚。右腳卸重離地、向後上帶起，與手臂節奏不同。 |
+| Rear-foot follow／recovery | 右腳在空中向前跟進後落地，兩腳形成支撐；胸口、頭與手繼續回到較直立的平衡位置，沒有用結尾 idle hold 增加長度。大鞋與 detached 身體關係保留。 |
+
+Authoring 使用分開的 shape-preserving 曲線；投球階段以 FK 方向的角度插值避免方向向量正規化造成速度尖峰，再烘焙到原 LINEAR GLB 契約。沒有新增 IK、retargeting、animation graph、runtime animation 或球路。原 camera／角色比例／場地／strike-zone truth／simulation 初始條件不變。旋轉可讀性、重量感、投影遮擋與正常速度節奏仍須 Michael＋Julia review。

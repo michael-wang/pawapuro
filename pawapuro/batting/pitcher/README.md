@@ -1,89 +1,77 @@
-# 右投手 Authoring Sample（S0）
+# 右投手 Authoring Sample（S0.1）
 
-狀態：2026-09-15 已製作第一版，等待 Michael＋Julia review。這是可編輯 authoring source 與 runtime candidate；**尚未接入 Pawapuro app，沒有 Native release／球路驗證**。
+2026-09-15：Michael 判定原 S0 motion 未通過；本版是 **S0.1 粗動作候選，等待 Michael＋Julia review，不進入 S1**。已更新可編輯 `.blend`、GLB 與 metadata；尚未接入 app。
 
-## 先看什麼
+## Michael 先看什麼
 
-本機 evidence 在 `build/pitcher-s0/`，不提交影片或逐 frame renders：
+Evidence 在忽略的 `build/pitcher-s01/`：
 
-- `pitcher-normal.mp4`：斜側面、1×、60 fps。
-- `pitcher-slow.mp4`：同一份 source frames、0.25×，方便看跨步／手臂路徑。
-- `pitcher-batting.mp4`：staging camera 與 horizontal lens shift，僅投手／支撐平面，沒有打者／球場。不是 app capture。
-- `seven-key-poses.png`：七個關鍵姿勢。
-- `release-grip-reference.png`：frames 90／91／92 的同位置放大，固定青環對照持球。
-- `roundtrip-comparison.png`：原始 `.blend` 與 GLB 重新匯入後的對照。
-- `sample-validation.json`、`validator.json`：數值／格式證據。
+| 檔案 | 用途 |
+|---|---|
+| `before-normal.mp4`／`after-normal.mp4` | 同一斜側面全身 camera、1×、60 fps。Before 2.516667 s；after 3.416667 s，沒有拉成相同長度。 |
+| `before-batting.mp4`／`after-batting.mp4` | 相同 staging camera／horizontal shift。只有投手與支撐平面，沒有打者／球場，不是 app capture。 |
+| `after-slow.mp4` | 同一批 after frames，每格重複四次，0.25×、60 fps、13.666667 s。 |
+| `contact-sheet.png` | Ready、coil、stride、前腳接觸、軀幹打開、前甩、release、早期收勢、右腳跟進／落地、最後回穩，標明 frame／clip time。 |
+| `release-continuous.png`／`recovery-continuous.png` | Release 周圍 23 個連續影格；右腳落地前後 37 個連續影格。 |
+| `whole-motion.png`／`batting-contact-sheet.png` | 整段動作 overview／打席視角檢查。Overview 不是正常速度播放證據。 |
+| `motion-diagnostic.png` | Evaluated pelvis／chest／head yaw、grip speed、俯視肩線／grip arc／腳底接觸。乾淨影片不帶這些標記。 |
+| `roundtrip-contact-sheet.png` | 匯出的 GLB 重新匯入 Blender 的對照。 |
 
-## 開啟與播放
+原 `build/pitcher-s0/` 的影片與 PNG 保留；S0 source／GLB／TOML 另保存在 `build/pitcher-s01/before/`。乾淨 before 是以保留的 S0 `.blend` 重製，只隱藏固定青色 release 診斷環；camera、比例、原動作與播放長度不變。
 
-本機 PowerShell：
+**證據限制**：本輪實際讀取／取樣 `.blend`、檢視渲染影格，且用 Blender 隨附 decoder 核對 MP4 的 FPS／frame count。瀏覽器播放器工具啟動失敗，沒有完成參考影片觀看，也沒有完成 Codex 正常速度播放自看；不以 contact sheet 冒稱看過影片。Michael 提到的遊戲參考圖在本次可讀 attachments 中不存在。這版 timing 依文字 feedback 與動畫原則提出，**不是 reference-verified timing**。研究與 motion brief 見 [design](../../../docs/design/batting-feel.md#s01-motion-reblocking)，量測與限制見 [environment](../../../docs/development/environment.md#s01-motion-reblocking2026-09-15)。
 
-```powershell
-& 'C:/astra-dev/tools/blender-4.5.13-windows-x64/blender.exe' --factory-startup 'C:/astra-dev/pawapuro/pawapuro/batting/pitcher/pitcher.blend'
-```
+## 可編輯來源與最小契約
 
-檔案預設停在 frame 43（抬腳）、斜側面 camera view。滑鼠放在 3D Viewport／Timeline，Space 播放／暫停；Shift＋Left 回到 frame 1。Timeline 的唯一 `release` marker 在 frame 91。Blender timeline 可以重複播放；**clip 契約仍是一次播放、不循環**，不是 runtime loop 設定。要看正確速度，先用離線輸出的影片；互動 viewport 不保證每次都能即時跑滿 60 fps。
+- `pitcher.blend` 是日常 authoring truth。預設 frame 49、斜側面 camera view；在 Timeline／3D Viewport 按 Space 播放。互動 viewport 不保證實時 60 fps。
+- 原 mesh、拓樸、五色、weights、13-node skeleton／rest transforms、camera、placement／scale 完全保留；2362 vertices／3936 triangles。一個 mesh／skin／`pitch_R` clip、15 個 GLB nodes、39 TRS channels。
+- 右臂使用原 rest 骨段長度的 FK 方向曲線，肩部隨 chest；不移動肘／手關節來伸縮肢體。隱藏 bend、連續 tube、球形手與 detached feet 保留。沒有新增 solver／骨架／framework。
+- `create_sample.py` 只供最初 S0 生成；`reblock_motion.py` 只供從 S0 source 明確另存 S0.1 candidate，拒絕已存在的目的檔。兩者都不是日常 export 的依賴。
+- 本版 authoring curve 的結果烘焙為可編輯的逐 frame FK TRS keys；saved source 已含全部動作。`export_sample.py` 讀目前存檔，不重建、不保存 `.blend`；輸出 GLB／TOML 並檢查 source hash 未變。
+- 60 fps／fps_base=1，frames 1–205 → GLB 0–3.4 s；playback_speed=1、loop=false。影片含首尾端點，共 205 個顯示 frames，因此長 3.416667 s。
+- `.blend` 唯一 timeline marker `release` 在 frame 97 → 1.6 s → 未來 240 Hz tick 384。Metadata／preview release label 從 marker 產生；不是 Native release integration。
+- `.blend` scene `key_poses` 保存 review poses，release 另從唯一 marker 插入；`contact_intervals` 保存四段腳底支撐區間。Export 產生 `[review]`／`[[contacts]]`，驗證與圖表讀取這些來源，不使用原 S0 frame 73／91／151 的檢查時間表。
+- 右腳地面支撐 1–85，86–170 離地，171–205 恢復支撐；左腳 1–17 初始支撐，18–78 抬腿／跨步，79–205 前腳支撐。接觸不是受力模擬；落地後 chest／手／頭仍回穩，沒有 idle hold 補長。
+- `grip` 是 `hand_R` 的 child，代表持球球心，固定 local binding；持球在 marker 後一格隱藏，不模擬後續球路。Reference world position、球半徑及 Native 初始條件不變。
 
-## Source、尺度與座標
+### 空間與格式
 
-- `pitcher.blend` 是可編輯來源。原創低細節 mesh／FK armature／動作由 Codex 依現有 `reference_scene.cpp` 與 `staging.toml` 製作，沒有外部角色或 mocap 資產。
-- `create_sample.py` 僅供**初次生成或另建候選**；目的 `.blend` 已存在就拒絕。不要用它覆蓋手動修過的來源。
-- `export_sample.py` 讀已存檔的 `.blend`，產生 `pitcher.glb`／`pitcher.toml` 與 source samples；不呼叫 generator、不保存 `.blend`。匯出 mesh 在記憶體中暫時解除 parent，避免 skin mesh 非 root 的警告，之後復原。
-- 本輪 asset 的長度已是公尺。`2.45` 只在初建時把既有比例換成公尺，**不是總高，也不在 placement 再乘一次**；rest mesh 高約 2.56515 m。
-- local origin 是既有後腳地面參考。runtime candidate placement 為 staging 的 `(0, 0.355, 18.5166)` m；scale=1。
-- Blender local = `(-game_local.x, -game_local.z, game_local.y)`。投手朝 Blender +Y，右投手臂在 Blender +X。
-- 標準 Blender +Y-up 匯出得到 GLB local = `(-game_local.x, game_local.y, game_local.z)`。投手朝 GLB −Z，右手在 GLB +X。
-- 未來 GLB → Pawapuro：反射 X **一次**，再加 placement；transform／inverse bind 要使用相同 basis 轉換，triangle winding 隨反射翻轉。D3D12 本身不替 importer 選座標慣例。本輪只驗證 authoring／GLB，不宣稱 Native 已正確實作轉換。
+長度已是公尺，`2.45` 是初建比例 scale，不能在 runtime 再乘；rest mesh 高約 2.56515 m。Local origin 為後腳地面參考，placement 為 staging 的 `(0, 0.355, 18.5166)` m，scale=1。
 
-## 本 sample 的內容契約
+Blender local = `(-game_local.x, -game_local.z, game_local.y)`；標準 glTF +Y-up export 得到 GLB local = `(-game_local.x, game_local.y, game_local.z)`。未來 GLB → game 反射 X 一次、反轉 winding，再加 placement；transform／inverse bind 使用相同轉換。本輪不驗證 C++ importer。
 
-- 一個 `PitcherMesh`，2362 vertices／3936 triangles；一副 13-node armature，含 root 與 grip。
-- Root 下有 pelvis、兩隻獨立 detached feet；chest／head／左右 arm／forearm／hand 提供必要控制。手臂是跨隱藏 bend 的連續 tube mesh；不靠 nonuniform bone scale 製造伸長，以免 parent-scale shear 在 TRS 匯出時失真。
-- 頭／帽／臉、球形手、手套與鞋採剛性 weights；衣襬與手臂採少量混合 weights。無 fingers、facial rig、constraints／IK runtime 或布料模擬。
-- 只有 `POSITION`、`COLOR_0`、`JOINTS_0`、`WEIGHTS_0`；每 vertex 四個槽位，實際最多兩個非零 influences。五種平塗顏色存在 `COLOR_0`，不是只有 viewport object color。GLB 不帶 materials／textures／normals／morph／compression／extensions。
-- 所有幾何已三角化。一個 `pitch_R` clip，39 個 TRS channels，實際輸出全部為 LINEAR；60 fps、fps_base=1、frames 1–151。GLB time 0 = source frame 1，clip duration=2.5 s；playback_speed=1、loop=false。
-- 七個 review poses：1 ready、43 leg lift、67 stride、78 torso rotation、85 arm acceleration、91 release、121 follow-through；151 是收勢後的結尾。這不是七個等長停頓。
-- **唯一 authoring release marker** 在 `.blend` frame 91。TOML 的 time=1.5 s、未來 240 Hz tick=360，均由 `(marker.frame − start_frame)` 匯出計算，不手填另一份 timing。
-- `grip` 是 `hand_R` 的 child，原點代表球心。Grip 與球形手中心相距約 0.1346 m；hand radius 約 0.1433 m。Grip 沒有獨立動畫偏移來湊 reference。
-- 輔助持球跟隨 grip，在 frame 92 起隱藏。固定青環、球、支撐平面、兩個 camera 都在 `AuthoringOnly` collection，未匯入角色 GLB；不模擬 release 後球路。
+GLB 只含 `POSITION`、`COLOR_0`、`JOINTS_0`、`WEIGHTS_0`；四個 influences 槽位、最多兩個非零 weights。Triangles、LINEAR animations；無 materials／textures／normals／morph／extensions。Blender 預覽使用原 vertex-color emission／Raw view transform，未改 lighting。重新匯入會把 color 轉 byte color，保留既有量化限制。
 
-Blender preview 使用 vertex-color emission 與 Raw view transform，方便對照既有 app 的平塗數值。這是 authoring 顯示設定，沒有新增 runtime material／lighting 系統。GLB 重新匯入 Blender 會將 color attribute 轉成 byte color，存在小量顏色量化，實測見 environment。
+## 日常 export／驗證
 
-## 日常匯出與驗證
-
-先在 Blender 保存想要匯出的 source；再從 repo 根目錄的 PowerShell 執行。所有工具使用明確位置，不改全域 PATH：
+先保存 Blender 中的編輯，再從 repo 根目錄執行；不跑 generator：
 
 ```powershell
 $Blender = 'C:/astra-dev/tools/blender-4.5.13-windows-x64/blender.exe'
 $Pitcher = 'C:/astra-dev/pawapuro/pawapuro/batting/pitcher'
-$Evidence = 'C:/astra-dev/pawapuro/build/pitcher-s0'
+$Evidence = 'C:/astra-dev/pawapuro/build/pitcher-s01'
 & $Blender --background --factory-startup "$Pitcher/pitcher.blend" --python-exit-code 1 --python "$Pitcher/export_sample.py"
 & 'C:/astra-dev/tools/gltf-validator-2.0.0-dev.3.10/gltf_validator.exe' -o -a "$Pitcher/pitcher.glb" > "$Evidence/validator.json"
 & $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/verify_sample.py"
+& $Blender --background --factory-startup "$Pitcher/pitcher.blend" --python-exit-code 1 --python "$Pitcher/inspect_motion.py" -- --output "$Evidence/motion-audit.json"
 ```
 
-逐一檢查 exit code。`verify_sample.py` 是本 sample 的離線檢查，不是 production C++ importer：核對檔案 hashes、節點／clip／attributes、weights、inverse binds、marker、right-hand sign、planted-foot transforms、GLB pose 與 source vertices，然後在**空白 Blender scene** 重新匯入 GLB 比較十個姿勢。Importer 自己產生的 bone-display Icosphere 不屬於 GLB mesh，檢查時依 custom_shape 引用排除。
+逐一檢查 exit code。Validator 檢查格式；`verify_sample.py` 對整段 205 frames 比較 source、獨立 GLB TRS／skinning 計算及空白 Blender scene round-trip，並核對 hashes、weights、inverse bind、release、腳底固定 transforms。原 0.1 mm alignment／deformation 容差未放寬。`inspect_motion.py` 核對固定骨段長度、grip local binding、落地／離地區間、地面穿入、前後出手方向與 pelvis → chest 時序。右臂／頭部橢球 proxy 不涵蓋帽子、肩部 attachment 或其他身體部位，不是完整 self-collision 保證。
 
 ## 重製預覽
-
-延續上方 PowerShell 變數：
 
 ```powershell
 & $Blender --background --factory-startup "$Pitcher/pitcher.blend" --python-exit-code 1 --python "$Pitcher/render_preview.py" -- --output "$Evidence/source-side" --animation --width 1280
 & $Blender --background --factory-startup "$Pitcher/pitcher.blend" --python-exit-code 1 --python "$Pitcher/render_preview.py" -- --output "$Evidence/source-batting" --animation --camera batting --width 1920
 & $Blender --background --factory-startup "$Pitcher/pitcher.blend" --python-exit-code 1 --python "$Pitcher/render_preview.py" -- --output "$Evidence/roundtrip-side" --roundtrip --width 1280
-& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/encode_preview.py" -- --frames "$Evidence/source-side" --output "$Evidence/pitcher-normal.mp4"
-& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/encode_preview.py" -- --frames "$Evidence/source-side" --output "$Evidence/pitcher-slow.mp4" --slow
-& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/encode_preview.py" -- --frames "$Evidence/source-batting" --output "$Evidence/pitcher-batting.mp4" --batting
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/encode_preview.py" -- --frames "$Evidence/source-side" --output "$Evidence/after-normal.mp4"
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/encode_preview.py" -- --frames "$Evidence/source-side" --output "$Evidence/after-slow.mp4" --slow
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/encode_preview.py" -- --frames "$Evidence/source-batting" --output "$Evidence/after-batting.mp4"
 & 'C:/Users/USER/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe' "$Pitcher/assemble_sheets.py" --evidence $Evidence
 ```
 
-最後一個命令使用本機已存在的 Python／Pillow；別台機器可使用具有 Pillow 的 Python。影片使用 Blender 隨附 encoder，不另裝 FFmpeg。每個 source frame 都離線渲染，影片解碼後核對 60 fps／frame count；正常影片保留起、迄兩個端點，共 151 frames（2.516667 s），不是 clip timeline 變成不同速度。慢速每個 frame 重複四次，共 604 frames（10.066667 s）。
+Encoder 由 render manifest 判斷 camera、frame range／FPS，拒絕缺格、多格與錯誤順序；輸出旁的 JSON 記錄實際 decoded frame count／FPS／倍率。Retime 後請用新的空白 evidence 子目錄渲染，避免舊尾幀留下；不要覆蓋 S0 before。
 
-## Review 限制
+重製 before 時開 `build/pitcher-s01/before/pitcher.blend`，render 到 `before-side`／`before-batting`，再以上述 encoder 輸出 `before-normal.mp4`／`before-batting.mp4`。這是有意保留的 S0 snapshot；新 clone 可從 Git commit `fb97f46` 取得到獨立忽略目錄，不 reset 當前 source。Sheets 需要這份 before frames。
 
-支撐腳／落地腳的固定區間已用 transforms 檢查；粗動作、明顯穿插與 silhouette 也有逐姿勢圖檢視，但沒有 cloth／self-collision solver。加速時手臂和大頭／帽簷的投影重疊、跨步與收勢的重量感仍需 Michael＋Julia review。這一版先提供有界的粗動作，不宣稱已達正式動畫品質。
-
-Batting camera 使用現有 position／target／36° vertical FOV 與推導的 horizontal shift；本輪 scene 只有投手與簡單支撐平面，不能驗收真正打者／球場背景中的動態遮擋或 early-flight contrast。
-
-跨概念責任見 [設計](../../../docs/design/batting-feel.md)，本輪版本、量測、限制見 [environment](../../../docs/development/environment.md)。S0 review 後仍須另行授權 S1。
+本輪沒有 C++／HLSL／renderer／staging Data 變更；沒有重跑 runtime／GPU 測試。球路、動態遮擋、early-flight 對比與正常速度動作可讀性，仍待後續授權／人類檢查。

@@ -30,7 +30,7 @@ def export():
     scene.frame_set(marker.frame)
     grip = rig.matrix_world @ rig.pose.bones["grip"].matrix.translation
     samples = {}
-    for frame in (1,43,67,78,85,90,91,92,121,151):
+    for frame in range(scene.frame_start, scene.frame_end+1):
         scene.frame_set(frame)
         dg=bpy.context.evaluated_depsgraph_get()
         mesh=bpy.data.objects["PitcherMesh"].evaluated_get(dg)
@@ -107,8 +107,13 @@ grip_node = "grip"
 grip_parent = "hand_R"
 grip_meaning = "held ball centre, not hand joint"
 '''
+    if "contact_intervals" in scene:
+        metadata += "\n[review]\nkey_poses = " + json.dumps(scene["key_poses"]) + "\n"
+        for name, intervals in json.loads(scene["contact_intervals"]).items():
+            for first, last in intervals:
+                metadata += f'\n[[contacts]]\nbone = "{name}"\nstart_frame = {first}\nend_frame = {last}\n'
     source.with_suffix(".toml").write_text(metadata,encoding="utf-8",newline="\n")
-    evidence=HERE.parents[2]/"build"/"pitcher-s0"
+    evidence=HERE.parents[2]/"build"/"pitcher-s01"
     # HERE = pawapuro/batting/pitcher; repository is parents[2].
     evidence.mkdir(parents=True,exist_ok=True)
     (evidence/"source-samples.json").write_text(json.dumps(samples),encoding="utf-8")

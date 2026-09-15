@@ -10,7 +10,8 @@ HERE=Path(__file__).resolve().parent
 parser=argparse.ArgumentParser()
 parser.add_argument("--output",type=Path,required=True)
 parser.add_argument("--camera",choices=("side","batting"),default="side")
-parser.add_argument("--frames",default="1,43,67,78,85,91,121")
+parser.add_argument("--frames")
+parser.add_argument("--diagnostic",action="store_true")
 parser.add_argument("--animation",action="store_true")
 parser.add_argument("--roundtrip",action="store_true")
 parser.add_argument("--width",type=int,default=960)
@@ -32,6 +33,9 @@ if args.roundtrip:
     for obj in list(bpy.data.objects):
         if obj.name.startswith("HeldBall_"): bpy.data.objects.remove(obj,do_unlink=True)
     scene["preview_notice"]="S0 GLB ROUND-TRIP | AUTHORING ONLY"
+if not args.diagnostic:
+    for obj in bpy.data.collections["AuthoringOnly"].objects:
+        if "Release" in obj.name: obj.hide_render=True
 scene.camera=bpy.data.objects["Review_Batting" if args.camera=="batting" else "Review_ThreeQuarter"]
 scene.render.resolution_x=args.width
 scene.render.resolution_y=round(args.width*9/16)
@@ -40,7 +44,10 @@ scene.render.engine="BLENDER_EEVEE_NEXT"
 scene.eevee.taa_render_samples=16
 scene.render.image_settings.file_format="PNG"
 args.output.mkdir(parents=True,exist_ok=True)
-frames=range(1,152) if args.animation else [int(v) for v in args.frames.split(",")]
+poses={int(part.split(":")[0]):part.split(":")[1] for part in scene["key_poses"].split(";")}
+poses[scene.timeline_markers["release"].frame]="release"
+frames=list(range(scene.frame_start,scene.frame_end+1)) if args.animation else ([int(v) for v in args.frames.split(",")] if args.frames else sorted(poses))
+(args.output/"preview.json").write_text(json.dumps({"source":bpy.data.filepath,"revision":scene.get("motion_revision","S0"),"start_frame":scene.frame_start,"end_frame":scene.frame_end,"fps":scene.render.fps,"fps_base":scene.render.fps_base,"release_frame":scene.timeline_markers["release"].frame,"poses":poses,"rendered_frames":frames,"camera":args.camera,"width":args.width,"height":scene.render.resolution_y,"diagnostic":args.diagnostic},indent=2),encoding="utf-8")
 for frame in frames:
     scene.frame_set(frame)
     # Imported glTF begins at Blender frame 0, unlike the authoring frame 1 origin.

@@ -556,3 +556,46 @@ TOML 包含 source／GLB hashes；詳細 raw figures 在 `build/pitcher-s0/sampl
 Evidence：`build/pitcher-s0/pitcher-normal.mp4`、`pitcher-slow.mp4`、`pitcher-batting.mp4`；`seven-key-poses.png`、`release-grip-reference.png`、`batting-camera-release.png`、`roundtrip-comparison.png`；validator／sample-validation／export／render／encode logs 與逐 frame PNGs 皆在忽略的 `build/pitcher-s0/`，不 commit。工具及 archives 留 repo 外。
 
 **沒有重跑 C++ build／CTest／app／GPU validation**：本輪未改 production C++、HLSL、CMake 或 staging Data；先前通過結果不算本輪新驗證。S0 candidate 停在 Michael＋Julia review gate，未開始 S1／S2／S3，沒有宣告動態 gameplay 或 M1 通過。
+
+
+## S0.1 Motion reblocking（2026-09-15）
+
+開始時 cwd `C:/astra-dev/pawapuro`，branch `main`，HEAD／main／origin/main 皆 `fb97f4614792c5e90ac9d3996083b0dbd0302bf8`，工作樹乾淨；`git ls-remote origin refs/heads/main` 也確認遠端同 commit。沿用 Blender 4.5.13 LTS 與 Khronos validator 2.0.0-dev.3.10，未安裝新 dependencies。原 `build/pitcher-s0/` 預覽未覆寫；source／GLB／TOML 另存 `build/pitcher-s01/before/`。本輪研究與 motion brief 見 [design](../design/batting-feel.md#s01-motion-reblocking)。
+
+### 實際 source 根因核對
+
+讀取保存的 S0 `.blend`，逐格 evaluated 151 frames，並檢視其 source-derived 圖像，而非只檢查 generator：
+
+- Pelvis／chest／head world yaw 的確是同曲線振幅縮放；rest／parent space 轉換未帶來不同發動時間。原負 yaw coil 使右肩較靠本壘，不能用加大原 yaw 解決本輪要求的右肩後留。
+- 全段右上臂關節距離 **0.0341～0.9296 m**、前臂 **0.2370～0.6913 m**，證實原先獨立移動 elbow／hand 的 FK bake 仍會伸縮。Weights 及 rest hierarchy 本身不需重建。
+- 分段 smoothstep 的確讓多個單調姿勢前後反覆慢下來；S0 整段 grip 最大速度反而在 frame 49，release 當格約 5.93 m/s。這是離散影格差分的 authoring 數據，不是 Native 球速。
+- 原版已有 post-release keys、軀幹前折與右腳前移。問題是右腳 frame 151 才回地面，沒有之後重新支撐的時間，不能描述成完全沒做 follow-through。
+
+### 最終候選的實測
+
+| 檢查 | S0.1 結果 |
+|---|---|
+| 不變項 fingerprint | Source rest mesh／topology／weights／colors、骨架 rest／parent hierarchy、兩台 cameras、placement／比例 scale 的前後 hashes 一致；無骨架或 weights 修改。 |
+| 時間 | 60 fps、source 1–205、clip 3.4 s；唯一 marker 97 → 1.6 s → 未來 tick 384。 |
+| Opening／前甩順序 | Evaluated world yaw 開轉速度峰值：pelvis frame 83、chest 91；grip 速度峰值 95 約 23.024 m/s；release 97 約 12.709 m/s。前腳接觸前 grip 峰值約 9.850 m/s。這些是候選曲線結果，不是影片測得的人體時間。 |
+| 固定骨段 | 全 205 frames 右上臂約 0.387803 m、前臂約 0.474552 m，誤差 <1e-5 m；grip local binding 全段固定 <1e-6 m。 |
+| 腳底 | 四個 source 支撐區間皆落地且 world transform 差 <1e-6；其餘對應離地 frames 的 mesh 最低點 >1e-6 m。整段無低於地面的腳底，右腳 171 後固定、身體繼續回穩到 205。 |
+| 方向／局部穿入 | Marker 前後 grip 持續朝本壘（local −Z）移動；全段右臂表面對頭部橢球 proxy 未檢出侵入。最初粗稿 coil 有侵入，降低折臂後排除。Proxy 排除肩部前兩圈，未涵蓋帽子／完整角色碰撞，不能宣稱完全無穿插。 |
+| Khronos validator | 0 errors／warnings／infos／hints，含資源驗證。 |
+| Release alignment | GLB 對原十進位 staging reference 誤差 **1.25296422e-6 m**（約 **0.001253 mm**）；原 0.1 mm 容差未變。 |
+| 全段 source ↔ GLB | 205 個 frames，雙向 mesh 最近點最大差 **1.59491162e-6 m**。 |
+| 空白 Blender round-trip | 全 205 frames，mesh 最大差 **1.56795340e-6 m**、grip 最大差 **1.07765894e-6 m**。Weights、bind、COLOR_0 與原 subset 檢查保留，未放寬容差。 |
+
+實際腳本 `inspect_motion.py` 檢查 source evaluated mesh／pose，`verify_sample.py` 保留獨立 GLB TRS／skinning 計算及空白 scene reimport；source samples 擴為整段，accessor 解碼只 cache 唯讀資料。Export 不呼叫 reblock／generator，也不保存 `.blend`；metadata 由 source marker／contact properties 產生。
+
+### 影像與尚未完成的觀看
+
+`build/pitcher-s01/` 保存 before／after 正常速度斜側面與 batting-view、after 0.25×，以及 key poses、整段 overview、release 周圍與收勢後半連續影格、GLB round-trip 和單張診斷圖。全部使用既有 camera；乾淨影片隱藏固定 reference 環。圖表由 saved source 的 poses／marker／contacts 決定標籤。
+
+正常影片 decoder 實測 60 fps：before 151 frames／2.516667 s；after 205 frames／3.416667 s。慢速 820 frames／13.666667 s，固定四次重複、0.25×。不同 clip 長度沒有被拉伸成相同時間；JSON sidecar 記錄 FPS、frames、速度與 authoring-only 身分。
+
+**不能宣稱正常速度自看完成**：瀏覽器／播放器工具在啟動時退出。初次讀取亦曾遇到 automatic approval review 的模型容量不足，之後本機操作重試成功；無繞過審核。已實際檢視 source-derived 全段 overview、release／recovery 連續影格及 batting／diagnostic 圖，但不是影片播放。外部 reference video 也沒有實際觀看；來源候選與 FPS／視角未確認項列在 design。附件只有文字，沒有可檢視的遊戲參考圖。
+
+從影格可見的限制：出手前斜側面仍有手／大頭／帽簷的投影重疊；大鞋與地面的深色對比使接觸不如診斷圖清楚。Release 後手臂速度仍有次級起伏，粗 motion 的重量感與節奏不能由速度峰值代替人類判斷。保留 camera、比例、顏色及 lighting，不用調構圖掩蓋。
+
+本輪未執行 C++ build／CTest／app／GPU validation，未修改 production code／staging；先前結果不列成本輪驗證。交付停在 Michael＋Julia review gate，不宣告 S0 motion／dynamic gameplay 通過、不進入 S1。

@@ -1,4 +1,5 @@
 """S0 authoring/export checks, run with Blender Python. No runtime implementation."""
+from functools import cache
 import hashlib
 import json
 import math
@@ -10,7 +11,7 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector, kdtree
 
 HERE=Path(__file__).resolve().parent
-EVIDENCE=HERE.parents[2]/"build"/"pitcher-s0"
+EVIDENCE=HERE.parents[2]/"build"/"pitcher-s01"
 
 
 def require(condition,message):
@@ -38,6 +39,7 @@ def main():
     require(all("targets" not in p for m in doc["meshes"] for p in m["primitives"]),"Morph targets")
     formats={5120:("b",1),5121:("B",1),5122:("h",2),5123:("H",2),5125:("I",4),5126:("f",4)}
     sizes={"SCALAR":1,"VEC2":2,"VEC3":3,"VEC4":4,"MAT4":16}
+    @cache
     def accessor(index):
         a=doc["accessors"][index]
         require("sparse" not in a,"Sparse accessor outside sample contract")
@@ -144,9 +146,13 @@ def main():
     source_grip=source[str(meta["release"]["authoring_frame"])]["grip_blender_m"]
     source_game=[a+b for a,b in zip((-source_grip[0],source_grip[2],-source_grip[1]),origin)]
     planted={}
-    for name,interval in (("foot_R",range(1,74)),("foot_L",range(73,152))):
+    require(set(source)=={str(f) for f in range(meta["clip"]["start_frame"],meta["clip"]["end_frame"]+1)},"Source must sample the entire clip")
+    require(len(meta.get("contacts",[]))==4,"Expected initial and final support intervals for both feet")
+    for contact in meta["contacts"]:
+        name=contact["bone"]
+        interval=range(contact["start_frame"],contact["end_frame"]+1)
         transforms=[pose((f-1)/60)[names[name]] for f in interval]
-        planted[name]=max(abs(m[r][c]-transforms[0][r][c]) for m in transforms for r in range(4) for c in range(4))
+        planted[f"{name}_{interval.start}_{interval.stop-1}"]=max(abs(m[r][c]-transforms[0][r][c]) for m in transforms for r in range(4) for c in range(4))
     require(max(planted.values())<1e-6,"Planted foot transform moved")
     # Independent Blender importer round-trip, into an empty scene, at the same 60fps.
     bpy.ops.wm.read_factory_settings(use_empty=True)

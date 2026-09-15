@@ -151,6 +151,14 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 Michael 在 Julia review 後正式授權工具準備、authoring sample 與 export contract。已製作一名右投手的可編輯 `.blend`、GLB candidate、由唯一 marker 產生的 TOML、必要腳本與正常／慢速／batting-view 預覽；格式、round-trip 與局部契約檢查已執行，結果見 [environment](../development/environment.md)，操作見 [pitcher README](../../pawapuro/batting/pitcher/README.md)。
 
-**停在 Michael＋Julia review gate。** 本輪人類需要判斷粗動作的準備／蓄力／跨步／出手／收勢是否可讀，並檢查投影重疊、衣襬、腳底與身體重量感；這不是動態 gameplay 或 M1 驗收。
+**Michael 判定原 S0 motion 未通過，不進入 S1。** 技術匯出成功不能取代人類動作接受。
 
 S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app，先驗證尺度／軸向／顏色與 ownership。S2 的 runtime pose／CPU skinning、S3 的共同 tick／release integration 仍未授權；不在本次修改任何 production C++、HLSL、CMake 或 staging Data。
+
+### S0.1：Reference Study＋Pitching Motion Reblocking
+
+已交付同一資產的粗動作候選：保留 S0 before；修正 coil 方向、pelvis／chest 的先後、固定長度手臂的前甩及右腳跟進落地；更新唯一 marker 對應的 metadata、整段匯出／接觸檢查，提供正常／慢速、同視角 before／after、連續影格與一張診斷圖。操作與證據位置由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。
+
+**仍停在 Michael＋Julia review gate，未宣告 S0 motion 通過。** 參考影片實際觀看、Codex 正常速度播放自看因播放器工具未啟動而未完成；遊戲參考圖未出現在可讀附件。Timing 是候選，數值檢查與 contact sheets 不填補這些證據缺口。人類須檢查不用箭頭能否讀出蓄力、前腳支撐 → 軀幹 → 手臂、release 連續性與後腳落地回穩，並決定是否需下一次 motion revision。
+
+本輪沒有授權或實作 S1～S3；通過這個 gate 後仍須另行授權下一個切片。沒有 production C++／HLSL／renderer／staging Data、打者動畫、碰撞或新場景。

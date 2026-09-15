@@ -10,15 +10,17 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--frames",type=Path,required=True)
 parser.add_argument("--output",type=Path,required=True)
 parser.add_argument("--slow",action="store_true")
-parser.add_argument("--batting",action="store_true")
 args=parser.parse_args(sys.argv[sys.argv.index("--")+1:])
 files=sorted(args.frames.glob("[0-9][0-9][0-9][0-9].png"))
-if len(files)!=151: raise RuntimeError(f"Expected 151 offline frames; found {len(files)}")
+manifest=json.loads((args.frames/"preview.json").read_text(encoding="utf-8"))
+expected=list(range(manifest["start_frame"],manifest["end_frame"]+1))
+if [int(p.stem) for p in files]!=expected: raise RuntimeError("Missing/extra/nonsequential offline frames")
+if manifest["fps"]!=60 or manifest["fps_base"]!=1: raise RuntimeError("Unexpected source clock")
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene=bpy.context.scene
 scene.render.fps=60; scene.render.fps_base=1
-scene.render.resolution_x=1920 if args.batting else 1280
-scene.render.resolution_y=1080 if args.batting else 720
+scene.render.resolution_x=manifest["width"]
+scene.render.resolution_y=manifest["height"]
 scene.render.resolution_percentage=100
 scene.view_settings.view_transform="Standard"
 scene.view_settings.look="None"
@@ -30,16 +32,16 @@ for path in sequence[1:]: strip.elements.append(path.name)
 strip.frame_final_duration=len(sequence)
 scene.frame_start=1; scene.frame_end=len(sequence)
 title=editor.strips.new_effect("S0 title",type="TEXT",channel=2,frame_start=1,frame_end=len(sequence)+1)
-title.text=("S0 / SOURCE .blend / "+("BATTING CAMERA" if args.batting else "THREE-QUARTER")+
-            (" / 0.25x slow motion" if args.slow else " / 1x / 60 fps"))
-title.font_size=24 if not args.batting else 34
+title.text=(manifest["revision"]+" / SOURCE .blend / "+("BATTING CAMERA" if (manifest['camera']=='batting') else "THREE-QUARTER")+
+            (" / 0.25x slow motion" if args.slow else " / 1x / 60 fps")+f" / {len(files)/60:.3f}s source video")
+title.font_size=24 if not (manifest['camera']=='batting') else 34
 title.location=(.5,.95); title.alignment_x="CENTER"; title.color=(.9,.95,1,1)
 title.use_shadow=True
 note=editor.strips.new_effect("Scope",type="TEXT",channel=3,frame_start=1,frame_end=len(sequence)+1)
 note.text="Authoring only | Ball hidden after release | No runtime / ball flight / dynamic occlusion approval"
-note.font_size=18 if not args.batting else 26
+note.font_size=18 if not (manifest['camera']=='batting') else 26
 note.location=(.5,.035); note.alignment_x="CENTER"; note.color=(.8,.88,.95,1); note.use_shadow=True
-if args.batting:
+if (manifest['camera']=='batting'):
     note.text="Staging camera + derived horizontal shift | Pitcher only; no batter/field | NOT an app capture"
 scene.render.image_settings.file_format="FFMPEG"
 scene.render.ffmpeg.format="MPEG4"
