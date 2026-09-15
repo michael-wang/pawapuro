@@ -967,3 +967,25 @@ v1B review artifact 保留。Front-foot plant orientation 尚待下一階段量�
 - 已檢視 actual runtime paired sheets、release／lifted close-up、saved mesh top／oblique 與完整 clip 抽樣；未連續觀看正常速度影片。Computer-use 初始化仍因 sandbox helper startup 失敗，沿用既有 process-targeted app harness，沒有宣稱該 UI 工具成功。鞋底外緣較突出、深色雙鞋重疊及 perspective foreshortening 仍是 human review 項目，未宣告完整 collision 或 style acceptance。
 
 停止於 Michael＋Julia review：v1C 未 promotion，沒有新的 Motion Truth／Character Motion Rule；material／highlight、cleats／sole detail、foot flex／articulation、rubber arm 延後，S3 未開始。
+
+
+## Rubber Arm v1A candidate（2026-09-16）
+
+Incremental preflight：HEAD／main／origin/main／live remote 為 `e7ee800c2f0a9f624caf78aa4366c72ae5ebc82e`，workspace clean，正式 v1B 未變。Michael＋Julia reject v1C shoe silhouette；orientation Motion Truth 正確，保留 rejected artifact、不 revert，暫停純 geometry shoe polish。局部診斷、修改與 review 路徑由 pitcher README 維護。
+
+Candidate `review/style-rubber-arm-v1a/` SHA256：
+
+- `pitcher.blend`：`8b0226ce7a313f3f9197a47b024cac6c9715be0f6648b0e00a979263f6ce6194`
+- `pitcher.glb`：`94052574318a75eda9975f9c03fb054ef7dc9b9be794c293a79036a15a1a7616`
+- `pitcher.toml`：`0326894ff911e61d138174cd8c9b1c385d5457a6152c91372e66eb24d21a2df9`
+
+- Source 前後／重開檔：205 frames bones／grip／keys／rest／hierarchy／contacts／camera exact；2050 個非 arm vertices／weights exact（含 v1B feet）。152 arm positions／228 weights 改變，無新 topology。Frame 1 Ready、60 fps／1–205、release f97 不變。
+- GLB：除 arm POSITION／JOINTS／WEIGHTS 及 POSITION bounds 外，accessor bytes／structure exact；39 animation channels、IBMs、colors／indices 不變。TOML 只改 source／GLB hashes。Fixture 只更新 24 個 arm points、一個 release bounds 與 provenance，非 arm／grip 原文保留。
+- Khronos 0 errors／warnings／infos／hints。第一次誤用 `-o` 作檔名參數只回 usage；修正 stdout 參數後完成，沒有把失敗呼叫當成功。
+- Source／GLB／round-trip PASS：mesh 最大誤差 1.283923e-6／1.744900e-6 m，GLB release alignment 5.454740e-7 m。`inspect_motion.py` 原 S0.2C revision 的固定骨長、grip、contacts、head proxy、opening／release checks 全部 PASS，未放寬容差或跳過 assert。
+- Debug／Release configure／build／正式 v1B CTest 各 4/4 PASS；另直接以 candidate 執行兩種 build 的既有 S2 motion／static tests 均 PASS，source grip max 1.35952e-6 m。沒有 production code／CMake／staging 修改。
+- 實際 candidate app：Debug／Release play／pause／817 steps／replay／Complete／minimize→restore PASS、exit 0；正常 wall time 3.4281／3.4227 s，Complete tick 816，pause／final hold pixels 不變，背景時間不補入。Debug GPU-based validation enabled、0 errors，shutdown live report 只有供 report 使用的 device，無 child objects；Release 無 debug layer。
+- Baseline runtime captures 重用 v1B，已核對 GLB／TOML／exe／DLL／staging bytes。Candidate 新擷取 205 格，以 60 fps 編碼 1×，decoder 核對 205 frames／3.416667 s；非 wall-clock 錄影。斜側面 render 相對路徑曾被 Blender 解到 `C:/build/style-rubber-arm-v1a/`，原 PNG bytes 已複製到 ignored evidence，沒有重製／改 source。
+- 已檢視 runtime／side 比較、雙角度 clean tube／wire 與全段抽樣；未連續觀看正常速度影片。手套側 Ready／coil 較直厚、部分角度 inner bend／重疊仍在，release 遮擋與 hand 接合觀感待 review，不宣告 style acceptance。
+
+Evidence：ignored `build/style-rubber-arm-v1a/`。正式三檔／fixture 不變，candidate 待 Michael＋Julia review、未 promotion；Character Motion Rules 六條內容不變，S3 未開始。

@@ -2,9 +2,29 @@
 
 2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式三檔已 promotion 至 v1B；projected shoe readability／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
 
+## Rubber Arm v1A candidate（2026-09-16）
+
+Michael＋Julia **reject v1C shoe silhouette**：heel→toe／planted support direction 正確，但過窄 upper 配寬 sole 形成 mound-like silhouette。正式鞋仍為 accepted v1B；保留 v1C rejected artifact、不 revert，暫停純 geometry shoe polish，material／highlight 與後續 presentation polish 延後。
+
+`review/style-rubber-arm-v1a/` 從正式 v1B 建立，**待 human review、未 promotion**，遵循既有 Rule 4，沒有新增 Motion Truth。`revise_rubber_arm.py` 只改 arm tube rest positions／weights。
+
+- **根因 C（兩者共同）**：saved source／evaluated poses 確認每臂 13×12 vertices，rest 中心線與 cross-section frame 在 ring 6 附近轉折。右臂 blend 集中於 rings 4–7；左臂原整段 forearm→hand 混合另有扁縮／粗細變化。實際 runtime、既有斜側面與兩角度 mesh 投影均已檢視；不是 animation path 修正。
+- **修改**：兩臂 rings 3–9 圓順化中心線／cross-section，rest 端點不移；rings 2–10 平滑 upper→forearm falloff，tube 不再混入 hand bone。152 個 rest positions、228 個頂點 weights 改變；13 bones、2362 vertices／3936 triangles 不變，hand sphere／glove 本身不改。沒有新增 topology、solver 或 shape system。
+- **保護**：205 格 bone／grip matrices、animation keys／handles、rest bones、camera、contacts exact；2050 個非 arm 頂點的 rest／evaluated positions 與 weights exact，包含 v1B feet。正式三檔／fixture 不變。
+- **觀察／限制**：front contact 外側 bend 與 early follow 右臂較圓順，左臂凹尖減少；Ready／coil 手套側也更直、更厚實。部分角度仍有 inner bend／coil 投影重疊，release 仍受頭／glove 遮擋。Hand 接合與是否過度軟厚待 human review，未宣告 style 或完整 collision 通過。
+
+優先開啟 ignored `build/style-rubber-arm-v1a/`：
+
+- `runtime-comparison.jpg`、`side-comparison.jpg`：Ready／coil／front contact／release／early follow；上方成對 before 左／after 右，放大區 before 上／after 下。
+- `clean-tube-silhouettes.jpg`：同一 evaluated mesh 的兩角度純輪廓；`arm-diagnosis.jpg`：Ready／front contact 的 wire／forearm weight 比較。`baseline-wire.jpg`／`trial-wire.jpg` 另含 acceleration／release；trial 與 saved candidate 取樣／weights 已核對 exact。
+- `candidate-runtime-1x.mp4`：真實 app tick captures，60 fps／205 frames／1×、3.416667 s，首格 Ready；不是 wall-clock 錄影。已實測正常 wall-time 播放，未連續觀看正常速度影片；`runtime-overview.jpg` 為全段抽樣。
+- `candidate-release/pawapuro.exe` 是隔離 candidate app；一般 build 仍載入正式 v1B。
+
+`check_rubber_arm_export.py` 核對 GLB animation／非 arm bytes 與來源 hashes；明確 `--write-fixture` 才更新候選的 24 個 arm expected points、一格受 arm 影響的 bounds／provenance，其他原文保留。驗證數值見 environment。S3 未開始，未改 shoe／material／camera／physics。
+
 ## Foot Shape v1C：Slender Directional Shoe Silhouette candidate
 
-2026-09-16：本輪從已接受的 `review/style-feet-v1b/pitcher.blend` 建立 `review/style-feet-v1c/`，**待 Michael＋Julia human review，未 promotion**。正式三檔仍是 v1B，hash 不變。先前 orientation diagnosis 直接量 evaluated heel→toe：f72／79／97／108 水平皆朝 game −Z、與 bone forward 無 yaw offset；問題是 projected readability。本輪只改 Visual Representation，沒有新增 Motion Truth 或修改 animation。
+2026-09-16：`review/style-feet-v1c/` 已由 Michael＋Julia **human rejected**；以下保留當時候選的修改／測試紀錄，未 promotion。正式三檔仍是 v1B，hash 不變。先前 orientation diagnosis 直接量 evaluated heel→toe：f72／79／97／108 水平皆朝 game −Z、與 bone forward 無 yaw offset；問題是 projected readability。本輪只改 Visual Representation，沒有新增 Motion Truth 或修改 animation。
 
 `revise_shoe_silhouette.py` 是一次性 feet-only edit：核對 v1B hash、拒絕覆寫 candidate，只重塑現有 220 vertices／foot 的 rest positions，不建立 topology 或重建角色。Upper 收窄、toe taper 加強並延伸 25 mm；heel／upper 比 sole 更收束。270 個 foot positions 改變；全部 1922 個非腳部 positions、indices、colors、weights、rest／hierarchy、全部 keys／骨骼／grip transforms／camera exact。每腳原本 59 個 coplanar contact vertices 的 rest 與全部 205 格 evaluated positions 都 exact 保留。
 

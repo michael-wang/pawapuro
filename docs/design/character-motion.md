@@ -114,9 +114,9 @@ Michael＋Julia 的 S2 runtime human review 已確認：S0 已接受的 motion �
 
 仍保留以下獨立 Character Style debts：
 
-- **Foot Shape**：v1B toe／heel／upper／sole geometry 已通過 Michael＋Julia human review 並 promotion；v1A footprint 尺寸保留。Front-foot evaluated geometry 朝向已診斷正確；v1C 只調 toe taper／upper silhouette 以改善 projected readability，候選待 human review。Motion Truth 保留，不新增 Motion Rule。
+- **Foot Shape**：v1B toe／heel／upper／sole geometry 已通過 Michael＋Julia human review 並 promotion；v1A footprint 尺寸保留。Front-foot evaluated geometry 朝向已診斷正確；v1C 因過窄 upper 配寬 sole 的 mound-like silhouette 已 human rejected；暫停純 geometry shoe polish，presentation debt 延後至 material／後續 polish。Motion Truth 保留，不新增 Motion Rule。
 - **Material／highlight**：參考鞋面的 specular／highlight 延後，目前沒有 material／lighting framework。
 - **Articulation／sole／cleat detail**：彈性形變與鞋底細節延後，目前沒有真實 caller 要求 implementation。
-- **Rubber arm**：animated hard-elbow debt 保留，等待另一個獨立 polish task。
+- **Rubber arm**：v1A candidate 依既有 Rule 4 調整 arm tube geometry／weights，待 human review、未 promotion；不修改 motion。
 
 操作與證據見 [pitcher README](../../pawapuro/batting/pitcher/README.md#style-polish-v1a125-planar-feet-candidate)，技術結果由 [environment](../development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16) 擁有。S3 未開始、M1 未完成；六條 rules 原文不變。
