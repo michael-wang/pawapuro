@@ -22,7 +22,7 @@ Detached feet、large flat feet、rubber-like continuous arms、spherical hands�
 
 Detached foot transforms、hidden bend joints、skin weights、grip node、authored contact intervals 與 release marker，都是目前 authoring sample 使用的方法。它們可更換，只要仍表達同一個 Motion Truth；不因此要求腳永久 parent 到 torso，或把目前 Blender／GLB hierarchy 升為永久角色架構。
 
-實際資產與工具契約由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。S0 authoring motion 與 S1 static import 已接受；S2 已實作 runtime clip playback／CPU skinning，待 human review。S2 的球仍是獨立 reference fixture；尚未實現 Rule 5 的 runtime 持有／釋放交接。
+實際資產與工具契約由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。S0 authoring motion 與 S1 static import 已接受；S2 runtime clip playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。S2 的球仍是獨立 reference fixture；尚未實現 Rule 5 的 runtime 持有／釋放交接。
 
 ## 六條 v0.1 rules
 
@@ -104,6 +104,10 @@ S1 bind-pose human feedback 留下兩項 debt：
 - Feet footprint 視覺上偏小，站立感與 support readability 不足。
 - Arm silhouette 仍有可讀成 elbow joint 的折角，與 rubber-arm visual language 不完全一致。
 
-這些是目前 runtime bind pose 的回饋，不能推論所有 animated poses 都有同樣問題；不是 S1 importer failure，也不撤回 S0／S1 接受。S2 已能在真正 batting camera 播放，現在交由 Michael＋Julia 做 Character Motion／Style Polish review。Runtime review-tick 截圖仍看得到偏窄的支撐輪廓與部分 hard-elbow 折角；這是截圖觀察，不能代替完整 1× 動態接受。本輪不改 feet size、mesh、weights 或 motion。
+Michael＋Julia 的 S2 runtime human review 已確認：S0 已接受的 motion 正確播放；feet footprint 不足與 hard-elbow 輪廓仍存在，並非單純 bind-pose 錯覺。這不撤回 S0／S1／S2 接受，也不代表 style polish 完成。
 
-S2 為 implemented candidate，停在 Michael＋Julia review gate；S3 未開始、M1 未完成。本次只更新 acceptance／交付狀態，六條 rules 保持原文。技術實測由 [environment](../development/environment.md#s2-runtime-pitcher-animation-playbackcpu-skinning2026-09-16) 擁有。
+### Runtime Character Style Polish v1A：Larger Grounded Feet
+
+依 Rule 1「Support is authoritative」，本輪只調 Visual Representation：從正式 S2 baseline 的 source shape，繞各 foot rest anchor 將水平兩軸放大 1.25×，厚度、骨骼／keys、接地 timing、grip 與其餘角色保持不變。1.25 是單一 review candidate，不是永久 style constant，沒有新的 Motion Truth／motion law，也沒有 runtime style parameter。
+
+Candidate 存於 `review/style-feet-v1a/`，正式資產仍是 S2 baseline。Michael＋Julia 將以實際 batting camera review 支撐感、尺寸與新 overlap；Codex 不宣告 style 通過。Hard-elbow／rubber-arm debt 留給獨立 task，本輪未修改。操作與證據見 [pitcher README](../../pawapuro/batting/pitcher/README.md#style-polish-v1a125-planar-feet-candidate)，技術結果由 [environment](../development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16) 擁有。S3 未開始、M1 未完成；六條 rules 原文不變。

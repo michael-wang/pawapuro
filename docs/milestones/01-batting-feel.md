@@ -194,10 +194,10 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 
 ## S2：Runtime Pitcher Animation Playback／CPU Skinning（2026-09-16）
 
-**Implemented candidate，待 Michael＋Julia human review。** 已交付單一 `pitch_R` 的 240 Hz pose／CPU LBS、concrete PitcherMotion owner 與固定容量 dynamic triangle stream；啟動 Ready 是 authoring frame 1，Complete 停在 frame 205。Space／P／`.` 只控制 animation，球仍是獨立 reference fixture。
+**Michael＋Julia 已接受 S2 技術與 human review。** 已交付單一 `pitch_R` 的 240 Hz pose／CPU LBS、concrete PitcherMotion owner 與固定容量 dynamic triangle stream；啟動 Ready 是 authoring frame 1，Complete 停在 frame 205。Space／P／`.` 只控制 animation，球仍是獨立 reference fixture。
 
 Debug／Release build、4/4 CTest、實際 app start／replay／pause／single-step／minimize／restore／Complete 已通過，Debug GPU validation 0 errors。八個 source review samples、release alignment、固定骨長、contact intervals 與舊 simulation tests 通過；完整數值與證據由 [environment](../development/environment.md#s2-runtime-pitcher-animation-playbackcpu-skinning2026-09-16) 保存。
 
-下一個 gate 由 Michael＋Julia 在實際 batting camera 正常速度觀看：authoring timing 是否原樣成立、detached feet 的 support／body coordination、hard elbow／footprint debt，以及 head／cap／glove／arm 的動態遮擋。截圖與 deterministic 數值不能替代這個接受。未修改 asset／camera／staging／physics，未做球 attachment／release、render interpolation、GPU skinning 或 batter animation。
+Michael＋Julia 已確認 authoring motion 正確在 runtime 播放，同時確認 footprint／hard-elbow style debt 仍存在。v1A 已另存唯一 1.25× planar feet candidate，待 support／overlap human review，未 promotion；rubber-arm 與 S3 仍需獨立授權。本輪正式 asset／camera／staging／physics 保持不變，未做球 attachment／release、render interpolation、GPU skinning 或 batter animation。
 
-完成本輪後停止；style polish 與 S3 都須另行授權，M1 未完成。
+完成本輪後停止；後續 style polish 與 S3 都須另行授權，M1 未完成。

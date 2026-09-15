@@ -850,3 +850,49 @@ Computer Use 初始化及 reset 重試均失敗（trusted Node kernel exited／W
 Computer Use 的 trusted Node 初始化與 reset 重試因 sandbox helper setup refresh errors 失敗；沿 S1 已用的 process-targeted key messages／DPI-aware PrintWindow 檢查本次 app。Codex 已檢視實際 startup 全圖與 Debug／Release review-tick sheets，**未以影片連續觀看正常速度 motion**；1× wall-time 執行與截圖觀察分開回報，由 Michael 在 app 補完整 motion review。
 
 截圖觀察：closed Ready／coil 抬腳集中、stride／前腳接觸與收勢姿態有變化；部分 Ready／late poses 的手臂仍讀得出硬折角，feet footprint 相對大頭／torso 偏窄，鞋重疊時支撐分離度有限。Stride／contact 的投球臂部分被頭／帽遮擋，手套靠近臉；獨立 reference ball／release ring 仍在臉與出手區附近干擾觀察。這些保留為 Character Motion／Style debt，不在本輪修改資產或球 owner，不替 Michael＋Julia 判定動態可讀性通過。
+
+
+## Style Polish v1A Larger Grounded Feet（2026-09-16）
+
+起始 main／HEAD／origin/main／live remote 均為 `a1a2b01a5c6ee33c8e1d7ec4a431edfdb0532097`，workspace 乾淨。Michael＋Julia 已接受 S2 技術與 runtime human review，並確認 footprint 不足／hard-elbow debt 存在於 animated view。本輪只交一個 1.25× planar feet candidate，未 promotion，未改 production code／HLSL／CMake／staging／physics／正式三檔，未做 rubber arm 或 S3。
+
+### 來源與保護
+
+`revise_footprint.py` 直接讀正式 saved `.blend`，利用兩組各 220 vertices 的 rigid foot weights，以 bind/rest anchor 放大 Blender X／Y，保留 Z；另存 `review/style-feet-v1a/pitcher.blend` 後重新開啟並比較。沒有重跑角色 generator／motion-edit scripts。保存後全 205 格 bones／grip matrices、全部 keys／handles／interpolation、rest skeleton、topology／colors／weights、camera／其他 mesh、1922 個非腳部 source／evaluated vertices 完全相同。
+
+Candidate GLB 的所有非 POSITION accessor bytes 完全相同，包含 animation、inverse binds、JOINTS／WEIGHTS、colors 與 indices；JSON 結構只允許 POSITION bounds 改變。所有 440 個 foot vertices 都符合固定 planar edit，其中 398 個座標 bytes 改變、42 個在中心軸不移動。比對先排除了錯誤的「440 個都必須改變」假設，並按 Blender → GLB 轉換保留 −0.0；沒有放寬 geometry 容差。TOML 只變 source／GLB hashes，clip／marker／contacts／space 語意不變。
+
+`motion_expected.txt` 的 candidate 副本只更新 7 格受影響 bounds、每格 source IDs 1300／1500 共 16 個腳部點，以及 hash／candidate 標示；既有 grip／非腳部點與正式 fixture 保留原文。資料來自本次 saved candidate 的既有 export source samples，不是 runtime 計算反填 expected values。
+
+### 本輪實測
+
+| 檢查 | 結果 |
+|---|---|
+| Khronos validator | 0 errors／warnings／infos／hints。 |
+| 既有 source／GLB／round-trip | PASS；GLB → source 全格 mesh 最大 1.283924e-6 m；Blender round-trip mesh 1.744900e-6 m、grip 1.660393e-6 m，原 0.1 mm 容差不變。 |
+| 既有 inspect_motion | PASS，保留 S0.2C revision 與原固定骨長／grip／contact／motion assertions。 |
+| Source foot shape／ground | Rest 寬 0.791350→0.989187 m、長 0.931000→1.163750 m，厚度 0.198450 m 不變。Planted world bottom Y 0.355 m 不變（比較 <1e-7 m）；全 205 frames 未穿過支撐平面。Airborne 右腳傾斜時最低點最大變化 0.0907805 m，詳見 pitcher README；不是承諾所有 airborne world-Y bounds 不變。 |
+| Debug／Release build、CTest | 各 4/4 PASS，ninja 無 code 工作；targets／正式 fixtures 原樣保留。 |
+| Candidate static regression | 兩版未修改的 static_pitcher_test 直接讀 candidate，全 subset／bounds／basis／grounding／10 個拒絕案例通過。 |
+| Candidate S2 motion test | 兩版既有 executable 直接讀 candidate＋小型 candidate fixture，全 ticks／counts／colors／bones／contacts／determinism／chunking／pause／replay／Complete 通過；source samples 最大 1.35952e-6 m。 |
+| Release diagnostic | Runtime tick 384，grip alignment **4.9151248e-7 m**，與 S2 原結果相同；容差仍 0.0001 m，沒有 snap／發球。 |
+| 實際 app | 本輪重新執行正式 Release baseline、candidate Debug／Release。各完成 start／play／pause／817 次 step／replay／minimize／restore／Complete／Esc exit 0。兩種 candidate 的正常速度 wall-time 約 3.4317／3.4101 s，clip time 均 3.4 s。 |
+| GPU／shutdown | Candidate Debug layer＋GPU-based validation 0 errors／corruption，無 live child resources（報告用 device 保留）；Debug／Release 完成 1378／2466 frames。Release 未啟用 debug layer，不列為另一次 GPU validation。 |
+| Raster comparison | 兩個 candidate build 的八張同 tick 圖逐像素相同。六個 baseline/candidate review pairs 的變動只在鞋部 raster 區域；raw PNG 同為 1920×1080，camera／crop／倍率未因 candidate 改變。 |
+| 1× 影片 | `candidate-runtime-1x.mp4`：actual runtime tick captures 0..816，每 4 ticks 一格，60 fps，解碼 205 frames／3.416667 s；多出的 1/60 s 是最後一格顯示時間，沒有 retime clip。這是 tick-sampled 重組，不是 wall-clock screen recording；另外執行不擷取的完整 1× app playback。 |
+
+### Review 與 launch 狀態
+
+證據留在忽略的 `build/style-feet-v1a/`。先看 `baseline-vs-125-runtime.jpg`、`candidate-runtime-1x.mp4`、`ready-contact-landing-feet.jpg`；`source-comparison.json`、`export-comparison.json`、`sample-validation.json`、`motion-audit.json`、`foot-world-bounds.json`、`*-smoke.json`、`build-test.log` 保存具體數值。一次性的 raster／encoder／export 比對 scripts 留在該目錄，不建立新 framework。
+
+Computer Use 初始化／reset 重試仍因 Windows sandbox helper setup refresh errors 失敗；本輪沿既有 process-targeted key messages → SDL loop／PrintWindow 擷取，沒有操作其他 app。Codex 實際檢視六組 paired poses、full-scene startup 與跨完整 clip 的 14 格 sequence；未連續觀看正常速度影片，不代替 Michael＋Julia style review。
+
+觀察：鞋部 footprint 更大，但 Ready／front-contact／final 深色雙鞋更容易連成較寬的一片，frame 65 展開姿勢的鞋面投影與衣襬重疊。未見六組 review 圖新增 screen-edge／打者遮擋；沒有宣稱完整 self-collision 驗證，沒有為 overlap 修改 pose／mesh 其他部位。是否更站得住、落地是否更有重量、1.25× 是否合適仍待 human review。
+
+Runtime 使用 `candidate-debug/`／`candidate-release/` isolated launch copies：exe／DLL／staging 從本次 build 原樣複製並核對；只在 isolated copies 放入 candidate GLB／TOML。一般 `build/debug`／`build/release` 的正式 launch GLB／TOML 從未替換，結束後 bytes／hash 仍等於正式資產；無需恢復。正式三檔 SHA256 仍為上節 S2 baseline 值。
+
+Candidate SHA256：
+
+- `.blend`：`3fbd587e767c4a154a702bdeeca742d871b7ed16a1647e283c76746e00d1fb5a`
+- `.glb`：`c5582de513ebb4163566a41225507bf39829bea58f003446a80871e82ca6c291`
+- `.toml`：`f65220513d2f3727b225f380c693e7926e61a8f606e9ddc89023b1cb76f5a3d4`
