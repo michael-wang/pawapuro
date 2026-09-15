@@ -1,6 +1,6 @@
 # M1：Batting Feel
 
-更新：2026-09-14。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2 的 reference flight／pause／single-step 已完成，本輪已加入交付 3 的同球重投及進壘驗證畫面，Step 1 整體仍待使用者 review，M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
+更新：2026-09-15。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2 的 reference flight／pause／single-step 已完成，本輪已加入交付 3 的同球重投及進壘驗證畫面，Step 1 整體仍待使用者 review，M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
 
 ## 完成的定義
 
@@ -145,3 +145,12 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 
 
 2026-09-15 Final Pre-Rig Character／Vertical Composition Pass：完成兩名 static fixture 的局部衣襬修形與既有 camera 兩個 Y 的 staging 候選，保留 baseline／torso-only／最終構圖及球路證據。Debug／Release、CTest 與實際 app／GPU regression 通過；**Michael＋Julia 已接受本輪靜態造型／構圖，Final Pre-Rig Pass 收尾**；接受項目與暫緩問題見設計文件，實測證據見 environment。下一步在新 Codex 對話規劃 Rig／Animation Pipeline，本輪不開始實作。Early-flight 背景對比與動畫遮擋仍待後續人類檢查；不代表動態球路、動畫、正式角色資產或 M1 已驗收。
+
+
+## Right-handed Pitcher S0 交付（2026-09-15）
+
+Michael 在 Julia review 後正式授權工具準備、authoring sample 與 export contract。已製作一名右投手的可編輯 `.blend`、GLB candidate、由唯一 marker 產生的 TOML、必要腳本與正常／慢速／batting-view 預覽；格式、round-trip 與局部契約檢查已執行，結果見 [environment](../development/environment.md)，操作見 [pitcher README](../../pawapuro/batting/pitcher/README.md)。
+
+**停在 Michael＋Julia review gate。** 本輪人類需要判斷粗動作的準備／蓄力／跨步／出手／收勢是否可讀，並檢查投影重疊、衣襬、腳底與身體重量感；這不是動態 gameplay 或 M1 驗收。
+
+S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app，先驗證尺度／軸向／顏色與 ownership。S2 的 runtime pose／CPU skinning、S3 的共同 tick／release integration 仍未授權；不在本次修改任何 production C++、HLSL、CMake 或 staging Data。

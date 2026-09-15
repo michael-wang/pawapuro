@@ -503,3 +503,56 @@ Complete 畫面仍畫完整 crossing tick 的球，球心 **(967.034790,759.2152
 - `pre-rig-*.log`、`pre-rig-baseline-geometry.csv`／`pre-rig-final-geometry.csv`：runtime／GPU 紀錄及生成幾何量測。暫存操作／量測 source 與 executable 已移除。
 
 Michael＋Julia 已完成靜態 review，本次 pass 收尾；[設計文件](../design/batting-feel.md) 分開記錄接受項目與暫緩問題。此處既有 build／capture／量測結果不變，本次僅更新文件狀態，未重跑 build／tests 或新增驗證。下一步在新對話規劃 Rig／Animation Pipeline；early-flight 背景對比與動畫遮擋仍待後續人類檢查，不視為動態球路、動畫、正式資產或 M1 驗收。
+
+
+## Right-handed Pitcher S0：Authoring Sample／Export Contract（2026-09-15）
+
+開始時實際 checkout 為 `C:/astra-dev/pawapuro`、branch `main`、HEAD `b296f9dec43d92423df8ae6ac37b7e6a7d501872`，工作樹乾淨。Michael 在 Julia review 後正式授權 S0 的工具準備、最低角色／動畫資產與 export contract；沒有授權 C++ runtime 接入。
+
+### 實際工具準備
+
+| 工具 | 本次結果 |
+|---|---|
+| Blender | 官方 Windows x64 ZIP，**4.5.13 LTS**；build `daeeeca98fb0`，build date 2026-08-25、commit date 2026-08-24。`--version` 與 headless 啟動／製作／render 均成功。 |
+| Blender 路徑 | `C:/astra-dev/tools/blender-4.5.13-windows-x64/blender.exe`。ZIP／checksum 留在同層 `downloads/`；未改全域 PATH、檔案關聯或既有使用者設定。 |
+| 官方 SHA-256 | ZIP 實際雜湊與官方 `blender-4.5.13.sha256` 一致：`b5fdf800ce65fa2f209e8f68d02667e4d720fa1c42f247c72d1882ab04decba6`。驗證後才解壓／執行。 |
+| Khronos Validator | 官方 Windows binary **2.0.0-dev.3.10**，位於 `C:/astra-dev/tools/gltf-validator-2.0.0-dev.3.10/gltf_validator.exe`，含 LICENSE／NOTICES。僅用於 authoring validation，未加入 runtime dependency。 |
+| Validator SHA-256 | 本機下載 ZIP 雜湊 `c5068f51205deedc28acc3529ee7e11ee60e853454f673093398eba80142202c`；官方 release API 未提供 digest，**這是本機記錄，不是獨立官方 checksum 比對**。 |
+| 圖片／影片 | Contact sheets 使用本機既有 Python／Pillow 12.3.0；影片使用 Blender 隨附的 H.264／MP4 encoder，沒有另裝 FFmpeg 或第三方外掛。 |
+
+官方來源：[Blender 4.5 LTS](https://www.blender.org/releases/4-5/)、[Windows ZIP](https://download.blender.org/release/Blender4.5/blender-4.5.13-windows-x64.zip)、[官方 checksum](https://download.blender.org/release/Blender4.5/blender-4.5.13.sha256)、[Khronos release](https://github.com/KhronosGroup/glTF-Validator/releases/tag/2.0.0-dev.3.10)。格式依據：[glTF 2.0 規格](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)。實際 exporter 參數另用此版本的 Blender RNA 查證，不把其他版本的 UI 選項當成已確認結果。
+
+### 資產與量測結果
+
+本輪只有 `pawapuro/batting/pitcher/` 的 authoring 資產／腳本，以及相關文件變更。細部空間／時間／格式契約與實際開啟、匯出、驗證、preview 命令由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。
+
+| 檢查 | 實際結果 |
+|---|---|
+| 小型資產 | `.blend` **2,356,699 bytes**；GLB **208,312 bytes**；2362 vertices／3936 triangles、13 skin joints、15 nodes、單一 mesh／skin／clip |
+| Clip／marker | `pitch_R`，39 TRS channels、全部 LINEAR；60 fps、fps_base=1、source frames 1–151 → GLB 0–2.5 s；唯一 release marker frame 91 → 1.5 s → 240 Hz tick 360 |
+| 尺度 | Rest mesh 高約 **2.56515 m**；2.45 是既有比例 scale，未重複作 runtime scaling。Placement 保留 staging 的 `(0, 0.355, 18.5166)`。 |
+| Official validator | **0 errors／0 warnings／0 infos／0 hints**，資源內容驗證開啟 |
+| Source grip world | `[-0.6499997973442078, 2.0500002908706665, 16.799999105072022]` m；使用 source pose 與既定座標／placement 換算，並非 Native sampling |
+| GLB grip world | `[-0.6499996781349182, 2.0500002908706665, 16.79999970111847]` m |
+| GLB − authored reference | `[3.2186508180931384e-07, 2.9087066666377837e-07, -2.988815310800419e-07]` m；距離 **5.26814052e-07 m**，約 **0.000527 mm** |
+| GLB 自行取樣 vs source | 十個重要 frames（含 90／91／92）雙向 vertex-position 最近點最大差 **9.13721919e-07 m**；沒有把兩種不同幾何順序直接以 index 相減 |
+| 空白 Blender scene round-trip | 重新匯入 GLB；十個姿勢 mesh 最大差 **1.19952028e-06 m**、grip 最大差 **9.25312918e-07 m**。不是 C++ importer 驗證。 |
+| Weights／inverse binds | Weight sum 最大誤差 **2.98023224e-08**；每 vertex 最多四個槽位／兩個非零 influences。Rest joint × inverse bind 與 identity 最大元素誤差 **3.08863861e-07**。 |
+| 平塗顏色 | 五色確實在 `COLOR_0`；匯出最大 channel 誤差 **7.62951095e-06**。Blender reimport 轉為 byte color 後最大差 **0.0035380435**，明確保留量化限制。 |
+| Planted feet | 後腳 frames 1–73、前腳 frames 73–151 的 world transforms 最大差皆 **0**。這不等於真實受力／重心已驗收。 |
+| Source 保護 | 生成腳本對已存在 `.blend` 拒絕覆寫；實測保留原檔 SHA-256。日常匯出不保存 source，同 source 重複匯出的 GLB byte-identical。 |
+
+TOML 包含 source／GLB hashes；詳細 raw figures 在 `build/pitcher-s0/sample-validation.json`。Release comparison 使用 staging 原始十進位數值作參考，不先轉成 float32 使差值被隱藏。本輪沒有改 `staging.toml` 的 release、velocity、camera、mound、角色 scale 或好球帶。未來 Native 的取樣／矩陣實作仍須另行量測，不宣稱目前已可無差異交接 simulation。
+
+### 實際視覺證據與限制
+
+- 原始 source 的 151 frames 逐張離線渲染；正常斜側面／batting 影片解碼確認 **60 fps、151 frames、2.516667 s**。Source clip 是 2.5 s，影片包含首尾兩個端點，因此多一個顯示 frame。慢速固定每 frame 重複四次，**60 fps、604 frames、10.066667 s、0.25×**。沒有拿掉幀的 viewport capture 代表正常節奏。
+- 已檢視七姿勢、release 前後、source／GLB 比較與影片解碼 frame。局部修正肩部連接高度與抬腳時的前臂路徑，避免明顯深入大頭；保留連續手臂與衣襬覆褲子。手套／帽／臉仍是粗略形體。
+- 另對七姿勢作頭部橢球與右臂表面的局部粗查；排除靠身體的前兩個 attachment rings 後，沒有 normalized squared distance <0.9 的右臂點。這只是針對觀察到問題的輔助診斷，**不是整段 self-collision 或全角色無穿插保證**。
+- 部分加速姿勢在特定視角仍有手臂／大頭／帽簷的投影重疊；腳的平塗對比、蓄力／跨步重量感與收勢節奏，交 Michael＋Julia 判斷。未把數值通過當成人類動作接受。
+- Authoring batting camera 使用現有 position／target／36° vertical FOV，推導 Blender horizontal shift 約 **0.21186446**，gameplay focus NDC X 約 **0.5**；release 投影約 **(738.816, 465.350) px**（1920×1080）。只有 camera 對照，沒有重建球場、打者或 app camera framework，不能驗收真實背景遮擋／early-flight contrast。
+- 輔助球在 frame 92 隱藏；preview 未模擬 release 後飛行。Source、GLB comparison 與 MP4 都有 authoring-only 標示。
+
+Evidence：`build/pitcher-s0/pitcher-normal.mp4`、`pitcher-slow.mp4`、`pitcher-batting.mp4`；`seven-key-poses.png`、`release-grip-reference.png`、`batting-camera-release.png`、`roundtrip-comparison.png`；validator／sample-validation／export／render／encode logs 與逐 frame PNGs 皆在忽略的 `build/pitcher-s0/`，不 commit。工具及 archives 留 repo 外。
+
+**沒有重跑 C++ build／CTest／app／GPU validation**：本輪未改 production C++、HLSL、CMake 或 staging Data；先前通過結果不算本輪新驗證。S0 candidate 停在 Michael＋Julia review gate，未開始 S1／S2／S3，沒有宣告動態 gameplay 或 M1 通過。

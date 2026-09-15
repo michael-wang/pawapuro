@@ -111,7 +111,7 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 - **Simple face first**：先用簡單眼睛、眉毛或帽簷／頭部方向；有實際情緒需求才擴充，不預建 facial animation。
 - **Proportions serve animation**：比例以未來投球／揮棒的力量、重心與節奏判讀為準，不以縮小真人或 static concept art 作唯一標準。
 
-目前只用既有橢球／短圓柱驗證右投手 release 與左打者 ready 兩個固定姿勢。放大頭、鞋、球形手、bat，縮短軀幹並保留短褲與鞋之間空隙；手、帽與鞋的相依尺寸直接由共用比例計算。這不證明動態姿勢已成立；正式 asset／rig／skeleton／animation 仍未開始。
+目前只用既有橢球／短圓柱驗證右投手 release 與左打者 ready 兩個固定姿勢。放大頭、鞋、球形手、bat，縮短軀幹並保留短褲與鞋之間空隙；手、帽與鞋的相依尺寸直接由共用比例計算。這不證明動態姿勢已成立。後續 S0 已製作右投手 authoring sample（見下節），但 app 的角色仍是 static fixture，未接入角色 asset／rig／animation runtime。
 
 ### 靜態人物 blockout
 
@@ -229,3 +229,15 @@ M1 重現目標是同一 build、相同平台／資產、相同 tick 輸入；�
 使用簡單容器與局部 RAII；scratch 只在有明確短期 lifetime 的工作使用。先量測，才決定 SOA、更多 threads 或 GPU compute。權威投打模擬留 CPU；local AI 不屬於 M1，也不能成為逐 tick 依賴。
 
 功能無法使六階段更可玩、可判讀、可調或可查錯時，先不加入。若可玩性驗收未過，修正最弱階段，不以新增 infrastructure 代替玩法改進。
+
+## 右投手 S0：authoring 與匯出邊界
+
+2026-09-15，Michael 在 Julia review 後授權最低右投手 authoring sample、Blender 工具準備、GLB／metadata 匯出與預覽。第一版已製作，**等待 Michael＋Julia review**；本節不授權 S1 的 C++ importer 或後續 runtime。
+
+本次選擇原創低細節 mesh／一副必要 armature／一段不循環 pitch clip，以既有大頭、扁腳、detached feet、球形手、連續簡化手臂及衣襬風格建立動作。隱藏 bend 與 weights 只解決目前肢體彎曲、衣襬連續性的實際需求，不引入真人完整骨架或 generic character。共同 tick／CPU skinning 是後續原則接受的方向，尚未實作。
+
+`.blend` 是可編輯來源；唯一 release marker 由 exporter 產生 timing metadata。Grip 是持球球心，其 parent 是右手；初次生成與日常匯出分開，匯出不重建來源。局部檔案、座標／placement、格式 subset 與操作命令由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護，不複製另一份通用 pipeline 文件。
+
+角色比例 scale 在 authoring 時換成公尺，placement 不重複縮放；asset 必須對照既有 release Data，不能為取得對齊修改 staging／camera／球路。S0 的 source 與 GLB round-trip 誤差只代表 authoring 交付，**不等於 Native release 已對齊**。後續 Native sampled initial state 若與 regression baseline 不同，仍須另列差異 review，不隱藏 snap 或重算球速。
+
+本次輔助球只在出手前跟隨 grip，marker 後隱藏；不製造第二條球路。Authoring camera 對照同一 staging 參數，但不包含 app 打者／球場，不能代替動態遮擋／early-flight 對比驗收。既有 horizontal off-axis camera、strike-zone truth、pitch sightline 與 deterministic Native simulation 邊界保留。
