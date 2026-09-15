@@ -125,7 +125,12 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 
 垂直 staging 只調既有 camera position Y／target Y：提高視點配合下俯方向，改善遠方投手帽冠與近景打者的垂直關係，讓既有外野牆頂上移。角色 scale／pose、場地與球路不變；horizontal yaw=0、36° FOV 及既有 shared off-axis projection 保留，不新增 vertical lens shift 或 pixel offset。實測 candidate 與 evidence 見開發環境文件。
 
-這是 static fixture／vertical composition 修正，仍待 **Michael＋Julia human review**；數值與 regression 通過不代表造型、動態 readability、正式 asset 或 animation 已驗收，不因此進入 Rig／Animation Pipeline。
+Michael＋Julia 已完成本輪靜態造型／構圖 review，Final Pre-Rig Pass 到此收尾：
+
+- **接受**：torso／shirt 與褲子的過渡、投手的 screen-space presence，以及目前 camera。
+- **暫緩**：外野牆仍略低、上方仍有留白；Michael 決定暫時保留，不再調整 camera、牆高或新增場景物件。
+
+接受範圍僅限本輪 static fixture／vertical composition；不代表動態球路、動畫、正式角色資產或 M1 已驗收。Early-flight 背景對比與動畫遮擋仍需後續人類檢查。下一步在新的 Codex 對話進行 **Rig／Animation Pipeline 規劃**，本輪不開始實作。
 
 ### Field readability／presence pass
 

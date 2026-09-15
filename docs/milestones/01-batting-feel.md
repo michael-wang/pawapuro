@@ -144,4 +144,4 @@ T3 支援範圍需在開始接觸實作時由實際 preset 與 data validation �
 2026-09-15 Character Style／紅中 fixture：比較較大扁腳候選後選定平面／高度雙倍率，帽子改成包頭 crown＋brim，手臂改單段連到球形手。正式 TOML reference pitch 依既有固定 tick 契約反推為 5 號位，Debug／Release、CTest 與實際 20 次重投、三狀態擷取通過；設計／驗證由既有文件維護，未開始 rig／skeleton／animation。
 
 
-2026-09-15 Final Pre-Rig Character／Vertical Composition Pass：完成兩名 static fixture 的局部衣襬修形與既有 camera 兩個 Y 的 staging 候選，保留 baseline／torso-only／最終構圖及球路證據。Debug／Release、CTest 與實際 app／GPU regression 通過；**等待 Michael＋Julia human review**，不宣告造型或動態 readability 驗收，也不進入 Rig／Animation Pipeline。設計與實測分別見 owning design／environment 文件。
+2026-09-15 Final Pre-Rig Character／Vertical Composition Pass：完成兩名 static fixture 的局部衣襬修形與既有 camera 兩個 Y 的 staging 候選，保留 baseline／torso-only／最終構圖及球路證據。Debug／Release、CTest 與實際 app／GPU regression 通過；**Michael＋Julia 已接受本輪靜態造型／構圖，Final Pre-Rig Pass 收尾**；接受項目與暫緩問題見設計文件，實測證據見 environment。下一步在新 Codex 對話規劃 Rig／Animation Pipeline，本輪不開始實作。Early-flight 背景對比與動畫遮擋仍待後續人類檢查；不代表動態球路、動畫、正式角色資產或 M1 已驗收。

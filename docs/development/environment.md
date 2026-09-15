@@ -469,7 +469,7 @@ Complete 畫面仍畫完整 crossing tick 的球，球心 **(967.034790,759.2152
 起始 main／origin/main 均為 `da2d6bdf1c1699352f26db60e6ff8510c2d62d99`，workspace 乾淨。依序擷取未修改 baseline、原 camera＋衣襬、衣襬＋新 camera；不是同時改完再推測原因。設計與 human review gate 見 [Batting Feel](../design/batting-feel.md)。
 
 - 衣襬只改 `reference_scene.cpp` 的兩個既有 fixture。投手保留原 chest rim，向下接到 Y=角色原點＋0.30×scale 的水平橢圓衣襬，半徑 X/Z=0.175／0.155×scale；第一次沿傾斜軸延伸仍露出碎片狀褲緣，因此改成水平截面。打者保留原上半橢球，從 equator 接至 Y=0.31×scale、半徑 X/Z=0.16／0.135×scale 的衣襬，取代下半收尖。沒有另一顆 pelvis、裙襬擴張或逐部位 Data。
-- 最終 camera 採人類提出的第一候選：position **(−0.75,1.55,−5)**、target **(−0.75,1.0713,16.8)**、FOV **36°**。只修改 TOML 兩個 Y；parser／validation／fallback、projection 實作皆未改。沒有另測相鄰 camera，因第一候選已符合本輪數值方向，球路仍可辨；最終觀感仍待 Michael＋Julia。
+- 最終 camera 採人類提出的第一候選：position **(−0.75,1.55,−5)**、target **(−0.75,1.0713,16.8)**、FOV **36°**。只修改 TOML 兩個 Y；parser／validation／fallback、projection 實作皆未改。沒有另測相鄰 camera，因第一候選已符合本輪數值方向，球路仍可辨；後續靜態構圖 review 已接受目前 camera，接受範圍見設計文件。
 
 下表為**實際生成的 geometry vertices 經既有 project_batting_point 投影**，不是離線重寫角色 landmarks。帽冠 top 用角色帽色上部 vertices，沒有以 bat tip 代替；鞋／plate／bat 同樣從現有幾何選取。暫存量測跳過 camera 後方草地 vertices（原函式會拒絕投影），沒有修改 production projection。CSV 保留在 build。
 
@@ -488,12 +488,12 @@ Complete 畫面仍畫完整 crossing tick 的球，球心 **(967.034790,759.2152
 | 本壘 Y 範圍 | 959.1437～1020.9424 | 937.1412～1011.5363 |
 | Bat Y 範圍 | 306.0336～677.8037 | 314.6493～680.3135 |
 
-- 實際 1920×1080 screenshot 藍框外緣由 **X=826～1094、Y=604～898** 改為 **X=827～1092、Y=594～884**；解析 bounds 與筆畫外緣的差異來自線寬／rasterization。左右 world-X 白線仍水平：後線外緣生成 vertices 的 ΔY=0，before Y=1078.7207、after Y=1081.3107。**後線最外側約 1.3 px 超過 client 下緣**，其餘筆畫仍可見；沒有新增鞋底、bat 或重要本壘裁切，這個 chalk 邊緣取捨交 human review。
+- 實際 1920×1080 screenshot 藍框外緣由 **X=826～1094、Y=604～898** 改為 **X=827～1092、Y=594～884**；解析 bounds 與筆畫外緣的差異來自線寬／rasterization。左右 world-X 白線仍水平：後線外緣生成 vertices 的 ΔY=0，before Y=1078.7207、after Y=1081.3107。**後線最外側約 1.3 px 超過 client 下緣**，其餘筆畫仍可見；沒有新增鞋底、bat 或重要本壘裁切，保留此 chalk 邊緣量測，不因本次靜態接受而宣稱它已修正。
 - 原 camera 的 torso-only 圖顯示兩件衣襬較平、褲子下半仍可見，沒有肉眼可見 z-fighting；褲子到鞋的空間保留。生成的非 shirt 色 vertices／colors multiset 與 baseline 相同；角色 origin／scale、頭帽、手腳、bat、場地與 simulation Data 均未改。投手 projected height 僅 +0.49%，存在感主要來自位置而非巨大化。
 - 實際檢視 Ready／release tick 0、ticks **1、3、6、12、24、36、48、60、72、84、94** 與 Complete。Release 球在牆頂上方，約 tick 24 短暫跨越黃色牆頂與手／臉背景，tick 36 後離開色帶並往胸前飛來；球本體仍可辨，沒有觀察到長時間沿牆頂相切。Mid／late flight、近壘均清楚，打者與修過的 torso 未擋主要球路。膚色背景對比與短暫邊緣交會是否足夠易追蹤，仍需 Michael＋Julia review，不能以球心座標在畫面內代替判讀驗收。
 - Debug／Release build 成功，CTest 各 **2/2**；未放寬既有 centre／prediction tolerance。44 個非法 Data 案例、20 deterministic rethrows、30／60／120 FPS chunking、pause／single-step、arrival once、prediction／evaluation 一致性皆通過。沒有為局部造型新增測試 framework。
 - 兩種實際 app 各初投＋**20 次重投**；首球在 tick 0 pause，逐步到 tick 94 後 resume，等待 pause 的兩張圖逐像素相同；正常 exit 0。Debug／Release 分別完成 **698／703 frames**。每次 release／arrival 與前版逐行相同，evaluation 的 world/time/velocity 也相同：raw tick **95**，p **(0.004963,0.759459,0.306804)**；plane p **(−0.000000450,0.775000632,0.431800008)**。本次 prediction／actual plane pixel **(959.999817,740.002991)**，error **0 px**；raw Complete 球心 **(966.906860,750.393799)**，未吸附。
-- Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource，僅供報告使用的 device。原生 computer-use helper 啟動失敗，沿用僅針對 Pawapuro process 的 Windows key messages／SDL event loop／DPI-aware PrintWindow。這是實際 app 自動操作與 capture，**尚未執行 Michael＋Julia human review，也未驗證任何動畫**。
+- Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource，僅供報告使用的 device。原生 computer-use helper 啟動失敗，沿用僅針對 Pawapuro process 的 Windows key messages／SDL event loop／DPI-aware PrintWindow。這是實際 app 自動操作與 capture，**當時尚未執行 human review，也未驗證任何動畫**；後續 Michael＋Julia 的接受限於靜態造型／構圖，不擴張上述技術驗證範圍。
 
 證據位於忽略的 `build/`（不提交自動產物）：
 
@@ -502,4 +502,4 @@ Complete 畫面仍畫完整 crossing tick 的球，球心 **(967.034790,759.2152
 - `pre-rig-final-debug-tick-48.png`／`pre-rig-final-debug-complete.png`：正式 mid-flight／Complete；`pre-rig-final-debug-tick-*.png` 與 `pre-rig-flight-inspection.png` 為額外診斷。Release 有同名三狀態與 tick captures。
 - `pre-rig-*.log`、`pre-rig-baseline-geometry.csv`／`pre-rig-final-geometry.csv`：runtime／GPU 紀錄及生成幾何量測。暫存操作／量測 source 與 executable 已移除。
 
-這是 static fixture／vertical composition candidate，沒有新增 Engine／renderer／shader、dependency、衣服／camera／stadium 系統；完成後停在 Michael＋Julia review gate。
+Michael＋Julia 已完成靜態 review，本次 pass 收尾；[設計文件](../design/batting-feel.md) 分開記錄接受項目與暫緩問題。此處既有 build／capture／量測結果不變，本次僅更新文件狀態，未重跑 build／tests 或新增驗證。下一步在新對話規劃 Rig／Animation Pipeline；early-flight 背景對比與動畫遮擋仍待後續人類檢查，不視為動態球路、動畫、正式資產或 M1 驗收。
