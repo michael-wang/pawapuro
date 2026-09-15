@@ -1,4 +1,6 @@
 """S0 authoring/export checks, run with Blender Python. No runtime implementation."""
+import argparse
+import sys
 from functools import cache
 import hashlib
 import json
@@ -11,7 +13,10 @@ import bpy
 from mathutils import Matrix, Quaternion, Vector, kdtree
 
 HERE=Path(__file__).resolve().parent
-EVIDENCE=HERE.parents[2]/"build"/"pitcher-s01"
+parser=argparse.ArgumentParser()
+parser.add_argument("--evidence",type=Path,default=HERE.parents[2]/"build"/"pitcher-s02a")
+args=parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
+EVIDENCE=args.evidence
 
 
 def require(condition,message):

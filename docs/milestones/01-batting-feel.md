@@ -162,3 +162,9 @@ S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app�
 **仍停在 Michael＋Julia review gate，未宣告 S0 motion 通過。** 參考影片實際觀看、Codex 正常速度播放自看因播放器工具未啟動而未完成；遊戲參考圖未出現在可讀附件。Timing 是候選，數值檢查與 contact sheets 不填補這些證據缺口。人類須檢查不用箭頭能否讀出蓄力、前腳支撐 → 軀幹 → 手臂、release 連續性與後腳落地回穩，並決定是否需下一次 motion revision。
 
 本輪沒有授權或實作 S1～S3；通過這個 gate 後仍須另行授權下一個切片。沒有 production C++／HLSL／renderer／staging Data、打者動畫、碰撞或新場景。
+
+### S0.2A：Closed Ready＋Coordinated Leg Lift
+
+已交付封閉式 Ready、原手套幾何藏球與左腳協調蓄力的局部 candidate，附 ed3d8be S0.1 的同視角／60 fps／1× 比較與完整修正版。Frames 72–205 的 evaluated transforms／mesh 保持一致；frame 79 只診斷，未修 B。驗證結果與觀看限制見 [environment](../development/environment.md#s02a-closed-readycoordinated-leg-lift2026-09-15)，檔案入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md)。
+
+**停在 Michael＋Julia review gate，未宣告動作通過。** 正常速度播放自看與參考影片觀看未完成，不能用逐格圖片或數值檢查代替。B／C、S1～S3 均須後續明確授權；沒有 production runtime／renderer／staging 變更。

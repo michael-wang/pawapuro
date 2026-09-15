@@ -10,12 +10,16 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--frames",type=Path,required=True)
 parser.add_argument("--output",type=Path,required=True)
 parser.add_argument("--slow",action="store_true")
+parser.add_argument("--last-frame",type=int)
 args=parser.parse_args(sys.argv[sys.argv.index("--")+1:])
 files=sorted(args.frames.glob("[0-9][0-9][0-9][0-9].png"))
 manifest=json.loads((args.frames/"preview.json").read_text(encoding="utf-8"))
 expected=list(range(manifest["start_frame"],manifest["end_frame"]+1))
 if [int(p.stem) for p in files]!=expected: raise RuntimeError("Missing/extra/nonsequential offline frames")
 if manifest["fps"]!=60 or manifest["fps_base"]!=1: raise RuntimeError("Unexpected source clock")
+if args.last_frame is not None:
+    if not manifest["start_frame"] <= args.last_frame <= manifest["end_frame"]: raise RuntimeError("Subset outside source clip")
+    files=[p for p in files if int(p.stem)<=args.last_frame]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene=bpy.context.scene
 scene.render.fps=60; scene.render.fps_base=1
@@ -57,7 +61,8 @@ if abs(decoded.fps-60)>1e-4: raise RuntimeError("Encoded FPS mismatch")
 if decoded.frame_duration!=len(sequence): raise RuntimeError("Encoded frame count mismatch")
 report={"file":str(args.output),"fps":decoded.fps,
         "decoded_frames":decoded.frame_duration,"duration_s":len(sequence)/60,
-        "source_frames":len(files),"repeat_per_source_frame":repeat,
+        "source_frames":len(files),"first_source_frame":int(files[0].stem),"last_source_frame":int(files[-1].stem),
+        "source_sha256":manifest.get("source_sha256"),"repeat_per_source_frame":repeat,
         "playback_speed":1/repeat,"offline_render":True,"runtime_capture":False}
 args.output.with_suffix(".json").write_text(json.dumps(report,indent=2),encoding="utf-8")
 print("S0_ENCODED",json.dumps(report))

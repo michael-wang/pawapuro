@@ -599,3 +599,41 @@ Evidence：`build/pitcher-s0/pitcher-normal.mp4`、`pitcher-slow.mp4`、`pitcher
 從影格可見的限制：出手前斜側面仍有手／大頭／帽簷的投影重疊；大鞋與地面的深色對比使接觸不如診斷圖清楚。Release 後手臂速度仍有次級起伏，粗 motion 的重量感與節奏不能由速度峰值代替人類判斷。保留 camera、比例、顏色及 lighting，不用調構圖掩蓋。
 
 本輪未執行 C++ build／CTest／app／GPU validation，未修改 production code／staging；先前結果不列成本輪驗證。交付停在 Michael＋Julia review gate，不宣告 S0 motion／dynamic gameplay 通過、不進入 S1。
+
+## S0.2A Closed Ready／Coordinated Leg Lift（2026-09-15）
+
+開始時實際 cwd `C:/astra-dev/pawapuro`，main／HEAD／origin/main 與 live remote main 均為 `ed3d8be8840a45491b821964677d2295952905cd`，工作樹乾淨。Blender 4.5.13 LTS／Khronos validator 2.0.0-dev.3.10 沿用，沒有安裝 dependencies。先複製 source／GLB／TOML 到忽略的 `build/pitcher-s02a/before/`，未重跑 S0 generator 或 S0.1 reblock。
+
+### Frame 79 右臂診斷
+
+先開實際 S0.1 `.blend`，檢視 frames 77／79／81 的乾淨 mesh、evaluated wireframe、肩→肘→手骨架投影；包含既有斜側面與另一臨時 authoring angle。`diagnose_arm.py` 留存可重製圖像與量測，未保存臨時 camera／wire objects。
+
+- 凹折在兩個角度仍存在，排除「只是遮擋」；骨架連接連續，upper-arm 相鄰旋轉在 frames 78／79／80 約 5.45°／3.85°／2.94°，無 frame 79 突然 roll 跳變，scale／determinant 近 1。
+- Skinning deformation matrix 是 pose × inverse(rest)。Frame 79 upper／fore 相對旋轉約 136.22°；fore／hand 約 177.72°。各取 0.5 的 linear blend，其最小 singular value 約 0.37284／0.01992；前臂／手部混合區幾乎壓成平面。實際管面 ring 9 最小半徑約 0.00645 m，而 rest 約 0.1072 m。
+- 既有全段 tube 漸變 weights 與此姿勢的相反 skin rotations 共同造成局部壓扁；不是單靠固定骨長檢查可發現。未證實是單一 bone roll 設定錯誤；最小 B 修法尚未驗證，不先改 weights 或重建骨架。
+- 原 frame 49 fore／hand 相對旋轉約 47.08°、上述 singular value 約 0.91677，顯示嚴重度隨姿勢改變。沒有證據表明此 B 問題阻止 A 的三個動作關係；A 只協調自身新姿勢的 pose roll，B 完整保留。
+
+### 局部候選與回歸
+
+實際修改腳本 `pawapuro/batting/pitcher/revise_ready_lift.py` 讀取 S0.1、局部寫入 1–71 的 FK keys，另存 candidate；確認後以相同 bytes 更新正式 source。更新前再核對正式 source SHA256，防止覆蓋其他編輯。Final `.blend` SHA256 `18894d26d6b2bc29aa2ff2e2a58c3479cf17eb9e1361890f8c8b2e3c2dedadcb`，預設 frame 1。Export 未修改此 source。
+
+| 檢查 | 實測 |
+|---|---|
+| Protected 動作 | `check_ready_lift.py` 開 before／after saved source，在 frames 72–205 每格比較所有 13 bones 的 world matrices 與所有 2362 evaluated vertices；matrix max abs = **0**、mesh max distance = **0 m**，容差各 1e-6。Protected keys 逐值相同。 |
+| 不變項 | Rest mesh／faces／weights／colors、骨骼 rest／parents／lengths、object transforms、兩個 cameras、placement／scale、contacts／timeline、球 mesh／scale 逐值相同。 |
+| Ready 方向 | Evaluated chest front game 約 `(-0.99999994, 0, 0.000000134)`，即 −X。頭的 world orientation 保留。 |
+| 合手藏球 | Frames 1–49 每格取 288 個球面點，轉回實際手套 deformation space；橢球 normalized squared distance 最大 **0.416656**（表面為 1）。這是幾何輔助，另檢視兩個視角的實際 render，沒有外露白點。 |
+| 接回連續性 | 檢視 64–76 連續影格。Grip 在到達 frames 70／71／72／73 的差分速度約 1.305／1.956／2.331／2.735 m/s；左腳約 5.254／5.183／5.454／5.612 m/s，未在 72 歸零停住。不是正常速度觀看證據。 |
+| Existing source checks | 全 205 frames 固定骨長、grip binding、腳底接觸／離地、頭部 proxy、release 方向與 opening 次序 PASS；revision S0.2A 仍執行原 assert，容差未放寬。 |
+| 局部時序影響 | 全段 pelvis 最大開轉速度現在落在 frame 67 的接回區段，chest 仍 91、grip 峰值仍 95；並非宣稱 S0.1 全部前半段速度保留。50–71 展開偏快仍待 review。 |
+| Khronos validator | 0 errors／warnings／infos／hints。 |
+| Source ↔ GLB／round-trip | 全 205 frames，GLB mesh 最大差 **1.59491162e-6 m**；空白 Blender reimport mesh **1.56795340e-6 m**、grip **1.07765894e-6 m**。原 0.1 mm 容差未變。 |
+| Release／支撐 | 原 world release 誤差 **1.25296422e-6 m**；GLB 接觸區間 transform 最大 drift **2.93140912e-9**。唯一 release 97、60 fps、frames 1–205、四段接觸區間不變。 |
+
+### 證據與限制
+
+六支 MP4 均以 Blender 隨附 decoder 核對 60 fps／1×，首 source frame 是 1。兩視角 before／after 局部比較各 84 frames／1.4 s；兩視角完整 after 各 205 frames／3.416667 s。Before 是本次 ed3d8be S0.1，hash `562f1237a3066c89eb0ccb88423e0b227c7c02861b1b014ed9f222be30a11be0`；不是 S0。Manifest／影片 JSON sidecar 保存 source hash、首尾 frame、FPS／倍率。
+
+已檢視兩視角 contact sheets、Ready／coil 放大、分手／接點連續影格及右臂診斷。正常速度播放自看未完成，不宣稱看過影片；Michael 參考影片／圖片未在可讀附件找到。本輪沒有新 reference video 觀看／逐格觀察，也不使用 0.25× 秒數推估 timing。
+
+從影格可見，展開區段較緊、深色雙鞋部分重疊，簡化手臂的凹形輪廓仍粗糙；B 的 frame 79 壓扁和 C 的後腳路徑保留。數值與影格證據不能替代重量感／正常速度可讀性的人類判斷。未執行 C++ build／CTest／app／GPU 測試，沒有 production C++／HLSL／renderer／staging Data 變更。交付停在 Michael＋Julia review，不進入 B、C 或 S1。

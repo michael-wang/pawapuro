@@ -232,7 +232,7 @@ M1 重現目標是同一 build、相同平台／資產、相同 tick 輸入；�
 
 ## 右投手 S0：authoring 與匯出邊界
 
-2026-09-15，Michael 在 Julia review 後授權最低右投手 authoring sample、Blender 工具準備、GLB／metadata 匯出與預覽。第一版已製作，但 Michael 判定 motion 未通過；目前只授權下述 S0.1 reblocking，**不進入 S1**。本節不授權 C++ importer 或後續 runtime。
+2026-09-15，Michael 在 Julia review 後授權最低右投手 authoring sample、Blender 工具準備、GLB／metadata 匯出與預覽。第一版已製作，但 Michael 判定 motion 未通過；後續只授權下述 S0.1／S0.2A authoring 修訂，**不進入 S1**。本節不授權 C++ importer 或後續 runtime。
 
 本次選擇原創低細節 mesh／一副必要 armature／一段不循環 pitch clip，以既有大頭、扁腳、detached feet、球形手、連續簡化手臂及衣襬風格建立動作。隱藏 bend 與 weights 只解決目前肢體彎曲、衣襬連續性的實際需求，不引入真人完整骨架或 generic character。共同 tick／CPU skinning 是後續原則接受的方向，尚未實作。
 
@@ -261,3 +261,11 @@ M1 重現目標是同一 build、相同平台／資產、相同 tick 輸入；�
 | Rear-foot follow／recovery | 右腳在空中向前跟進後落地，兩腳形成支撐；胸口、頭與手繼續回到較直立的平衡位置，沒有用結尾 idle hold 增加長度。大鞋與 detached 身體關係保留。 |
 
 Authoring 使用分開的 shape-preserving 曲線；投球階段以 FK 方向的角度插值避免方向向量正規化造成速度尖峰，再烘焙到原 LINEAR GLB 契約。沒有新增 IK、retargeting、animation graph、runtime animation 或球路。原 camera／角色比例／場地／strike-zone truth／simulation 初始條件不變。旋轉可讀性、重量感、投影遮擋與正常速度節奏仍須 Michael＋Julia review。
+
+### S0.2A Closed Ready／Coordinated Leg Lift
+
+2026-09-15：依 Michael 指定投法，Ready 胸口朝 game −X（三壘側），頭保持注意本壘；合手期間原手套包覆右手 grip 上的球。左腳在離地期間隨蓄力轉入自身右側、coil 集中於手套下方；維持 detached feet，不新增 solver 或改 hierarchy。這是明確的人類動作要求，本輪未另研究其他投法，也未取得可觀看的參考附件。
+
+範圍限 frames 1–49 與 50–71 的接回過渡；72–205 的 evaluated 動作保留，包括既有 frame 79 局部凹折。Camera／比例／mesh／weights／rest、唯一 release marker 與 simulation 初始條件不變。球仍由 hand_R／固定 grip 帶動，只在原 release marker 後隱藏；藏球由幾何位置達成。
+
+本版仍是待 Michael＋Julia review／可能再修正的 candidate。B 的手套方向／出手前右臂，以及 C 的追加左旋／右腳跨前均未實作，不進入 S1。局部操作與證據由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護，實測與診斷由 environment 維護。

@@ -1,4 +1,5 @@
 """Export the loaded, editable .blend. Never invokes the generator or saves the source."""
+import argparse
 import hashlib
 import json
 import sys
@@ -9,7 +10,7 @@ import bpy
 HERE = Path(__file__).resolve().parent
 
 
-def export():
+def export(evidence):
     source = Path(bpy.data.filepath)
     if not source.is_file():
         raise RuntimeError("Open pitcher.blend before exporting")
@@ -113,7 +114,7 @@ grip_meaning = "held ball centre, not hand joint"
             for first, last in intervals:
                 metadata += f'\n[[contacts]]\nbone = "{name}"\nstart_frame = {first}\nend_frame = {last}\n'
     source.with_suffix(".toml").write_text(metadata,encoding="utf-8",newline="\n")
-    evidence=HERE.parents[2]/"build"/"pitcher-s01"
+    evidence=Path(evidence)
     # HERE = pawapuro/batting/pitcher; repository is parents[2].
     evidence.mkdir(parents=True,exist_ok=True)
     (evidence/"source-samples.json").write_text(json.dumps(samples),encoding="utf-8")
@@ -121,4 +122,7 @@ grip_meaning = "held ball centre, not hand joint"
 
 
 if __name__=="__main__":
-    export()
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--evidence",type=Path,default=HERE.parents[2]/"build"/"pitcher-s02a")
+    args=parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
+    export(args.evidence)

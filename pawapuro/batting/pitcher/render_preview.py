@@ -1,5 +1,6 @@
 """Render asset-derived evidence; no source save, no ball trajectory."""
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -47,7 +48,7 @@ args.output.mkdir(parents=True,exist_ok=True)
 poses={int(part.split(":")[0]):part.split(":")[1] for part in scene["key_poses"].split(";")}
 poses[scene.timeline_markers["release"].frame]="release"
 frames=list(range(scene.frame_start,scene.frame_end+1)) if args.animation else ([int(v) for v in args.frames.split(",")] if args.frames else sorted(poses))
-(args.output/"preview.json").write_text(json.dumps({"source":bpy.data.filepath,"revision":scene.get("motion_revision","S0"),"start_frame":scene.frame_start,"end_frame":scene.frame_end,"fps":scene.render.fps,"fps_base":scene.render.fps_base,"release_frame":scene.timeline_markers["release"].frame,"poses":poses,"rendered_frames":frames,"camera":args.camera,"width":args.width,"height":scene.render.resolution_y,"diagnostic":args.diagnostic},indent=2),encoding="utf-8")
+(args.output/"preview.json").write_text(json.dumps({"source":bpy.data.filepath,"source_sha256":hashlib.sha256(Path(bpy.data.filepath).read_bytes()).hexdigest(),"revision":scene.get("motion_revision","S0"),"start_frame":scene.frame_start,"end_frame":scene.frame_end,"fps":scene.render.fps,"fps_base":scene.render.fps_base,"release_frame":scene.timeline_markers["release"].frame,"poses":poses,"rendered_frames":frames,"camera":args.camera,"width":args.width,"height":scene.render.resolution_y,"diagnostic":args.diagnostic},indent=2),encoding="utf-8")
 for frame in frames:
     scene.frame_set(frame)
     # Imported glTF begins at Blender frame 0, unlike the authoring frame 1 origin.
