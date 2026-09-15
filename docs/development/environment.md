@@ -637,3 +637,32 @@ Evidence：`build/pitcher-s0/pitcher-normal.mp4`、`pitcher-slow.mp4`、`pitcher
 已檢視兩視角 contact sheets、Ready／coil 放大、分手／接點連續影格及右臂診斷。正常速度播放自看未完成，不宣稱看過影片；Michael 參考影片／圖片未在可讀附件找到。本輪沒有新 reference video 觀看／逐格觀察，也不使用 0.25× 秒數推估 timing。
 
 從影格可見，展開區段較緊、深色雙鞋部分重疊，簡化手臂的凹形輪廓仍粗糙；B 的 frame 79 壓扁和 C 的後腳路徑保留。數值與影格證據不能替代重量感／正常速度可讀性的人類判斷。未執行 C++ build／CTest／app／GPU 測試，沒有 production C++／HLSL／renderer／staging Data 變更。交付停在 Michael＋Julia review，不進入 B、C 或 S1。
+
+## S0.2B Arm Deformation／Glove Direction（2026-09-15）
+
+起始 cwd `C:/astra-dev/pawapuro`，main／HEAD／origin/main／live remote 均為 `45305e36b2efbe4901b4b1be7480bb01285db9c3`，工作樹乾淨。保存三檔 S0.2A baseline；其 source hash `18894d26d6b2bc29aa2ff2e2a58c3479cf17eb9e1361890f8c8b2e3c2dedadcb` 與既有 after-side／after-batting manifests 一致，可重用 before renders。沒有安裝工具、重做廣泛研究或重跑過往 generator。
+
+先讀既有 diagnostic JSON／圖，只補 f77／79／81、Ready／coil、release／收勢樣本。兩策略隔離比較：roll-only 把 f79 ring 9 最小半徑從 0.006453 m 改善至 0.042044 m，仍收窄；相同 roll 加局部 weights 達 **0.107187 m**，接近原 rest 半徑。兩個既有診斷角度都恢復連續管狀輪廓，沒有修改 mesh 半徑／topology。混合集中於肘附近四圈，管端跟 forearm 收入原球形 hand，避免原 forearm／hand 相反旋轉在整段前臂互相抵消。僅右臂 tube 144 vertices 的 weights 改變。
+
+`revise_arm_glove.py` 另存兩個 arm candidates；選定後才由 `point_glove.py` 讀選定來源、修改左臂 50–96。手套 f79 的肩→中心水平偏角由 −57.171° 改為 **+0.501°**，水平 home cosine **0.999962**；保留彎曲，並非只轉手套表面。Frames 1–49 與 97–205 左臂完整保留。接回到達 95／96／97／98 的 glove 差分速度約 3.66／2.78／1.97／1.74 m/s，沒有在 97 新增 hold；分手展開偏快仍交人類判斷。
+
+| 整段 205 frames 檢查 | 實測／容差 |
+|---|---|
+| Body／head／feet evaluated matrices | 最大差 **0**，保護容差 1e-6。 |
+| 左臂授權區間外／右臂 roll 區間外 | 左臂 1–49、97–205 及右臂 1–49、110–205 matrices 最大差皆 **0**。 |
+| 右臂關節／右手與 grip | 關節位置最大差 **3.191e-6 m**；右手／grip matrix max abs **7.629e-6**；grip local matrix 差 **3.949e-7**。子節點 TRS 補償的 float32 誤差，以原骨長 guard 同級 1e-5 檢查，不宣稱逐 byte 相同。 |
+| 非修改 mesh 區域 | 排除右 tube 全段與左臂 50–96 後，最大差 **4.068e-6 m**，包含被補償的右手球形 mesh，容差 1e-5；rest vertices／topology／配色／其他 weights 不變。 |
+| 允許的右 tube deformation | 全段最大 vertex 位移 **0.327242 m**，與關節軌跡差分分開報告；所有 sampled rings 最小半徑／rest 半徑 ≥ **0.347050**，最低在 f174。不是強迫全 mesh 0 差值。 |
+| Ready／coil | 左腳與身體軌跡未改；兩姿勢影格回歸已檢視。球面對手套橢球 q 最大 **0.416656**，原 binding／顯示規則保留，沒有新增消失開關。 |
+| Motion checks | 固定骨長、grip、接觸、release 方向、opening 次序通過；S0.2B revision 不跳過 assert。左臂新姿勢沒有新增頭部橢球 proxy 侵入；不是完整碰撞保證。 |
+| Khronos validator | 0 errors／warnings／infos／hints。 |
+| Source → GLB → round-trip | GLB mesh 最大差 **1.283923e-6 m**；round-trip mesh **1.567953e-6 m**、grip **1.187614e-6 m**。原 0.1 mm 容差不變。 |
+| Release | 原 staging world reference 誤差 **5.454740e-7 m**，原 0.1 mm 容差不變；97／60 fps／1–205／contacts 不變。 |
+
+最終只渲染一版完整 side（205 frames）與 batting 45–105（61 frames）。MP4 decoder 核對 60 fps／1×；完整片 3.416667 s、短片 1.016667 s。Before 完整片沿用 `build/pitcher-s02a/after-full-side.mp4`，before batting 短片從正確原 renders 擷取，沒有重渲整段或另做慢速版本。局部圖、Ready／coil、分手／接回連續影格與整段 overview 已檢視；正常速度播放自看未完成，不反覆嘗試已知失敗播放器，也未宣稱參考影片觀看。
+
+簡單命令／script 計時（不含工具審核等待與人工判讀）：兩個 arm edits 約 0.134／0.142 s，glove edit 約 0.067 s；三組局部 renders 約 5.11／4.53／5.19 s，glove probe 2.52 s；scope comparison 1.95 s，export 1.65 s，round-trip verification 2.91 s，motion checks 0.56 s；最終 side 20.65 s、batting 10.73 s、補充 diagnostic 4.64 s；encode＋decoder side 2.78 s、兩支 batting 合計 3.99 s。這不是效能 benchmark 或總工作耗時。
+
+正式替換的自動審核拒絕覆寫未經 human review 的 source，建議隔離候選。其後發現正式三檔已與候選 bytes 相同，與拒絕回報不一致；逐檔確認候選 hash 與備份 HEAD blob 後，已恢復原三檔，沒有 reset／改歷史。最終交付 `review/s02b/pitcher.blend`／GLB／TOML，正式資產仍為 S0.2A。Candidate source hash `b3dcccd38ad7c216b18ccb69b4a664240051de0b988618f449737611748dd366`，export 沒有保存／重建 source。升為正式資產仍待 review 後確認。
+
+限制：低面數彎肘仍帶稜角，部分收勢手臂被身體遮擋；全段 ring／proxy 數值不保證所有 self-intersections 都已排除。沒有改 C、camera／深色鞋／lighting；沒有 production C++／HLSL／CMake／staging 或 runtime／GPU 測試。停在 Michael＋Julia review，未宣告整支投球通過。

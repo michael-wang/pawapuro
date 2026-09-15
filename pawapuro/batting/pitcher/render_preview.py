@@ -22,7 +22,7 @@ if args.roundtrip:
     for obj in list(bpy.data.collections["PitcherAsset"].objects):
         bpy.data.objects.remove(obj,do_unlink=True)
     # Import into a clean asset collection; retain only explicitly excluded preview helpers.
-    bpy.ops.import_scene.gltf(filepath=str(HERE/"pitcher.glb"))
+    bpy.ops.import_scene.gltf(filepath=str(Path(bpy.data.filepath).with_suffix(".glb")))
     for obj in bpy.context.selected_objects:
         if obj.type=="MESH":
             obj.data.materials.clear()

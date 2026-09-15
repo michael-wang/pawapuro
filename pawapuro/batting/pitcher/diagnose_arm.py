@@ -1,4 +1,4 @@
-"""Read-only S0.1 arm diagnosis; temporary wire/camera objects are never saved."""
+"""Read-only sample arm diagnosis; temporary wire/camera objects are never saved."""
 import argparse,sys
 import bpy,json,math
 import numpy as np
@@ -6,6 +6,7 @@ from pathlib import Path
 from mathutils import Vector
 from bpy_extras.object_utils import world_to_camera_view
 parser=argparse.ArgumentParser();parser.add_argument('--evidence',type=Path,required=True)
+parser.add_argument('--frames',default='77,79,81')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 root=args.evidence; out=root/'arm-diagnosis'; out.mkdir(parents=True,exist_ok=True)
 scene=bpy.context.scene; rig=bpy.data.objects['PitcherRig']; obj=bpy.data.objects['PitcherMesh']
@@ -20,7 +21,7 @@ n=material.node_tree.nodes;n.clear();e=n.new('ShaderNodeEmission');e.inputs['Col
 rows=[]
 for view,camera in [('side',bpy.data.objects['Review_ThreeQuarter']),('other',cam)]:
  scene.camera=camera
- for f in [77,79,81]:
+ for f in [int(v) for v in args.frames.split(',')]:
   scene.frame_set(f);dg=bpy.context.evaluated_depsgraph_get(); ev=obj.evaluated_get(dg);mesh=ev.to_mesh()
   arm=[ev.matrix_world@mesh.vertices[i].co for i in range(2050,2206)]
   rings=[sum(arm[j*12:(j+1)*12],Vector())/12 for j in range(13)]
@@ -45,4 +46,4 @@ for f in [1,25,49,77,79,81]:
   x,y=deform[left],deform[right]
   contraction.append({'frame':f,'pair':[left,right],'relative_rotation_deg':math.degrees(x.to_quaternion().rotation_difference(y.to_quaternion()).angle),'half_blend_min_singular':float(np.linalg.svd((np.array(x.to_3x3())+np.array(y.to_3x3()))*.5,compute_uv=False)[-1])})
 (out/'diagnosis.json').write_text(json.dumps({'views':rows,'adjacent_upper_arm':metrics,'skin_rotation_contraction':contraction},indent=2))
-print(json.dumps({'adjacent_upper_arm':metrics,'radii79':rows[1]['ring_radii']},indent=2))
+print(json.dumps({'adjacent_upper_arm':metrics,'radii79':next((r['ring_radii'] for r in rows if r['frame']==79),None)},indent=2))

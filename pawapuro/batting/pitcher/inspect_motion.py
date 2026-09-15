@@ -18,7 +18,7 @@ rows=[]
 for frame in range(scene.frame_start,scene.frame_end+1):
     scene.frame_set(frame); dg=bpy.context.evaluated_depsgraph_get(); er=rig.evaluated_get(dg)
     row={'frame':frame,'bones':{}}
-    if scene.get('motion_revision') in ('S0.1', 'S0.2A'):
+    if scene.get('motion_revision') in ('S0.1', 'S0.2A', 'S0.2B'):
         for held in bpy.data.objects:
             if held.name.startswith('HeldBall_'):
                 assert held.hide_render==(frame>scene.timeline_markers['release'].frame), 'Held ball visibility differs from sole release marker'
@@ -58,7 +58,7 @@ summary={'source':bpy.data.filepath,'frames':len(rows),'release_frame':release,
          'contacts':json.loads(scene.get('contact_intervals','{}')),
          'normal_speed_visually_reviewed':False,'reference_video_visually_reviewed':False,
          'proxy_notice':'Head ellipsoid excludes cap, shoulder seam and other character parts; screen overlap is a separate review.'}
-if scene.get('motion_revision') in ('S0.1', 'S0.2A'):
+if scene.get('motion_revision') in ('S0.1', 'S0.2A', 'S0.2B'):
     for key, bone in [('upper_length_m','arm_R'),('forearm_length_m','forearm_R')]:
         assert max(abs(r[key]-rig.data.bones[bone].length) for r in rows)<1e-5, 'FK length drift'
     assert not summary['arm_head_proxy_intrusion_frames'], 'Arm enters head ellipsoid proxy'

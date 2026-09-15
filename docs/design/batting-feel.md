@@ -269,3 +269,9 @@ Authoring 使用分開的 shape-preserving 曲線；投球階段以 FK 方向的
 範圍限 frames 1–49 與 50–71 的接回過渡；72–205 的 evaluated 動作保留，包括既有 frame 79 局部凹折。Camera／比例／mesh／weights／rest、唯一 release marker 與 simulation 初始條件不變。球仍由 hand_R／固定 grip 帶動，只在原 release marker 後隱藏；藏球由幾何位置達成。
 
 本版仍是待 Michael＋Julia review／可能再修正的 candidate。B 的手套方向／出手前右臂，以及 C 的追加左旋／右腳跨前均未實作，不進入 S1。局部操作與證據由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護，實測與診斷由 environment 維護。
+
+### S0.2B Arm Deformation／Glove Direction
+
+Michael 接受「抬腳尤其左腳現在很棒」：保留該左腳／蓄力連動，不擴大解讀為整支投球通過。本輪固定整段 body／head／feet 與右手／grip 軌跡，僅修右臂 tube 的 pose roll／局部 weights，以及左臂 50–96 的展開／指向／回收。手套指向以 world game −Z 為準，不用 chest-local forward；97 起接回既有左臂。LBS／rest／hierarchy／topology、唯一 release marker、camera、staging／Native 物理均不變。
+
+兩個局部策略比較後，選用協調 roll 加肘附近有限混合 weights；不新增骨骼／solver／corrective shapes，也不換 skinning。Saved source candidate 與操作入口由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。此版停在 Michael＋Julia review；正式來源仍保留 S0.2A，C 與 S1 未授權實作。

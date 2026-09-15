@@ -168,3 +168,9 @@ S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app�
 已交付封閉式 Ready、原手套幾何藏球與左腳協調蓄力的局部 candidate，附 ed3d8be S0.1 的同視角／60 fps／1× 比較與完整修正版。Frames 72–205 的 evaluated transforms／mesh 保持一致；frame 79 只診斷，未修 B。驗證結果與觀看限制見 [environment](../development/environment.md#s02a-closed-readycoordinated-leg-lift2026-09-15)，檔案入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md)。
 
 **停在 Michael＋Julia review gate，未宣告動作通過。** 正常速度播放自看與參考影片觀看未完成，不能用逐格圖片或數值檢查代替。B／C、S1～S3 均須後續明確授權；沒有 production runtime／renderer／staging 變更。
+
+### S0.2B：Arm Deformation Fix＋Glove Direction
+
+已交付獨立右臂／手套 candidate、f77／79／81 兩角度比較、Ready／coil 回歸、手套姿勢與正常速度預覽。Michael 對左腳抬起／蓄力連動的接受已記錄，逐格保護未改。正式三檔保留 S0.2A，候選位於 `pawapuro/batting/pitcher/review/s02b/`，等待 review 後另行確認升版；不是整支動畫通過。
+
+既有匯出／motion 檢查與 B 的區段保護均通過；正常速度播放自看與 runtime／GPU 測試未完成。證據入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md)，實測見 environment。完成後停在 Michael＋Julia review gate，不自行進入 C 或 S1。

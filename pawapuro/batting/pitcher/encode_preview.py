@@ -11,14 +11,20 @@ parser.add_argument("--frames",type=Path,required=True)
 parser.add_argument("--output",type=Path,required=True)
 parser.add_argument("--slow",action="store_true")
 parser.add_argument("--last-frame",type=int)
+parser.add_argument("--first-frame",type=int)
 args=parser.parse_args(sys.argv[sys.argv.index("--")+1:])
 files=sorted(args.frames.glob("[0-9][0-9][0-9][0-9].png"))
 manifest=json.loads((args.frames/"preview.json").read_text(encoding="utf-8"))
-expected=list(range(manifest["start_frame"],manifest["end_frame"]+1))
+expected=manifest.get("rendered_frames",list(range(manifest["start_frame"],manifest["end_frame"]+1)))
+if expected!=list(range(expected[0],expected[-1]+1)): raise RuntimeError("Video requires contiguous rendered frames")
+if not manifest["start_frame"]<=expected[0]<=expected[-1]<=manifest["end_frame"]: raise RuntimeError("Rendered range outside source")
 if [int(p.stem) for p in files]!=expected: raise RuntimeError("Missing/extra/nonsequential offline frames")
 if manifest["fps"]!=60 or manifest["fps_base"]!=1: raise RuntimeError("Unexpected source clock")
+if args.first_frame is not None:
+    if not expected[0]<=args.first_frame<=expected[-1]: raise RuntimeError("Start outside rendered frames")
+    files=[p for p in files if int(p.stem)>=args.first_frame]
 if args.last_frame is not None:
-    if not manifest["start_frame"] <= args.last_frame <= manifest["end_frame"]: raise RuntimeError("Subset outside source clip")
+    if not int(files[0].stem) <= args.last_frame <= expected[-1]: raise RuntimeError("Subset outside source clip")
     files=[p for p in files if int(p.stem)<=args.last_frame]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene=bpy.context.scene

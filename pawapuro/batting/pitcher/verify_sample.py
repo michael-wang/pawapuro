@@ -15,8 +15,10 @@ from mathutils import Matrix, Quaternion, Vector, kdtree
 HERE=Path(__file__).resolve().parent
 parser=argparse.ArgumentParser()
 parser.add_argument("--evidence",type=Path,default=HERE.parents[2]/"build"/"pitcher-s02a")
+parser.add_argument("--asset-dir",type=Path,default=HERE)
 args=parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
 EVIDENCE=args.evidence
+ASSET=args.asset_dir
 
 
 def require(condition,message):
@@ -24,7 +26,7 @@ def require(condition,message):
 
 
 def main():
-    raw=(HERE/"pitcher.glb").read_bytes()
+    raw=(ASSET/"pitcher.glb").read_bytes()
     magic,version,length=struct.unpack_from("<III",raw)
     require(magic==0x46546c67 and version==2 and length==len(raw),"GLB header")
     json_length,json_type=struct.unpack_from("<II",raw,12)
@@ -33,9 +35,9 @@ def main():
     bin_length,bin_type=struct.unpack_from("<II",raw,20+json_length)
     require(bin_type==0x004e4942,"BIN chunk")
     binary=raw[28+json_length:28+json_length+bin_length]
-    meta=tomllib.loads((HERE/"pitcher.toml").read_text(encoding="utf-8"))
+    meta=tomllib.loads((ASSET/"pitcher.toml").read_text(encoding="utf-8"))
     staging=tomllib.loads((HERE.parent/"staging.toml").read_text(encoding="utf-8"))
-    require(meta["source_sha256"]==hashlib.sha256((HERE/"pitcher.blend").read_bytes()).hexdigest(),"Stale source hash")
+    require(meta["source_sha256"]==hashlib.sha256((ASSET/"pitcher.blend").read_bytes()).hexdigest(),"Stale source hash")
     require(meta["glb_sha256"]==hashlib.sha256(raw).hexdigest(),"Stale GLB hash")
     require(meta["space"]["runtime_scale"]==1 and meta["space"]["placement_game_m"]==staging["pitcher_blockout"]["position_m"],"Placement/scale changed")
     require(not doc.get("extensionsRequired") and not doc.get("extensionsUsed"),"Unexpected extensions")
@@ -162,7 +164,7 @@ def main():
     # Independent Blender importer round-trip, into an empty scene, at the same 60fps.
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps=60; bpy.context.scene.render.fps_base=1
-    bpy.ops.import_scene.gltf(filepath=str(HERE/"pitcher.glb"))
+    bpy.ops.import_scene.gltf(filepath=str(ASSET/"pitcher.glb"))
     imported_mesh=bpy.data.objects["PitcherMesh"]
     imported_rig=next(o for o in bpy.context.scene.objects if o.type=="ARMATURE")
     shapes={p.custom_shape for p in imported_rig.pose.bones if p.custom_shape}
