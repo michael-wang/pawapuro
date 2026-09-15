@@ -2,6 +2,7 @@
 #include <SDL3/SDL_main.h>
 #include "batting/reference_scene.hpp"
 #include "batting/reference_pitch.hpp"
+#include "batting/pitcher/static_pitcher.hpp"
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -38,7 +39,12 @@ int main(int argc, char** argv)
         pawapuro::ReferencePitch pitch(staging.release_position_m, staging.reference_velocity_mps, staging.strike_zone_plane_z());
         const auto prediction = pawapuro::predict_arrival(pitch);
         const float aspect = static_cast<float>(width) / static_cast<float>(height);
-        const auto scene = pawapuro::make_batting_reference(staging, prediction.state.position_m, aspect);
+        // Startup transport data is temporary; scene owns the copied triangles, then D3D12View copies them.
+        const auto scene = [&] {
+            const auto pitcher = pawapuro::load_static_pitcher(
+                utf8_path(base_path) / "batting/pitcher/pitcher.glb", staging);
+            return pawapuro::make_batting_reference(staging, prediction.state.position_m, aspect, pitcher.vertices);
+        }();
         const auto screen_point = [&](DirectX::XMFLOAT2 ndc) {
             return DirectX::XMFLOAT2{(ndc.x + 1) * width / 2, (1 - ndc.y) * height / 2};
         };

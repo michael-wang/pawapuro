@@ -54,7 +54,7 @@ int main(int argc, char** argv)
             BattingStaging s;
             s.strike_zone_width_m = width;
             const ReferencePitch pitch(s.release_position_m, s.reference_velocity_mps, s.strike_zone_plane_z());
-            const auto scene = make_batting_reference(s, predict_arrival(pitch).state.position_m, 16.0f / 9);
+            const auto scene = make_batting_reference(s, predict_arrival(pitch).state.position_m, 16.0f / 9, {});
             float left = 1e9f, right = -1e9f, back = 1e9f, front = -1e9f;
             unsigned plate_vertices = 0;
             for (unsigned i = 0; i < scene.ball_vertex_start; ++i) {
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
                 const auto focus = project_batting_point(s,
                     {0, (s.strike_zone_bottom_m + s.strike_zone_top_m) / 2, s.strike_zone_plane_z()}, aspect);
                 require(std::abs(focus.x) < 1e-6f, "Lens shift did not centre gameplay focus");
-                const auto scene = make_batting_reference(s, baseline_prediction.state.position_m, aspect);
+                const auto scene = make_batting_reference(s, baseline_prediction.state.position_m, aspect, {});
                 // Vertical pitch gives top/bottom different depths; allow one pixel of bbox-centre drift.
                 require(std::abs(scene.zone_min_ndc.x + scene.zone_max_ndc.x) * 1920 / 4 < 1,
                     "Overlay centre disagrees with gameplay focus");
@@ -93,16 +93,13 @@ int main(int argc, char** argv)
                 }
             }
         }
-        // An independently tuned release must not create a zero-length shoulder-to-hand limb.
+        // Pitcher transport no longer depends on release; a former procedural overlap is valid.
         {
             BattingStaging s;
             const float h = s.pitcher_blockout_height_m;
             const auto o = s.pitcher_blockout_position_m;
             s.release_position_m = {o.x - 0.16f*h, o.y + 0.57f*h + 0.035f, o.z - 0.40f*h - 0.13f};
-            bool rejected = false;
-            try { (void)make_batting_reference(s, {0, 1, s.strike_zone_plane_z()}, 16.0f / 9); }
-            catch (const std::runtime_error&) { rejected = true; }
-            require(rejected, "Coincident release-pose endpoints were not rejected");
+            (void)make_batting_reference(s, {0, 1, s.strike_zone_plane_z()}, 16.0f / 9, {});
         }
         // Compare fields exactly in one build/platform; never compare struct padding.
         const auto expected = ticks(48);

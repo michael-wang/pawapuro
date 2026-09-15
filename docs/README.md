@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-15。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；已加入進壘區置中、authoritative gameplay 好球帶／本壘一致性、2D overlay／預測落點及同球重投驗證；M1 尚未完成。Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成，S1 未開始。
+更新：2026-09-16。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；已加入進壘區置中、authoritative gameplay 好球帶／本壘一致性、2D overlay／預測落點及同球重投驗證；M1 尚未完成。Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。S1 static GLB bind-pose import 已實作並完成本輪技術驗證，待 Michael＋Julia human review；S2／S3 尚未開始。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 

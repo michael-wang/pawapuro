@@ -1,6 +1,6 @@
 # Batting Feel：體驗與實作邊界
 
-更新：2026-09-15。使用者已指定的目標與層級決策在此記錄；具體控制、範圍和驗收提案見 [M1](../milestones/01-batting-feel.md)。背景依據是 [Jai 研究](../research/jai-design-adoption-review.md)；本文件不重述語言比較。
+更新：2026-09-16。使用者已指定的目標與層級決策在此記錄；具體控制、範圍和驗收提案見 [M1](../milestones/01-batting-feel.md)。背景依據是 [Jai 研究](../research/jai-design-adoption-review.md)；本文件不重述語言比較。
 
 ## 體驗目標
 
@@ -111,7 +111,7 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 - **Simple face first**：先用簡單眼睛、眉毛或帽簷／頭部方向；有實際情緒需求才擴充，不預建 facial animation。
 - **Proportions serve animation**：比例以未來投球／揮棒的力量、重心與節奏判讀為準，不以縮小真人或 static concept art 作唯一標準。
 
-目前只用既有橢球／短圓柱驗證右投手 release 與左打者 ready 兩個固定姿勢。放大頭、鞋、球形手、bat，縮短軀幹並保留短褲與鞋之間空隙；手、帽與鞋的相依尺寸直接由共用比例計算。這不證明動態姿勢已成立。後續 S0 已製作右投手 authoring sample（見下節），但 app 的角色仍是 static fixture，未接入角色 asset／rig／animation runtime。
+先前用既有橢球／短圓柱驗證右投手 release 與左打者 ready 兩個固定姿勢。放大頭、鞋、球形手、bat，縮短軀幹並保留短褲與鞋之間空隙；手、帽與鞋的相依尺寸直接由共用比例計算。這不證明動態姿勢已成立。後續 S0 已完成右投手 authoring baseline；S1 app 改讀正式 GLB 的 static bind mesh（見末節），打者仍用此 static fixture；尚未接入動畫或 skinning。
 
 ### 靜態人物 blockout
 
@@ -284,3 +284,15 @@ Michael 接受「抬腳尤其左腳現在很棒」：保留該左腳／蓄力連
 本候選維持 1–205、60 fps、release 97；1–97 的 evaluated bones／mesh、左腳全段、B weights／rest／hierarchy、camera／scale／staging／Native 球路不變。右腳實際仍在 171 落地，contact metadata 保留原區間；171 後身體繼續回穩，不增加 idle hold。局部數值與畫面入口見 pitcher README／environment。
 
 Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成，S1 未開始。 `review/s02c/` 保留為歷史 human-review artifact；此次 promotion 不改 motion／timing／資產契約。
+
+
+## S1：Static Pitcher GLB Runtime Import（2026-09-16）
+
+本輪授權並實作單一正式 pitcher GLB 的 static bind/rest mesh transport，取代 procedural pitcher；待 Michael＋Julia review。S0 authoring motion 已接受，S1 不套 frame 1 或假造 Ready，不執行 animation／skinning。App 的 Ready 是球的 simulation state，角色本身保持 bind pose。
+
+- Engine `rendering/static_glb` 只處理實際需要的 GLB container／primitive、POSITION、COLOR_0、indices 與 parent-composed static node transforms；回傳 owned triangles／node 資料，不含棒球語意。現有 Pawapuro caller 是此能力的直接需求，沒有 asset manager 或 scene graph runtime。
+- Pawapuro `batting/pitcher/static_pitcher` 指定 mesh／grip 契約，負責一次 X reflection、一次 winding reversal、scale=1 與既有 staging pitcher placement。公尺已在 authoring 烘好；`height_m` 不再縮放 asset，`pitcher.toml` 不加入 runtime 第二份 placement truth。Bind grip 只作方向／hierarchy 檢查，不連接球。
+- File bytes、cgltf parse tree 與 accessor 暫存僅在同步讀取期間存活，cgltf tree 先於 backing bytes 釋放。回傳資料自有；pitcher vertices 複製至 scene 後即釋放暫存，scene 活到 main scope 結束。既有 D3D12View 初始化複製至 immutable vertex buffer，renderer 擁有 GPU resource 並於 fence 完成後釋放，沒有借用 parser pointers。
+- Imported pitcher 是 ordinary world vertices；ball translated range 與 overlay range 不變，static batter／camera／field／Native simulation 保留。缺檔或不支援的顯示格式直接 startup fail，包含 source path、owner 與原因，沒有 procedural fallback。D3D12View／HLSL 不改。
+
+實際 subset／啟動入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)，依賴與本輪驗證見 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。Runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證；S2／S3 未開始，M1 未完成。

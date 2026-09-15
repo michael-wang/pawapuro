@@ -739,3 +739,61 @@ Michael 的實際正常速度觀看 feedback：「右腳前踩、軀幹延伸都
   - `pitcher.toml`：`9c982e1486642cc54d7071aa832bd4a0f720d75c113f56b7ecdc9f31cc55cf21`
 
 JSON／logs 在忽略的 `build/pitcher-s02c-promotion/`。未重製影片或 screenshots，未執行 runtime／GPU／C++ build 測試；沒有 production C++／HLSL／renderer／CMake／staging 或 dependency 變更。完成後停止，S1 尚未開始。
+
+
+## S1 Static Pitcher GLB Runtime Import（2026-09-16）
+
+基準 cwd `C:/astra-dev/pawapuro`，branch main；HEAD／main／origin/main／live remote main 均為 `83408e4c8ba3188b2bb15a7fe185ec10cd4bff0c`，起始 workspace 乾淨，origin 為 canonical `michael-wang/pawapuro`。本輪完成 static GLB transport，待 Michael＋Julia review；S0 的 A／B／C authoring motion 已接受。未改正式三檔、motion、staging、simulation、D3D12View 或 HLSL。
+
+### 依賴與建置
+
+唯一新增 dependency 為 [cgltf v1.15](https://github.com/jkuhlmann/cgltf/releases/tag/v1.15)，固定 peeled commit `360db1a95480fe102ae9c69b27c5d101167ff5ba`；[官方 header／API](https://github.com/jkuhlmann/cgltf/tree/360db1a95480fe102ae9c69b27c5d101167ff5ba) 與 [MIT license](https://github.com/jkuhlmann/cgltf/blob/360db1a95480fe102ae9c69b27c5d101167ff5ba/LICENSE) 已核對。`cmake/PrepareCgltf.cmake` 明確下載至忽略的 `.deps/cgltf-1.15/`，以 SHA256 固定 header `e378a21c084bf1f288bb799de827bb26906efb024255f1ecf1705ea13f11c6ec`、license `f619925f80ef862497aaf8e8155ef218fa6a2190055129523ca3df9119a9ba95`。Prepare 已成功執行；正常 configure 只檢查本機檔案，不連網。Build 沿既有慣例複製 `cgltf-LICENSE.txt`；未加 package manager、其他 dependency 或 global PATH。
+
+在既有 x64 VS developer shell（本機 MSVC 14.44／SDK 10.0.26100.0），repository root 執行：
+
+```powershell
+cmake -P cmake/PrepareCgltf.cmake
+cmake -S . -B build/debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/debug
+ctest --test-dir build/debug --output-on-failure
+cmake -S . -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release
+ctest --test-dir build/release --output-on-failure
+& ./build/debug/pawapuro.exe
+& ./build/release/pawapuro.exe
+```
+
+本機 build script 在 child developer shell 使用 `chcp 65001`，避免既有本地化 MSVC include tracking 問題。建置輸出讀取 launch-relative `batting/pitcher/pitcher.glb`，與同層 `staging.toml` 同採 configure copy；正式 GLB 有變化會觸發重新 configure。Parser 只在 startup 使用；Engine／Pawapuro／GPU ownership 見設計文件，subset 見 pitcher README。
+
+### 實測
+
+| 檢查 | 結果 |
+|---|---|
+| Debug／Release build＋CTest | 各 3/3 通過：新增 static_pitcher、既有 reference_pitch／batting_staging。/W4／WX 保留。 |
+| GLB transport | 2362 source vertices，3936 triangles，11808 expanded vertices；完整 scene immutable buffer 22563 vertices。 |
+| Game local bounds，m | min (−1.263325, 0, −1.005480)，max (1.340500, 2.565150, 0.621810)。 |
+| World bounds，m | min (−1.263325, 0.355000, 17.511120)，max (1.340500, 2.920150, 19.138411)。 |
+| Bind grip world，m | (−1.120000, 1.670000, 18.166599)，位於 game −X；手套 hand_L 在 +X。不是 animated／release grip。 |
+| Scale／grounding | scale=1；測試將 height_m 加倍，local bounds／頂點尺寸不變；只修改 staging placement 時所有頂點同量平移。Mesh 最低點等於 placement Y=0.355，為 mound top 0.35 上方 5 mm，沒有再乘 2.45。 |
+| Static contract tests | 正式 subset／count、全部 position/color finite／opaque、合法 indices、hierarchy grip、basis／一次 winding、placement／bounds（1e-5 容差）、world／ball／overlay range isolation；缺檔、壞 magic、截短、非有限 POSITION、非法 index 的 source／owner／reason 全部通過。 |
+| Existing regressions | 保留 20 deterministic rethrows、30／60／120 FPS chunking、pause／single-step、arrival once、prediction／projection、44 個 staging 非法案例。舊 procedural shoulder/release 重合拒絕測試改為允許獨立 release，因該投手 geometry 已移除；未刪除 simulation assertions。 |
+| 實際 app | Debug／Release client 均 1920×1080，各初投＋20 次重投，pause 0→1 tick single-step；暫停等待兩張圖逐像素相同。完整球路仍由原 Native owner 更新。 |
+| 與本輪保留 baseline app 比較 | 兩種舊 exe 各實際完成一球。新版每次 release／raw arrival／plane evaluation（含 pixel）逐行相同，camera／overlay log 也相同。Raw Complete tick 95，t=0.395833333 s，p=(0.004963,0.759459,0.306804)；plane t=0.392833450 s，p=(−0.000000,0.775001,0.431800)，prediction delta=(0,0) px。 |
+| 畫面差分 | Debug／Release startup 逐像素相同；與各自舊版相比，僅 13056 pixels 改變，全部位於 [695,402]–[880,594) 的投手 rectangle（右／下 exclusive），rectangle 外逐像素一致。 |
+| GPU／shutdown | RTX 5070 Ti。Debug layer＋GPU-based validation 0 errors／corruption；shutdown report 無 live child resources，只有供報告的 device。Debug／Release exit 0，完成 641／642 frames。Release 依既有 compile contract 未啟用 debug layer，不把它標成另一次 GPU validation。 |
+
+正式 assets SHA256 與本輪 baseline 完全相同：
+
+- `.blend`：`8b76ae4a40377fa07021ebdf18c98b3bd73dddf132154961fbcf7131c63c3bca`
+- `.glb`：`c151f41798432c777464beea590b9ea5241e019cfb88bff6a99b9b2b1092d038`
+- `.toml`：`9c982e1486642cc54d7071aa832bd4a0f720d75c113f56b7ecdc9f31cc55cf21`
+
+兩種 build output 的 GLB 與正式檔 bytes／hash 相同；cgltf license copies 亦相同。本次未重新匯出、保存 Blender 或重跑 authoring motion validation，因其資料未改。
+
+### Review 證據與限制
+
+忽略目錄 `build/pitcher-s1/`：先開 `debug-startup.png`／`release-startup.png`（1920×1080）及 `debug-pitcher-crop.png`／`release-pitcher-crop.png`（固定原圖 [675,390]–[905,602] 區域 3× nearest 放大，camera 不變）。`*-midflight.png` 為 tick 48，`*-complete.png` 保留到壘；`debug.log`／`release.log`、`*-smoke.json`、`regression-summary.json` 與 `build-test.log` 記錄以上實測。`baseline-debug/`／`baseline-release/` 保留本輪前的 executable，baseline 截圖是舊 procedural app，不是動畫 before。
+
+Computer Use 初始化及 reset 重試均失敗（trusted Node kernel exited／Windows sandbox helper setup refresh errors），沿既有 process-targeted Windows key messages → SDL event loop、DPI-aware PrintWindow 方式操作本次啟動的 app。這是實際程序／畫面檢視，非人類手動試玩；暫存 smoke script 留在忽略目錄，沒有新增 runtime automation framework。
+
+已檢視 startup 全圖及投手放大：帽／臉朝本壘、球形右手在 game −X／手套在 +X、shirt／pants 配色與 detached feet 可見，未見 mesh 缺面；深色鞋並排時輪廓接近，原 reference release 指示圈／球位於臉旁。球沒有接手，此圖不證明 animated handoff、dynamic occlusion 或 early-flight readability。S1 保持 bind pose，即使 app simulation state 顯示 Ready 也不是 `.blend` frame 1。未重新製作 Blender comparison render，沒有 animation playback／skinning／release integration；停在 Michael＋Julia review，S2／S3 尚未開始、M1 未完成。

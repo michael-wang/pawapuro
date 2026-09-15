@@ -1,6 +1,6 @@
 # M1：Batting Feel
 
-更新：2026-09-15。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2 的 reference flight／pause／single-step 已完成，本輪已加入交付 3 的同球重投及進壘驗證畫面，Step 1 整體仍待使用者 review，M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
+更新：2026-09-16。狀態：M1 Step 1 交付 1 已實作並完成靜態場景驗證；另已完成靜態 staging calibration／啟動 Data；交付 2 的 reference flight／pause／single-step 已完成，本輪已加入交付 3 的同球重投及進壘驗證畫面，Step 1 整體仍待使用者 review，M1 尚未完成。層級與時間契約以 [Batting Feel 設計](../design/batting-feel.md) 為準。
 
 ## 完成的定義
 
@@ -181,3 +181,10 @@ S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app�
 已從正式 `55489a9c` 的 S0.2B 完成局部 candidate（`review/s02c/`），在 Michael＋Julia review 接受後原樣升為正式 S0.2C。1–97 的 keys／bones／mesh 保護與 A／B 回歸通過；後段增加軀幹續轉／前折與右腳前移，最終右足心比左足心更靠本壘約 0.374 m。保持 205 格，右腳在 171 接地並保留後續回穩時間。交付正常速度 before／after、兩視角完整影片、接點／落地 contact sheets 及俯視診斷。
 
 Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成，S1 未開始。 Michael 已實際正常速度觀看並接受 C 的旋轉／前折、投球臂延續、右腳跨前與 recovery 節奏；Codex 正常速度播放自看及 runtime／GPU 測試仍未完成。本次完成 promotion 後停止，等待下一個授權。
+
+
+## S1：Static Pitcher GLB Runtime Import（2026-09-16）
+
+已依本輪授權接入正式 S0.2C GLB 的 static bind mesh，取代 procedural pitcher，並交付 actual app startup／crop。Debug／Release build、CTest 各 3/3、實際 release／Complete、pause／single-step／20 rethrows 與 Debug GPU 檢查通過；詳細結果與可開啟證據由 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16) 維護，使用方式見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)。
+
+**停在 Michael＋Julia review gate。** 此 gate 只驗證位置、尺度、左右手／朝向、grounding、vertex colors 與既有 scene 沒被破壞；bind pose 不以投球 Ready 的美觀驗收。S0 authoring baseline 已接受，S1 技術驗證不是 runtime animation 或完整 pitcher pipeline 通過。S2 的 pose／CPU skinning、S3 的共同 tick／release integration 均未開始；後續須另行授權，M1 尚未完成。

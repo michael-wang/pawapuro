@@ -1,6 +1,18 @@
 # 右投手 Authoring Sample（正式資產 S0.2C）
 
-2026-09-15：Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成，S1 未開始。
+2026-09-15：Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。2026-09-16：S1 static bind-pose runtime import 已實作並完成技術驗證，待 Michael＋Julia review；S2／S3 尚未開始。
+
+## S1 static bind-pose runtime
+
+從 build output 的 `pawapuro.exe` 啟動，讀同目錄下 `batting/pitcher/pitcher.glb`。CMake configure 從正式本目錄 GLB 複製；app 不從 source tree 搜尋，未載入 `pitcher.toml`；animation／skin 僅解析，不 evaluate 或 deformation。啟動時雙臂展開是原始 bind/rest mesh，並非 `.blend` 的 frame 1 Ready；球維持獨立 reference pitch。
+
+- 唯一 primitive：POSITION FLOAT VEC3、COLOR_0 normalized UNSIGNED_SHORT VEC4（opaque）、UNSIGNED_SHORT triangle indices；2362 個 source vertices → 3936 triangles → 11808 個 position/color vertices。單一 embedded BIN、15 static nodes；JOINTS_0／WEIGHTS_0、skin／clip 安全解析但不 evaluate。
+- 不支援 materials／textures、morph、extensions／compression、sparse、其他 attribute set 或多 mesh。失敗回報 source／owner／具體原因，不猜格式或退回舊投手。Static transforms 採 glTF column-major，拒絕非有限、非 affine、singular／reflected node transforms；目前 sample 的 mesh node 為 identity。
+- `static_pitcher.cpp` 核對 `PitcherMesh` 與 `hand_R` 下的 `grip`；反射 X 一次、三角形交換後兩頂點一次，以公尺 scale=1 加上 staging 的 `pitcher_blockout.position_m`。共享 style／height Data 仍供舊 static batter／歷史設定使用，不再變形 GLB。
+
+先看本機忽略目錄 `build/pitcher-s1/` 的 `debug-startup.png`／`release-startup.png`（1920×1080）及 `debug-pitcher-crop.png`／`release-pitcher-crop.png`（原圖固定區域 3× nearest 放大，非新增 camera）。`*-midflight.png`／`*-complete.png` 與 `*.log` 保留球路檢查；`baseline-*-startup.png` 是本輪開始前的 procedural app，不能當成動畫 before。完整 metrics、cgltf prepare 與測試命令見 [environment](../../../docs/development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。
+
+S1 待 human review；目前深色雙鞋輪廓接近，reference release 指示圈／球位於角色臉旁，仍須後續動態檢查。沒有修改 authoring 三檔／motion、camera／scale、球路或 renderer，沒有進入 S2。
 
 ## S0.2C 已接受並升為正式：Follow-through Rotation／Rear-Foot Recovery
 
@@ -135,7 +147,7 @@ Frame 79 的凹折在兩個角度、相鄰 frames 與 wireframe 都可見，不�
 
 ### 空間與格式
 
-長度已是公尺，2.45 是初建比例 scale，runtime 不再乘；placement `(0, 0.355, 18.5166)` m、scale=1。Blender local = `(-game_local.x, -game_local.z, game_local.y)`；標準 glTF +Y-up export 得到 GLB local = `(-game_local.x, game_local.y, game_local.z)`。未來轉回 game 反射 X 一次、反轉 winding，再加 placement。
+長度已是公尺，2.45 是初建比例 scale，runtime 不再乘；placement `(0, 0.355, 18.5166)` m、scale=1。Blender local = `(-game_local.x, -game_local.z, game_local.y)`；標準 glTF +Y-up export 得到 GLB local = `(-game_local.x, game_local.y, game_local.z)`。S1 轉回 game 反射 X 一次、反轉 winding，再加 placement。
 
 GLB 只有 POSITION／COLOR_0／JOINTS_0／WEIGHTS_0、triangles、LINEAR animation；四 influences 槽位，最多兩個非零 weights。沒有 materials／textures／normals／morph／extensions。預覽沿用 vertex-color emission／Raw，未調 lighting；round-trip byte color 的量化限制保留。
 
