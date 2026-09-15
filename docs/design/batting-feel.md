@@ -119,6 +119,14 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 
 `[pitcher_blockout]` 與 `[batter_blockout]` 各保留 `position_m` 與 `height_m`；height 是站立比例 scale，頭／帽放大後不再等於精確總高。投手原點是投手板附近後腳參考，打者原點是腳底高度參考。新增一份共用 `[character_style]`，只提供 head／hand scale、foot planar／height scale 與 bat thickness scale，因本次需要反覆比較且兩個角色應採同一造型語言。沿用 startup defaults／validation；軀幹、短褲、帽簷與 pose 端點的固定比例留 Native，不把每個部位變成 Data。角色只是 Pawapuro scene fixture，沒有新增 Engine API 或正式人物 pipeline。
 
+### Final Pre-Rig：衣襬與垂直構圖
+
+上衣在腰線附近保有寬度並略覆褲子上緣，避免收尖後堆疊兩個 primitive 的輪廓；不新增 pelvis／腰帶物件，不以整顆 torso 放大處理。固定衣襬比例留 Pawapuro Native：投手保留原前傾胸口截面，下緣轉成水平寬衣襬；打者保留原上半橢球，下半部接至略內收的寬衣襬。褲子仍可見，褲子與大腳之間的 detached 風格保留。
+
+垂直 staging 只調既有 camera position Y／target Y：提高視點配合下俯方向，改善遠方投手帽冠與近景打者的垂直關係，讓既有外野牆頂上移。角色 scale／pose、場地與球路不變；horizontal yaw=0、36° FOV 及既有 shared off-axis projection 保留，不新增 vertical lens shift 或 pixel offset。實測 candidate 與 evidence 見開發環境文件。
+
+這是 static fixture／vertical composition 修正，仍待 **Michael＋Julia human review**；數值與 regression 通過不代表造型、動態 readability、正式 asset 或 animation 已驗收，不因此進入 Rig／Animation Pipeline。
+
 ### Field readability／presence pass
 
 本次只增強投打對決的舞台感：投手以既有 `height_m` 等比例放大，維持 Q 版頭身／四肢比例，不增加尚無需求的比例欄位。Raised mound 的 `height_m` 成為 startup Data，允許 0.125～1 m；平頂 radius 上限放寬到 2 m，仍小於底部 radius 下限。投手板、中央標尺及 release 支柱的落地高度直接使用丘高；投手腳底仍由角色 `position_m` 明示，本次一起調整到板面，單獨調丘高時須同步檢查站位。Release 的世界位置與整條球路不隨丘高移動。後續 pre-animation correction 比較 0.30／0.35／0.40 m 後選 0.35 m；radius／top radius／visual apron 不變，camera 也保留原設定以免破壞近景構圖。

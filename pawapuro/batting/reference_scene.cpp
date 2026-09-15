@@ -196,7 +196,31 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
             // The rear-foot origin stays at the rubber; pelvis/chest lean toward home.
             const auto pelvis = at(0, 0.34f, -0.23f);
             const auto chest = at(-0.02f, 0.57f, -0.40f);
-            segment(pelvis, chest, h * 0.16f, h * 0.15f, shirt);
+            // Keep the chest rim in its original leaning plane; only the lower shirt
+            // changes to a broad horizontal hem covering the top of the shorts.
+            const auto axis = XMVector3Normalize(XMVectorSubtract(XMLoadFloat3(&chest), XMLoadFloat3(&pelvis)));
+            const auto rim_side = XMVector3Normalize(XMVector3Cross(axis, XMVectorSet(0, 1, 0, 0)));
+            const auto up = XMVector3Cross(axis, rim_side);
+            const auto chest_rim = [&](int i) {
+                const float angle = XM_2PI * static_cast<float>(i) / 12;
+                XMFLOAT3 result;
+                XMStoreFloat3(&result, XMVectorAdd(XMLoadFloat3(&chest), XMVectorScale(
+                    XMVectorAdd(XMVectorScale(rim_side, std::cos(angle)), XMVectorScale(up, std::sin(angle))), h * 0.15f)));
+                return result;
+            };
+            const auto hem_rim = [&](int i) {
+                const float angle = XM_2PI * static_cast<float>(i) / 12;
+                // Project the same ring orientation onto the horizontal waist plane.
+                const auto radial = XMVectorAdd(XMVectorScale(rim_side, std::cos(angle)), XMVectorScale(up, std::sin(angle)));
+                const float x = XMVectorGetX(radial), z = XMVectorGetZ(radial);
+                const float length = std::hypot(x, z);
+                return at(0.175f * x / length, 0.30f, -0.23f + 0.155f * z / length);
+            };
+            for (int i = 0; i < 12; ++i) {
+                quad(hem_rim(i), chest_rim(i), chest_rim(i + 1), hem_rim(i + 1), shirt);
+                triangle(chest, chest_rim(i), chest_rim(i + 1), shirt);
+                triangle(at(0, 0.30f, -0.23f), hem_rim(i + 1), hem_rim(i), shirt);
+            }
             part(at(0, 0.30f, -0.23f), {0.17f, 0.09f, 0.15f}, pants);
             part(at(0.02f, 0.75f, -0.40f), head_radii, skin);
             part(at(0.02f, 0.75f + 0.12f * head, -0.40f), cap_radii, shirt);
@@ -219,7 +243,27 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
             segment(at(0.16f, 0.57f, -0.40f), glove, h * 0.055f, h * 0.045f, skin);
             part(glove, {0.09f, 0.10f, 0.07f}, {0.55f, 0.30f, 0.13f});
         } else {
-            part(at(0, 0.47f, 0), {0.17f, 0.16f, 0.14f}, shirt);
+            // Preserve the upper ellipsoid; its lower half now tapers to a broad hem,
+            // rather than a point sitting on a second ellipsoid. No extra pelvis piece.
+            const auto shirt_ring = [&](int ring, int lon) -> XMFLOAT3 {
+                const float angle = XM_2PI * static_cast<float>(lon) / 16;
+                const float latitude = XM_PI * static_cast<float>(ring) / 8;
+                const float y = ring <= 4 ? 0.47f + 0.16f * std::cos(latitude) : 0.31f;
+                const float rx = ring <= 4 ? 0.17f * std::sin(latitude) : 0.16f;
+                const float rz = ring <= 4 ? 0.14f * std::sin(latitude) : 0.135f;
+                return {origin.x + rx * h * std::cos(angle), origin.y + y * h,
+                    origin.z + rz * h * std::sin(angle)};
+            };
+            for (int ring = 0; ring < 5; ++ring) {
+                const float shade = 0.72f + 0.28f * (1 - static_cast<float>(ring) / 8);
+                for (int lon = 0; lon < 16; ++lon)
+                    quad(shirt_ring(ring, lon), shirt_ring(ring + 1, lon),
+                        shirt_ring(ring + 1, lon + 1), shirt_ring(ring, lon + 1),
+                        {shirt.x * shade, shirt.y * shade, shirt.z * shade});
+            }
+            for (int lon = 0; lon < 16; ++lon)
+                triangle(at(0, 0.31f, 0), shirt_ring(5, lon), shirt_ring(5, lon + 1),
+                    {shirt.x * 0.86f, shirt.y * 0.86f, shirt.z * 0.86f});
             part(at(0, 0.30f, 0), {0.17f, 0.09f, 0.15f}, pants);
             part(at(0, 0.77f, 0), head_radii, skin);
             part(at(0, 0.77f + 0.12f * head, 0), cap_radii, shirt);

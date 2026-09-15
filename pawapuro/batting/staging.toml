@@ -4,9 +4,9 @@
 preset = "right_handed_pitcher_vs_left_handed_batter"
 # Frame from third-base (-X), opposite the future left-handed batter at +X.
 # This presentation camera leaves catcher-view right for the foreground batter.
-position_m = [-0.75, 1.25, -5.0]
+position_m = [-0.75, 1.55, -5.0]
 # No horizontal yaw: target X matches camera X. Lens shift is derived from gameplay focus.
-target_m = [-0.75, 2.10, 16.8]
+target_m = [-0.75, 1.0713, 16.8]
 vertical_fov_degrees = 36.0
 
 [release]

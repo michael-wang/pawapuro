@@ -462,3 +462,44 @@ Complete 畫面仍畫完整 crossing tick 的球，球心 **(967.034790,759.2152
 - Debug／Release 實際 app 各完成初投加 **20 次重投**，每次 release／arrival／evaluation 紀錄各自相同。Pause 等待畫面逐像素不變，single-step **11→12 tick**，正常 exit 0，各完成 **608 frames**。Ready／暫停 tick 48 的 Mid-flight／Complete 三張 1920×1080 擷取在 `build/calibration-debug-*.png`／`calibration-release-*.png`，log 同前綴。
 - 實際圖可見更扁的鞋底、包住頭頂的帽冠與單段手臂；兩手握棒、release 球及主要球路仍可辨。帽冠與手臂仍是低細節 static fixture，不宣稱完成動態可讀性。Camera／projection、好球帶、場地、人物原點與 ball radius Data 逐項比對未改；reference_pitch.cpp/.hpp、renderer、main loop 均未改。
 - Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource（僅供報告的 device）。原生 computer-use helper 啟動失敗，沿用 process-targeted Windows key messages／SDL event loop／DPI-aware PrintWindow；這是實際 app 自動操作與畫面檢視。候選／截圖／logs 留在忽略的 build，暫存驗證腳本移除。沒有新增 dependency 或 animation architecture。
+
+
+## Final Pre-Rig Character／Vertical Composition（2026-09-15）
+
+起始 main／origin/main 均為 `da2d6bdf1c1699352f26db60e6ff8510c2d62d99`，workspace 乾淨。依序擷取未修改 baseline、原 camera＋衣襬、衣襬＋新 camera；不是同時改完再推測原因。設計與 human review gate 見 [Batting Feel](../design/batting-feel.md)。
+
+- 衣襬只改 `reference_scene.cpp` 的兩個既有 fixture。投手保留原 chest rim，向下接到 Y=角色原點＋0.30×scale 的水平橢圓衣襬，半徑 X/Z=0.175／0.155×scale；第一次沿傾斜軸延伸仍露出碎片狀褲緣，因此改成水平截面。打者保留原上半橢球，從 equator 接至 Y=0.31×scale、半徑 X/Z=0.16／0.135×scale 的衣襬，取代下半收尖。沒有另一顆 pelvis、裙襬擴張或逐部位 Data。
+- 最終 camera 採人類提出的第一候選：position **(−0.75,1.55,−5)**、target **(−0.75,1.0713,16.8)**、FOV **36°**。只修改 TOML 兩個 Y；parser／validation／fallback、projection 實作皆未改。沒有另測相鄰 camera，因第一候選已符合本輪數值方向，球路仍可辨；最終觀感仍待 Michael＋Julia。
+
+下表為**實際生成的 geometry vertices 經既有 project_batting_point 投影**，不是離線重寫角色 landmarks。帽冠 top 用角色帽色上部 vertices，沒有以 bat tip 代替；鞋／plate／bat 同樣從現有幾何選取。暫存量測跳過 camera 後方草地 vertices（原函式會拒絕投影），沒有修改 production projection。CSV 保留在 build。
+
+| 指標（px，除另註） | Before | After |
+|---|---:|---:|
+| 投手帽冠 top Y | 481.8046 | 402.2809 |
+| 打者帽冠 top Y | 415.2633 | 412.9772 |
+| 投手鞋底最下緣 Y | 673.0867 | 594.4993 |
+| 投手帽冠至鞋底 projected height | 191.2821 | 192.2184（+0.49%） |
+| Gameplay focus X／Y | 959.9999／750.8538 | 959.9999／740.0032 |
+| Overlay left／right | 826.9975／1093.9155 | 828.0790／1092.4269 |
+| Overlay top／bottom | 604.8008／897.9097 | 595.2288／884.2245 |
+| Overlay width／height | 266.9180／293.1089 | 264.3478／288.9957（−0.96%／−1.40%） |
+| 中外野牆頂 Y／Y÷1080 | 572.2598／0.52987 | 475.3008／0.44009 |
+| 打者鞋底最下緣 Y | 1064.8175 | 1067.6201 |
+| 本壘 Y 範圍 | 959.1437～1020.9424 | 937.1412～1011.5363 |
+| Bat Y 範圍 | 306.0336～677.8037 | 314.6493～680.3135 |
+
+- 實際 1920×1080 screenshot 藍框外緣由 **X=826～1094、Y=604～898** 改為 **X=827～1092、Y=594～884**；解析 bounds 與筆畫外緣的差異來自線寬／rasterization。左右 world-X 白線仍水平：後線外緣生成 vertices 的 ΔY=0，before Y=1078.7207、after Y=1081.3107。**後線最外側約 1.3 px 超過 client 下緣**，其餘筆畫仍可見；沒有新增鞋底、bat 或重要本壘裁切，這個 chalk 邊緣取捨交 human review。
+- 原 camera 的 torso-only 圖顯示兩件衣襬較平、褲子下半仍可見，沒有肉眼可見 z-fighting；褲子到鞋的空間保留。生成的非 shirt 色 vertices／colors multiset 與 baseline 相同；角色 origin／scale、頭帽、手腳、bat、場地與 simulation Data 均未改。投手 projected height 僅 +0.49%，存在感主要來自位置而非巨大化。
+- 實際檢視 Ready／release tick 0、ticks **1、3、6、12、24、36、48、60、72、84、94** 與 Complete。Release 球在牆頂上方，約 tick 24 短暫跨越黃色牆頂與手／臉背景，tick 36 後離開色帶並往胸前飛來；球本體仍可辨，沒有觀察到長時間沿牆頂相切。Mid／late flight、近壘均清楚，打者與修過的 torso 未擋主要球路。膚色背景對比與短暫邊緣交會是否足夠易追蹤，仍需 Michael＋Julia review，不能以球心座標在畫面內代替判讀驗收。
+- Debug／Release build 成功，CTest 各 **2/2**；未放寬既有 centre／prediction tolerance。44 個非法 Data 案例、20 deterministic rethrows、30／60／120 FPS chunking、pause／single-step、arrival once、prediction／evaluation 一致性皆通過。沒有為局部造型新增測試 framework。
+- 兩種實際 app 各初投＋**20 次重投**；首球在 tick 0 pause，逐步到 tick 94 後 resume，等待 pause 的兩張圖逐像素相同；正常 exit 0。Debug／Release 分別完成 **698／703 frames**。每次 release／arrival 與前版逐行相同，evaluation 的 world/time/velocity 也相同：raw tick **95**，p **(0.004963,0.759459,0.306804)**；plane p **(−0.000000450,0.775000632,0.431800008)**。本次 prediction／actual plane pixel **(959.999817,740.002991)**，error **0 px**；raw Complete 球心 **(966.906860,750.393799)**，未吸附。
+- Debug GPU-based validation **0 errors**，未見 corruption；shutdown 無 live child resource，僅供報告使用的 device。原生 computer-use helper 啟動失敗，沿用僅針對 Pawapuro process 的 Windows key messages／SDL event loop／DPI-aware PrintWindow。這是實際 app 自動操作與 capture，**尚未執行 Michael＋Julia human review，也未驗證任何動畫**。
+
+證據位於忽略的 `build/`（不提交自動產物）：
+
+- `pre-rig-baseline-ready.png`、`pre-rig-torso-ready.png`、`pre-rig-final-debug-ready.png`：同 client 尺寸、相同 debug 元素的 full-frame 分階段比較。
+- `pre-rig-pitcher-hem-comparison.png`／`pre-rig-batter-hem-comparison.png`：左 before、右 torso-only，兩側採完全相同 crop 座標與倍率；投手 4×、打者 2× nearest-neighbour，僅供衣襬 review。
+- `pre-rig-final-debug-tick-48.png`／`pre-rig-final-debug-complete.png`：正式 mid-flight／Complete；`pre-rig-final-debug-tick-*.png` 與 `pre-rig-flight-inspection.png` 為額外診斷。Release 有同名三狀態與 tick captures。
+- `pre-rig-*.log`、`pre-rig-baseline-geometry.csv`／`pre-rig-final-geometry.csv`：runtime／GPU 紀錄及生成幾何量測。暫存操作／量測 source 與 executable 已移除。
+
+這是 static fixture／vertical composition candidate，沒有新增 Engine／renderer／shader、dependency、衣服／camera／stadium 系統；完成後停在 Michael＋Julia review gate。
