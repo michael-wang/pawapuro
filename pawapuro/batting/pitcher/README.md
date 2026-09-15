@@ -1,6 +1,41 @@
 # 右投手 Authoring Sample（正式 Style Feet v1B；motion S0.2C）
 
-2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式三檔已 promotion 至 v1B；plant orientation／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式三檔已 promotion 至 v1B；projected shoe readability／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+
+## Foot Shape v1C：Slender Directional Shoe Silhouette candidate
+
+2026-09-16：本輪從已接受的 `review/style-feet-v1b/pitcher.blend` 建立 `review/style-feet-v1c/`，**待 Michael＋Julia human review，未 promotion**。正式三檔仍是 v1B，hash 不變。先前 orientation diagnosis 直接量 evaluated heel→toe：f72／79／97／108 水平皆朝 game −Z、與 bone forward 無 yaw offset；問題是 projected readability。本輪只改 Visual Representation，沒有新增 Motion Truth 或修改 animation。
+
+`revise_shoe_silhouette.py` 是一次性 feet-only edit：核對 v1B hash、拒絕覆寫 candidate，只重塑現有 220 vertices／foot 的 rest positions，不建立 topology 或重建角色。Upper 收窄、toe taper 加強並延伸 25 mm；heel／upper 比 sole 更收束。270 個 foot positions 改變；全部 1922 個非腳部 positions、indices、colors、weights、rest／hierarchy、全部 keys／骨骼／grip transforms／camera exact。每腳原本 59 個 coplanar contact vertices 的 rest 與全部 205 格 evaluated positions 都 exact 保留。
+
+| Rest 尺寸（m） | v1B | v1C |
+|---|---:|---:|
+| 整體寬 | 0.989187 | 0.989187 |
+| 整體長 | 1.163750 | 1.188750（+2.148%） |
+| 最大高度 | 0.198450 | 0.198450 |
+| 整體 width:length | 0.8500 | 0.8321 |
+| Upper 寬／長（既有上方六圈） | 0.959512／1.128837 | 0.690250／1.151641 |
+| Upper width:length | 0.8500 | 0.5994 |
+
+整體 Blender rest Y bounds 從 [−0.581875, +0.581875] 改為 [−0.581875, +0.606875]；X／Z bounds 不變。Upper 寬減約 28.1%，沒有縮小原平底 support patch。Planted world bottom Y 仍為 0.355 m，before／after 差 0；全 205 格 airborne 最低 0.000852719 m，原不穿地／contact checks 通過。右腳傾斜時延伸 toe 使 airborne bottom 最大差 0.0197003 m，沒有改 motion 補償。
+
+Michael 優先看 ignored `build/style-feet-v1c/slender/`（上層既有 orientation diagnosis 保留）：
+
+- `v1b-vs-v1c-runtime.jpg`：v1B 左／v1C 右，f49／79／97／108／171／205，同 runtime camera／tick／crop。
+- `release-planted-closeup.jpg`、`lifted-foot-closeup.jpg`：真正 batting runtime 的接地、release、follow 與抬腳；lifted 另附既有 side camera。
+- `candidate-runtime-1x.mp4`：完整真實 runtime tick captures，以 60 fps 重組 1×；205 顯示 frames／3.416667 s，clip 仍為 3.4 s，首格 tick 0 Ready。不是 wall-clock 錄影。
+- `top-oblique-silhouette.jpg`：實際 saved mesh 的 top／side／oblique 診斷；edges 僅在診斷圖，source／runtime 材質不變。
+- `candidate-release/pawapuro.exe`：隔離 S2 app copy；Space 播放，P 暫停，`.` 單步。一般 build 仍載入正式 v1B。
+
+v1B runtime baseline 重用既有真實 captures，已核對 GLB／TOML、executable／DLL／staging 與目前 baseline 相同，並非拿 v1A 當 before。F79／97／108 的 projected upper width **72.90→52.44 px**，整鞋 width 仍約 75.17 px；支撐寬度保留。檢視可見 upper 收窄、toe 更尖、鞋底外緣突出；透視縮短仍在，主 camera 下是否一眼讀懂 toe／heel 尚待 human review。鞋底外緣可能顯得較突出，深色雙鞋仍會重疊；抽樣未見新增嚴重穿地／遮擋，不是完整 collision 保證。已檢視 paired crops、lifted、top／oblique 與全段抽樣，另實測正常速度執行；**未完成正常速度連續影片自看**。
+
+沿用 `export_sample.py`／`verify_sample.py`／`inspect_motion.py`，將 asset 路徑設為 `review/style-feet-v1c`，evidence 使用上述 `slender/`；export 不呼叫 revision，也不保存 source。既有 `check_shoe_shape_export.py` 因第二個實際 shoe-shape caller 加入 `--baseline`／`--candidate`／`--evidence`，沿用同一份 assertions／tolerances，不複製 validator；預設只核對 fixture，明確 `--write-fixture` 才寫候選 fixture：
+
+```powershell
+python pawapuro/batting/pitcher/check_shoe_shape_export.py --baseline pawapuro/batting/pitcher/review/style-feet-v1b --candidate pawapuro/batting/pitcher/review/style-feet-v1c --evidence build/style-feet-v1c/slender
+```
+
+Candidate fixture 只改五格受 foot 影響的 bounds、16 個 foot sample points 與 provenance；grip／非腳部點原文不變，正式 fixture 不變。結果見 environment 的 v1C 紀錄。Material／highlight、cleats／sole detail、foot flex／articulation、rubber arm 仍延後；S3 未開始。
 
 ## Style Feet v1B promotion（2026-09-16）
 

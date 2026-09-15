@@ -946,3 +946,24 @@ Candidate SHA256：
 最小 regression：Khronos 0 errors／warnings／infos／hints；目前正式 source 唯讀 evaluated samples 與 accepted candidate 相同，既有 source／GLB／round-trip PASS；Debug／Release 原 S2 motion test PASS（all ticks、skin、contacts、fixed bones、chunking／pause／replay）。Runtime release alignment error 4.9151248e-7 m，原容差不變。沒有重製影片／screenshot，也沒有重跑歷史診斷或宣稱新 GPU 檢查；evidence 在 ignored `build/style-feet-v1b-promotion/`。
 
 v1B review artifact 保留。Front-foot plant orientation 尚待下一階段量測；material／highlight、cleats、foot articulation、rubber arm 延後，S3 未開始。
+
+## Foot Shape v1C：Slender Directional Shoe Silhouette（2026-09-16）
+
+增量 preflight：HEAD／main／origin/main／live remote 均為 `f9b6f2af7e0a6f1a188ad7e7d7b62402e00a5785`，workspace clean，AGENTS.md 未變。正式三檔先前已 promotion 至 v1B，本輪沒有再 promotion；直接從 hash 相同的 `review/style-feet-v1b/` 建立 v1C review candidate。上層 `build/style-feet-v1c/` 的舊 orientation diagnosis 保留，新證據全部在 ignored `build/style-feet-v1c/slender/`。
+
+| Candidate | SHA256 |
+|---|---|
+| pitcher.blend | `e2eb83e5c80e7f3c93ac7ae4f1ec1c3167618197c20c3d2d958d1d69c84f43ad` |
+| pitcher.glb | `ab4f444c1b688ef534589690f59f8dce60f43579a4ff58aaf4559093ae29b925` |
+| pitcher.toml | `d515e00178a3557537de247eeaf984c983fa3350c223236a41eef7a235aebf21` |
+
+- Source edit：`revise_shoe_silhouette.py` 只改 270 個 foot positions，仍為 2362 vertices／3936 triangles、220 vertices／foot；未建新 topology。保存前與重開後核對全部 205 格 bones／grip matrices、keys／handles、rest／hierarchy、weights、colors、indices、camera、contacts 與 1922 個非腳部 mesh exact。每腳 59 個平底 contact vertices 全段 exact；planted bottom 差 0（原 1e-7 m guard），landing support positions 未變，airborne 最低 0.000852719 m，原 noncontact >1e-6 guard 保留。
+- 尺寸：width／maximum height 不變；toe 增長 0.025 m，length 1.163750→1.188750 m（+2.148%），width:length 0.85→0.832124。Upper 上方六圈 width 0.959512→0.690250 m、width:length 0.85→0.599362。F79／97／108 projected upper width 72.9008→52.4431 px，整鞋約 75.17 px 不變；這量化形狀變化，並非 human readability 通過證據。
+- Export：全部非 POSITION accessor bytes 相同，包括 39 animation channels／times／IBMs／JOINTS／WEIGHTS／COLOR／indices；非 foot POSITION exact。TOML 只改 source／GLB hashes。既有 export checker 增加資產／evidence 路徑參數，v1A→v1B 舊 caller 與 v1B→v1C 新 caller 均通過，未放寬任何 tolerance。候選 fixture 只改五格 foot bounds、16 個 foot points／provenance，正式 fixture 未改。
+- Khronos：0 errors／warnings／infos／hints。Source／GLB／round-trip PASS，mesh 最大誤差 1.283923e-6／1.744900e-6 m、round-trip grip 1.660393e-6 m，原 0.1 mm 容差保留。`inspect_motion.py` 在原 S0.2C revision 下執行全部 grip／fixed lengths／contacts／head proxy／opening／release checks，未因 style 版本跳過。Runtime release alignment error 4.9151248e-7 m 未變。
+- Debug／Release configure、build、正式 v1B CTest 各 4/4 PASS；另直接以 v1C asset 跑原 `pitcher_motion_test` 與 `static_pitcher_test`，兩種 build 均 PASS（含 all-tick、chunking／pause／replay、contacts、fixed bones 與 10 個 static failure cases）。未改 C++／HLSL／CMake／staging／renderer 或依賴。
+- Candidate Debug／Release 實際 app play／pause／817 single steps／replay／Complete／minimize→restore PASS；正常速度 wall time 3.4333／3.4371 s，Complete tick 816、exit 0，pause／final hold pixels 不變，背景時間不補入。Debug GPU-based validation 啟用、0 errors，shutdown live report 僅回報用 device，無 child objects。Release 不啟用 debug layer。
+- Baseline runtime captures 重用已驗證 v1B：GLB／TOML、executable／DLL／staging bytes 與目前相同；candidate 使用新隔離 launch copy，正式 build 仍為 v1B。七個 review tick 的 title／grip／state 與 baseline exact；六組 paired image 差分只落在鞋部。影片是 candidate 每 4 ticks 擷取一格的 60 fps／205 frames／1× 重組，首格 Ready，3.416667 s，非 wall-clock 錄影；decoder 核對通過。
+- 已檢視 actual runtime paired sheets、release／lifted close-up、saved mesh top／oblique 與完整 clip 抽樣；未連續觀看正常速度影片。Computer-use 初始化仍因 sandbox helper startup 失敗，沿用既有 process-targeted app harness，沒有宣稱該 UI 工具成功。鞋底外緣較突出、深色雙鞋重疊及 perspective foreshortening 仍是 human review 項目，未宣告完整 collision 或 style acceptance。
+
+停止於 Michael＋Julia review：v1C 未 promotion，沒有新的 Motion Truth／Character Motion Rule；material／highlight、cleats／sole detail、foot flex／articulation、rubber arm 延後，S3 未開始。

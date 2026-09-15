@@ -1,9 +1,16 @@
-"""Compare v1B against official v1A; only --write-fixture writes the candidate test fixture.
-Requires source-comparison.json and both evaluated source samples under build/style-feet-v1b.
+"""Compare the two supplied shoe-shape assets; only --write-fixture writes a candidate fixture.
+Requires source-comparison.json and both evaluated source samples in --evidence.
 """
 from pathlib import Path
-import json,struct,tomllib,hashlib,sys
-root=Path(__file__).resolve().parent;candidate=root/'review/style-feet-v1b';out=root.parents[2]/'build/style-feet-v1b'
+import json,struct,tomllib,hashlib,argparse
+here=Path(__file__).resolve().parent
+parser=argparse.ArgumentParser()
+parser.add_argument('--baseline',type=Path,default=here)
+parser.add_argument('--candidate',type=Path,default=here/'review/style-feet-v1b')
+parser.add_argument('--evidence',type=Path,default=here.parents[2]/'build/style-feet-v1b')
+parser.add_argument('--write-fixture',action='store_true')
+args=parser.parse_args();root=args.baseline;candidate=args.candidate;out=args.evidence
+label='v1C' if candidate.name=='style-feet-v1c' else 'v1B'
 def glb(p):
  b=p.read_bytes();n=struct.unpack_from('<I',b,12)[0];return json.loads(b[20:20+n]),b[28+n:]
 a,ab=glb(root/'pitcher.glb');b,bb=glb(candidate/'pitcher.glb')
@@ -40,7 +47,7 @@ lines=(root/'motion_expected.txt').read_text().splitlines();new=[];edits=[];idx=
 for line in lines:
  if line.startswith('# source_sha256'):new.append('# source_sha256 '+mb['source_sha256'])
  elif line.startswith('# glb_sha256'):new.append('# glb_sha256 '+mb['glb_sha256'])
- elif line.startswith('# Accepted'):new.append('# v1B shoe-shape candidate evaluated Blender samples; human style review pending; game local (-x,z,-y).')
+ elif line.startswith('# ') and 'evaluated Blender samples;' in line:new.append(f'# {label} shoe-shape candidate evaluated Blender samples; human style review pending; game local (-x,z,-y).')
  elif line.startswith('sample'):
   parts=line.split();tick=int(parts[1]);frame=tick//4+1;row=src[str(frame)];pts=[[-p[0],p[2],-p[1]] for p in row['vertices_blender_m']]
   oldpts=[[-p[0],p[2],-p[1]] for p in oldsrc[str(frame)]['vertices_blender_m']]
@@ -62,7 +69,7 @@ for line in lines:
   idx+=1
  else:new.append(line)
 expected='\n'.join(new)+'\n'
-if '--write-fixture' in sys.argv:
+if args.write_fixture:
  (candidate/'motion_expected.txt').write_text(expected)
 else:
  assert (candidate/'motion_expected.txt').read_text()==expected,'Candidate fixture mismatch'

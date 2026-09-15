@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-16。M1 尚未完成。Michael＋Julia 已接受 Right-handed Pitcher S0（A／B／C）的 authoring motion baseline、S1 static GLB runtime import，以及 Character Motion Rules v0.1 design。S2 runtime 240 Hz animation playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。Style Feet v1A 的 1.25× planar footprint 已通過 Michael＋Julia human review 並原樣 promotion 為正式資產；接受限於支撐 footprint 尺寸，Foot Shape v1B geometry 已通過 human review 並原樣升為正式資產；front-foot plant orientation 及其他 style debts 保留。App 可播放正式 S0.2C 單一 clip；球仍是獨立 reference fixture。Release integration、dynamic occlusion／early-flight readability 與正式遊戲品質尚未通過；S3 未開始。
+更新：2026-09-16。M1 尚未完成。Michael＋Julia 已接受 Right-handed Pitcher S0（A／B／C）的 authoring motion baseline、S1 static GLB runtime import，以及 Character Motion Rules v0.1 design。S2 runtime 240 Hz animation playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。Style Feet v1A 的 1.25× planar footprint 已通過 Michael＋Julia human review 並原樣 promotion 為正式資產；接受限於支撐 footprint 尺寸，Foot Shape v1B geometry 已通過 human review 並原樣升為正式資產；front-foot orientation 已診斷正確，v1C projected shoe readability candidate 待 human review，其他 style debts 保留。App 可播放正式 S0.2C 單一 clip；球仍是獨立 reference fixture。Release integration、dynamic occlusion／early-flight readability 與正式遊戲品質尚未通過；S3 未開始。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 
