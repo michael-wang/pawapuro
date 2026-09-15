@@ -105,7 +105,7 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 - **Oversized cap**：帽冠包覆大頭上半部，寬帽簷從前方伸出並表達朝向；不能像浮空圓盤。
 - **Detached / simplified body-foot relationship**：身體與腳可分離或簡化連接；間距是風格特徵，並非待修的解剖缺陷。
 - **Simple spherical hands**：球形／橢球手即可表達握球、握棒與移動方向，不做手指細節或 finger rig。
-- **Continuous rubber-like arms**：手臂是 shoulder 直接連到球形手的連續簡化肢體，不要求可見 upper arm／forearm 或 elbow anatomy，除非日後 gameplay readability 證明必要。目前用單一直線 segment，沒有 deformation 或彎曲系統。
+- **Continuous rubber-like arms**：手臂是 shoulder 直接連到球形手的連續簡化肢體，不要求可見 upper arm／forearm 或 elbow anatomy。早期 static fixture 使用單一直線 segment；目前 motion relationships 由 [Character Motion Rules](character-motion.md) 維護，hidden joints 不代表可見解剖。
 - **Silhouette first**：未來投手的 ready、抬腿、跨步、旋轉、release、follow-through，以及打者的 ready、load、啟動、通過 zone、follow-through／失衡，都應能快速區分；不為靜態漂亮犧牲動作輪廓。
 - **Exaggerated equipment allowed**：球、bat、glove、鞋、帽／頭盔可誇張，以提升 readability、impact 與 motion clarity，並保持世界內部一致。
 - **Simple face first**：先用簡單眼睛、眉毛或帽簷／頭部方向；有實際情緒需求才擴充，不預建 facial animation。
@@ -288,11 +288,11 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 
 ## S1：Static Pitcher GLB Runtime Import（2026-09-16）
 
-本輪授權並實作單一正式 pitcher GLB 的 static bind/rest mesh transport，取代 procedural pitcher；待 Michael＋Julia review。S0 authoring motion 已接受，S1 不套 frame 1 或假造 Ready，不執行 animation／skinning。App 的 Ready 是球的 simulation state，角色本身保持 bind pose。
+本輪授權並實作單一正式 pitcher GLB 的 static bind/rest mesh transport，取代 procedural pitcher；Michael＋Julia 已接受 S1 的基本位置／尺度／左右／顏色／grounding 與 scene integration，renderer 無須擴張。S0 authoring motion 已接受，S1 不套 frame 1 或假造 Ready，不執行 animation／skinning。App 的 Ready 是球的 simulation state，角色本身保持 bind pose。
 
 - Engine `rendering/static_glb` 只處理實際需要的 GLB container／primitive、POSITION、COLOR_0、indices 與 parent-composed static node transforms；回傳 owned triangles／node 資料，不含棒球語意。現有 Pawapuro caller 是此能力的直接需求，沒有 asset manager 或 scene graph runtime。
 - Pawapuro `batting/pitcher/static_pitcher` 指定 mesh／grip 契約，負責一次 X reflection、一次 winding reversal、scale=1 與既有 staging pitcher placement。公尺已在 authoring 烘好；`height_m` 不再縮放 asset，`pitcher.toml` 不加入 runtime 第二份 placement truth。Bind grip 只作方向／hierarchy 檢查，不連接球。
 - File bytes、cgltf parse tree 與 accessor 暫存僅在同步讀取期間存活，cgltf tree 先於 backing bytes 釋放。回傳資料自有；pitcher vertices 複製至 scene 後即釋放暫存，scene 活到 main scope 結束。既有 D3D12View 初始化複製至 immutable vertex buffer，renderer 擁有 GPU resource 並於 fence 完成後釋放，沒有借用 parser pointers。
 - Imported pitcher 是 ordinary world vertices；ball translated range 與 overlay range 不變，static batter／camera／field／Native simulation 保留。缺檔或不支援的顯示格式直接 startup fail，包含 source path、owner 與原因，沒有 procedural fallback。D3D12View／HLSL 不改。
 
-實際 subset／啟動入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)，依賴與本輪驗證見 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。Runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證；S2／S3 未開始，M1 未完成。
+實際 subset／啟動入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)，依賴與本輪驗證見 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。Runtime animation／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 與 early-flight readability 尚未驗證，M1 未完成。下一技術切片 S2 尚未授權／開始，S3 未開始。後續 animation authoring 的動作關係與 Motion Brief 由 [Character Motion Rules v0.1](character-motion.md) 擁有；該文件待 design review，並記錄延後至真正 batting camera 播放動畫後再評估的 style debt。

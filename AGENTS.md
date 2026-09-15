@@ -7,6 +7,7 @@ trade-offs; it is not a mandate to implement every discussed feature.
 
 ## Scope and workflow
 
+- Character animation work must read [Pawapuro Character Motion Rules](docs/design/character-motion.md) and establish support/contact, body intent, lead/lag, attachment, and momentum resolution before full motion authoring.
 - Do only the explicitly approved task. Do not start the next milestone step implicitly.
 - If a task reveals a larger architectural decision, stop and report it rather than silently expanding scope.
 - Prefer small, reviewable changes. Verify the affected behavior and review the diff; distinguish observed results from assumptions.

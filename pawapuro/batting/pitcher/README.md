@@ -1,6 +1,6 @@
 # 右投手 Authoring Sample（正式資產 S0.2C）
 
-2026-09-15：Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。2026-09-16：S1 static bind-pose runtime import 已實作並完成技術驗證，待 Michael＋Julia review；S2／S3 尚未開始。
+2026-09-15：Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。2026-09-16：Michael＋Julia 已接受 S1 static bind-pose runtime import；下一技術切片 S2 尚未授權／開始，S3 未開始。
 
 ## S1 static bind-pose runtime
 
@@ -12,7 +12,7 @@
 
 先看本機忽略目錄 `build/pitcher-s1/` 的 `debug-startup.png`／`release-startup.png`（1920×1080）及 `debug-pitcher-crop.png`／`release-pitcher-crop.png`（原圖固定區域 3× nearest 放大，非新增 camera）。`*-midflight.png`／`*-complete.png` 與 `*.log` 保留球路檢查；`baseline-*-startup.png` 是本輪開始前的 procedural app，不能當成動畫 before。完整 metrics、cgltf prepare 與測試命令見 [environment](../../../docs/development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。
 
-S1 待 human review；目前深色雙鞋輪廓接近，reference release 指示圈／球位於角色臉旁，仍須後續動態檢查。沒有修改 authoring 三檔／motion、camera／scale、球路或 renderer，沒有進入 S2。
+S1 human review 已接受基本位置／尺度／左右／顏色／grounding 與 scene integration，renderer 無須擴張；不代表 animation／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion／early-flight readability 或 M1 已驗證。Footprint 偏小與 elbow 輪廓的 bind-pose feedback 記於 [Character Motion Rules](../../../docs/design/character-motion.md#s1-acceptance-與延後的-polish)，延後至 S2 能在真正 batting camera 播放後再做 Character Polish review；不退回 importer、不推論所有 animated poses。本次 docs-only 不改資產，S2 尚未授權；後續 full motion authoring 先依該 owning doc 建立 Motion Brief。
 
 ## S0.2C 已接受並升為正式：Follow-through Rotation／Rear-Foot Recovery
 

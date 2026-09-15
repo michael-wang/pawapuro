@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-16。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；已加入進壘區置中、authoritative gameplay 好球帶／本壘一致性、2D overlay／預測落點及同球重投驗證；M1 尚未完成。Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。S1 static GLB bind-pose import 已實作並完成本輪技術驗證，待 Michael＋Julia human review；S2／S3 尚未開始。
+更新：2026-09-16。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；已加入進壘區置中、authoritative gameplay 好球帶／本壘一致性、2D overlay／預測落點及同球重投驗證；M1 尚未完成。Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。Michael＋Julia 已接受 S1 static GLB runtime import；下一技術切片 S2 尚未授權／開始，S3 未開始。Character Motion Rules v0.1 已整理，待 design review。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 
@@ -9,6 +9,7 @@
 | 文件 | 唯一責任 |
 |---|---|
 | [Batting Feel 設計與邊界](design/batting-feel.md) | 六階段體驗、Native／Data／Lua 責任、concept locality、時間與資料契約。 |
+| [Pawapuro Character Motion Rules](design/character-motion.md) | 超現實角色仍須可信可讀的動作關係，以及完整 animation authoring 前的因果推理。 |
 | [M1：Batting Feel](milestones/01-batting-feel.md) | 本次 scope、驗收方式、小步 implementation plan、第一個 coding task。 |
 | [Jai Design Adoption Review](research/jai-design-adoption-review.md) | 2026-09-13 研究快照，保存來源、取捨與 migration 分析。 |
 | [開發環境核對](development/environment.md) | 工具與依賴紀錄、建置／啟動命令、Step 1 各次交付的實測結果與限制。 |

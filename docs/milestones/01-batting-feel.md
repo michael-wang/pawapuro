@@ -187,4 +187,6 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 
 已依本輪授權接入正式 S0.2C GLB 的 static bind mesh，取代 procedural pitcher，並交付 actual app startup／crop。Debug／Release build、CTest 各 3/3、實際 release／Complete、pause／single-step／20 rethrows 與 Debug GPU 檢查通過；詳細結果與可開啟證據由 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16) 維護，使用方式見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)。
 
-**停在 Michael＋Julia review gate。** 此 gate 只驗證位置、尺度、左右手／朝向、grounding、vertex colors 與既有 scene 沒被破壞；bind pose 不以投球 Ready 的美觀驗收。S0 authoring baseline 已接受，S1 技術驗證不是 runtime animation 或完整 pitcher pipeline 通過。S2 的 pose／CPU skinning、S3 的共同 tick／release integration 均未開始；後續須另行授權，M1 尚未完成。
+**Michael＋Julia 已接受 S1 human review。** 接受限於基本位置、尺度、左右手／朝向、grounding、vertex colors 與 scene integration，renderer 無須擴張；不代表動畫／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 或 early-flight readability 已驗證。S0 authoring baseline 已接受，M1 尚未完成。下一技術切片 S2 的 pose／CPU skinning 尚未授權／開始，S3 未開始。
+
+本次另交付 [Character Motion Rules v0.1](../design/character-motion.md)，作為後續 animation authoring 的 owning design doc，停在 Michael＋Julia design review gate。S1 bind-pose 的 footprint／elbow 輪廓 debt 由該文件維護，延後至 S2 能播放後的 Character Polish review；本次不改 code／asset，也不授權 S2。

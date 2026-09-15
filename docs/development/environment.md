@@ -743,6 +743,8 @@ JSON／logs 在忽略的 `build/pitcher-s02c-promotion/`。未重製影片或 sc
 
 ## S1 Static Pitcher GLB Runtime Import（2026-09-16）
 
+最新 human review：Michael＋Julia 已接受 S1 static import；接受邊界與延後的 Character Style debt 見 [Character Motion Rules](../design/character-motion.md#s1-acceptance-與延後的-polish)。以下保留技術交付當時的紀錄；本次 docs-only 未執行新的 build／CTest／GPU validation，S2 尚未授權／開始。
+
 基準 cwd `C:/astra-dev/pawapuro`，branch main；HEAD／main／origin/main／live remote main 均為 `83408e4c8ba3188b2bb15a7fe185ec10cd4bff0c`，起始 workspace 乾淨，origin 為 canonical `michael-wang/pawapuro`。本輪完成 static GLB transport，待 Michael＋Julia review；S0 的 A／B／C authoring motion 已接受。未改正式三檔、motion、staging、simulation、D3D12View 或 HLSL。
 
 ### 依賴與建置
