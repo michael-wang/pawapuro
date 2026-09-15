@@ -989,3 +989,25 @@ Candidate `review/style-rubber-arm-v1a/` SHA256：
 - 已檢視 runtime／side 比較、雙角度 clean tube／wire 與全段抽樣；未連續觀看正常速度影片。手套側 Ready／coil 較直厚、部分角度 inner bend／重疊仍在，release 遮擋與 hand 接合觀感待 review，不宣告 style acceptance。
 
 Evidence：ignored `build/style-rubber-arm-v1a/`。正式三檔／fixture 不變，candidate 待 Michael＋Julia review、未 promotion；Character Motion Rules 六條內容不變，S3 未開始。
+
+
+## Throwing Arm Whip Timing v1A candidate（2026-09-16）
+
+Incremental preflight：HEAD／main／origin/main `4437a57def45102a047c0edb23d9c77afd5196a4`，workspace clean，正式 v1B source hash `f54437abc9ddcf75474962c1b34d6c30e689144dd30adb806b7f03df1faa943b`。Rubber Arm candidate 暫緩 promotion，本輪未使用它。Saved official f97／107／112／126 evaluated local TRS 確認 post-release 姿勢仍在長時段變化，非只依歷史 generator 推論。Timing knots／數字／evidence 由 pitcher README 維護。
+
+Candidate `review/style-arm-whip-v1a/` SHA256：
+
+- `pitcher.blend`：`f6e437cf18aece5bdde97069e4f9ef3ec5ee3d0151c99e90cd31bfaca2a923f2`
+- `pitcher.glb`：`98a126e42de3e5b4a1856cf56454bee196144dbc6620e0bc28dcc771b4450a9e`
+- `pitcher.toml`：`bf59cb5da49d487b25304ea93bbe59570738366eb24144ac5173c916d836aae5`
+
+- Source／重開檔：只有三個右臂 bones 的 f98–204 local TRS keys retime；205 格 protected body／feet／left arm exact，全部 geometry／weights／rest／hierarchy／camera／contacts exact。F1–97、f205 的完整 evaluated bones／mesh exact。第一次保存前檢查攔到 Blender 重算 LINEAR keys 的 unused AUTO handles；確認只有 unused handles 後改檢 key 值／interpolation 並維持 evaluated exact 檢查，未改 release 前 pose。不是 tolerance 放寬或移除 motion assert。
+- GLB：9 個右臂 TRS output accessors 改變；其他 accessors（含 geometry／weights／IBMs／body／left arm）exact，但 grip child 有 exporter bake 的小數值差：translation component max 5.029142e-7 m、rotation 4.100730e-8、scale 2.384186e-7，逐格 vector difference <原 1e-6 binding guard。Source grip keys／binding 不變；所有 f1–97／f205 output bytes exact。TOML 只更新 source／GLB hashes。未人工修補 GLB。
+- Fixture 只 patch f108／171 的 hand-grip／受右臂影響的 bounds，以及 source vertices 1800／2100 在這兩格的四個 points，另更新 provenance；其他原文保留，正式 fixture 不變。
+- Khronos：0 errors／warnings／infos／hints。Source／GLB／Blender round-trip PASS，mesh 最大誤差 2.098526e-6／1.706817e-6 m；release alignment 5.454740e-7 m 與正式相同。`inspect_motion.py` 原 S0.2C checks 全部 PASS：固定骨長、grip、contacts、head proxy、opening／release，原容差不變。
+- Debug／Release configure／build／正式 v1B CTest 各 4/4 PASS；candidate 的原 motion／static tests 兩 build 均 PASS（source grip max 1.02721e-6 m），包含 30／60／120 render chunking 的 deterministic tick、pause／replay、all ticks／skin／contacts／fixed bones。無 C++／HLSL／renderer／staging／CMake 變更。
+- 隔離 candidate app play／pause／817 steps／replay／Complete／minimize→restore PASS，Debug／Release 正常 wall time 3.4225／3.4089 s，Complete tick 816、exit 0；pause／final hold pixels 不變、背景時間不補入。Debug GPU-based validation enabled、0 errors；live-object report 僅供報告的 device，無 child objects。Release 無 debug layer。
+- Runtime baseline captures 重用已核對 GLB／TOML／exe／DLL／staging bytes 的正式 v1B。Candidate 205 frames 新擷取；f1–97 與 f205 完整 frame pixels exact。短片 60 frames／60 fps／1×／1 s，完整片 205 frames／60 fps／3.416667 s；decoder 核對通過，均為 tick captures 重組，非 wall-clock 錄影。
+- 已檢視 authoring 局部 sequence、actual runtime f97–111 每格與全段抽樣；未連續觀看正常速度影片。快速收回後較長時間靠近胸口、hard-elbow 在更快 timing 下是否仍搶眼，留給 human review，不宣告通過。
+
+Evidence：ignored `build/style-arm-whip-v1a/`。正式三檔／fixture 不變，candidate 待 Michael＋Julia review、未 promotion；Rule 3／6 適用但六條原文不改，S3 未開始。

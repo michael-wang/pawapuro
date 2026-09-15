@@ -2,11 +2,41 @@
 
 2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式三檔已 promotion 至 v1B；projected shoe readability／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
 
+## Throwing Arm Whip Timing v1A candidate（2026-09-16）
+
+Runtime human review 指出主要 presentation bottleneck 是 post-release throwing-arm timing 過慢。Rubber Arm v1A 正常速度改善不明顯，**暫緩 promotion，保留 artifact、不永久 reject**；本輪完全從正式 v1B 開始，沒有混入該 geometry／weights。
+
+`review/style-arm-whip-v1a/` 是 **待 Michael＋Julia review 的單一 candidate、未 promotion**。依既有 Rule 3 lead／lag、Rule 6 momentum resolution，只 retime `arm_R`／`forearm_R`／`hand_R` 的 f98–204 local TRS；既有準備、body lead、release f97 與 final f205 保留。本版 0.1 s sweep 是候選目標，不是永久 Motion Rule。
+
+`retime_arm_whip.py` 從 saved source evaluated local TRS 取樣，以 monotone Hermite time remap 烘焙回原 LINEAR 契約。Knots 為 **target→source（source frames／target frame slope）**：97→97（1）、103→112（3）、107→126（1.6）、127→140（0.6）、165→170（0.85）、205→205（1）。Source time 持續前進，不插 freeze；後半 settle 逐漸接回原終點。只改 local timing，equivalent local pose 不代表與舊 frame 相同的 world pose，因 torso 保持當下原 timing。
+
+| Release 起算 | 正式 | Candidate |
+|---|---:|---:|
+| 舊 f112 local pose | 15 frames／0.250 s | 6 frames／0.100 s（f103） |
+| 舊 f126 local pose | 29 frames／0.483 s | 10 frames／0.167 s（f107） |
+| f97→116 post-release hand peak | 13.048 px/frame（f101→102） | 25.666 px/frame（f100→101，1.967×） |
+| f92→116 整個 window peak | 21.840 px/frame（f95→96） | 25.666 px/frame（f100→101） |
+
+位移使用 hand node origin、1920×1080／60 fps、正式 batting camera／horizontal off-axis projection。Blender camera 與 runtime 公式投影差最多 0.000305 px；不是手掌外緣 pixel tracking。舊 f112／126 local pose 對應的 quaternion 最大差 5.96e-8，其餘 local location／scale exact；f97／f205 完整 evaluated pose exact。
+
+優先開啟 ignored `build/style-arm-whip-v1a/`：
+
+- `release-before-after-1x.mp4`：同 camera 左正式／右 candidate、f92–151、60 fps／1×、1.0 s；真實 runtime tick captures 重組，沒有時間拉伸。
+- `runtime-release-sequence.jpg`：要求的 f92／94／97／100／103／106／110／116，同 frame／tick；`every-frame-sweep.jpg` 是 f97–111 每一格 before／after。
+- `candidate-runtime-1x.mp4`：完整 205 frames／60 fps／3.416667 s，首格 Ready；`runtime-overview.jpg` 包含 settle／final。
+- `candidate-release/pawapuro.exe`：隔離 candidate app；一般 build 仍使用正式 v1B。
+
+實際檢視局部 authoring、runtime 逐格 sweep 與全段抽樣：f98–103 下收更集中，隨後快速收近身體；torso 保持原節奏。長 settle 期間手臂靠胸口、變化較小，是否收得太早／像 teleport、hard-elbow 是否仍搶眼待 human review。已實測正常 wall-time 執行，未連續觀看正常速度影片，不宣告 timing／style 通過。
+
+保護與回歸：全部 geometry／weights／rest skeleton／camera／contacts exact；205 格 body／feet／left arm transforms exact，f1–97 與 f205 完整 evaluated mesh／bones exact，runtime 同段 pixels 也 exact。Blender 重算右臂鄰近 LINEAR keys 不使用的 AUTO handles，key 值／interpolation 與 release 前 evaluated pose 不變。Exporter post-release grip local baking 有 <1e-6 數值差，source grip binding 不改，release GLB outputs exact。`check_arm_whip_export.py` 只 patch f108／171 的 grip／arm bounds 及四個右臂／hand expected points、provenance；其他 fixture 記錄保留，正式 fixture 不改。完整測試結果見 environment。
+
+無 geometry／shoe／torso retime／runtime speed multiplier／release integration；六條 Character Motion Rules 不改，S3 未開始。
+
 ## Rubber Arm v1A candidate（2026-09-16）
 
 Michael＋Julia **reject v1C shoe silhouette**：heel→toe／planted support direction 正確，但過窄 upper 配寬 sole 形成 mound-like silhouette。正式鞋仍為 accepted v1B；保留 v1C rejected artifact、不 revert，暫停純 geometry shoe polish，material／highlight 與後續 presentation polish 延後。
 
-`review/style-rubber-arm-v1a/` 從正式 v1B 建立，**待 human review、未 promotion**，遵循既有 Rule 4，沒有新增 Motion Truth。`revise_rubber_arm.py` 只改 arm tube rest positions／weights。
+`review/style-rubber-arm-v1a/` 從正式 v1B 建立；正常速度 human feedback 改善不明顯，**暫緩 promotion、保留 artifact**，遵循既有 Rule 4，沒有新增 Motion Truth。`revise_rubber_arm.py` 只改 arm tube rest positions／weights。
 
 - **根因 C（兩者共同）**：saved source／evaluated poses 確認每臂 13×12 vertices，rest 中心線與 cross-section frame 在 ring 6 附近轉折。右臂 blend 集中於 rings 4–7；左臂原整段 forearm→hand 混合另有扁縮／粗細變化。實際 runtime、既有斜側面與兩角度 mesh 投影均已檢視；不是 animation path 修正。
 - **修改**：兩臂 rings 3–9 圓順化中心線／cross-section，rest 端點不移；rings 2–10 平滑 upper→forearm falloff，tube 不再混入 hand bone。152 個 rest positions、228 個頂點 weights 改變；13 bones、2362 vertices／3936 triangles 不變，hand sphere／glove 本身不改。沒有新增 topology、solver 或 shape system。
