@@ -277,10 +277,10 @@ Michael 接受「抬腳尤其左腳現在很棒」：保留該左腳／蓄力連
 兩個局部策略比較後，選用協調 roll 加肘附近有限混合 weights；不新增骨骼／solver／corrective shapes，也不換 skinning。Saved source candidate 與操作入口由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。 `review/s02b/` 保留驗收基準。
 
 
-### S0.2C Follow-through／Rear-Foot Recovery candidate
+### S0.2C Follow-through／Rear-Foot Recovery（authoring 已接受）
 
 以已正式 promotion 的 S0.2B 為 baseline，只修改 release 97 之後：pelvis 較早延續開轉，chest 帶動原局部手臂收勢並繼續旋轉／前折，頭部較小幅跟隨；身體前移與右腳空中跟進重疊，最後右腳比固定左腳更靠本壘。保留 detached feet，不加入 IK／grounding／solver；不是分開補一段胸口轉動與一段腳滑行。
 
 本候選維持 1–205、60 fps、release 97；1–97 的 evaluated bones／mesh、左腳全段、B weights／rest／hierarchy、camera／scale／staging／Native 球路不變。右腳實際仍在 171 落地，contact metadata 保留原區間；171 後身體繼續回穩，不增加 idle hold。局部數值與畫面入口見 pitcher README／environment。
 
-`review/s02c/` 是待 Michael＋Julia review 的 candidate，正式三檔仍為已接受的 S0.2B。C 不自動升版；沒有進入 S1，整支 pitch motion 與 M1 尚未通過。
+Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成，S1 未開始。 `review/s02c/` 保留為歷史 human-review artifact；此次 promotion 不改 motion／timing／資產契約。

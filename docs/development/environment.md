@@ -717,3 +717,25 @@ Candidate SHA256：
 Evidence 在 `build/pitcher-s02c/`，影片／renders／logs 不提交。四支 MP4 以既有 Blender decoder 核對 60 fps、repeat=1／playback=1×：完整 side／batting 為 205 顯示 frames、3.416667 s、首格 1；before／after 收勢各 109 frames、1.816667 s、97–205。沒有拉伸時間或新增 0.25×。已檢視兩視角局部／最終 contact sheets、release 97–108 與 landing 164–176 連續格、全段抽樣與等比例 world top diagnostic；正常速度播放自看未完成，不把 decoder 檢查寫成觀看。
 
 視覺限制：斜側面中段約 115–160 的右臂部分被 torso 遮擋，深色雙鞋近接時分離度有限；batting-view 原畫面人物小，sheet 只作固定 crop 放大。數值／proxy 不保證完整 self-collision 或人類重量感。沒有調 camera、比例、lighting、場地或 Native pitch 初始條件；沒有 production C++／HLSL／renderer／staging 變更，沒有 runtime／GPU／C++ build 測試。C 尚待 Michael＋Julia review，正式 S0.2B 不覆寫，停止於 gate、不進入 S1。
+
+
+### S0.2C Promotion to Official Pitcher Asset（2026-09-15）
+
+Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成，S1 未開始。
+
+Michael 的實際正常速度觀看 feedback：「右腳前踩、軀幹延伸都不錯，有投球的味道。」接受包括 release 後軀幹旋轉／前折、throwing arm 延續、右腳朝本壘跟進並落在左腳前方，以及 follow-through 到 recovery 的目前節奏與整體觀感。此為人類觀看結果，並非補稱 Codex 已完成正常速度自看。
+
+起始 cwd `C:/astra-dev/pawapuro`，branch main；HEAD／main／origin/main／live remote 均為 `d3de8a99e1072f4ff2b940a6dd6dab07a8c3e7a3`，工作樹乾淨。候選三檔核對 Git blobs、交付 SHA256 與 TOML provenance 後，明確從 review/s02c 複製至正式路徑；未保存 .blend、未修改 keys／weights／marker／metadata。歷史 review artifacts 保留，未整理或刪除。
+
+從正式 .blend 的 byte-identical 隔離副本，用既有 exporter 取得全 205 格 source samples；隔離重匯出 GLB／TOML 亦與接受候選逐 byte 相同，沒有重寫正式三檔。再以正式 asset 執行既有 validator、verify_sample、inspect_motion、check_ready_lift 的 follow-through scope；全部 PASS／exit 0，腳本、assert、tolerance 未改：
+
+- Khronos validator：0 errors／warnings／infos／hints。
+- Source／GLB mesh 最大差 1.283923e-6 m；round-trip mesh 1.744900e-6 m、grip 1.660393e-6 m；release alignment 5.454740e-7 m，均在原 0.1 mm 容差內。
+- 固定骨長、grip binding、contacts、motion checks 通過。C scope 同時執行 A 的 Ready／coil 藏球、B 的 ring deformation／glove direction 及 C 的續轉／rear-foot checks；沒有誤用歷史 B 的全段 body 不變規則。
+- 1–97 bones／mesh 與 C 原始 S0.2B before 差 0，左腳全段差 0；weights 等常數 exact。右腳最終比左腳更靠本壘 0.373999 m，171–205 接地無滑移。
+- 驗證後正式三檔與接受 candidate 逐 byte 相同。正式 SHA256：
+  - `pitcher.blend`：`8b76ae4a40377fa07021ebdf18c98b3bd73dddf132154961fbcf7131c63c3bca`
+  - `pitcher.glb`：`c151f41798432c777464beea590b9ea5241e019cfb88bff6a99b9b2b1092d038`
+  - `pitcher.toml`：`9c982e1486642cc54d7071aa832bd4a0f720d75c113f56b7ecdc9f31cc55cf21`
+
+JSON／logs 在忽略的 `build/pitcher-s02c-promotion/`。未重製影片或 screenshots，未執行 runtime／GPU／C++ build 測試；沒有 production C++／HLSL／renderer／CMake／staging 或 dependency 變更。完成後停止，S1 尚未開始。

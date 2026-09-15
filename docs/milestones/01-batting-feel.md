@@ -178,6 +178,6 @@ S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app�
 
 ### S0.2C：Follow-through Rotation＋Rear-Foot Recovery
 
-已從正式 `55489a9c` 的 S0.2B 完成局部 candidate（`review/s02c/`），正式資產不覆寫。1–97 的 keys／bones／mesh 保護與 A／B 回歸通過；後段增加軀幹續轉／前折與右腳前移，最終右足心比左足心更靠本壘約 0.374 m。保持 205 格，右腳在 171 接地並保留後續回穩時間。交付正常速度 before／after、兩視角完整影片、接點／落地 contact sheets 及俯視診斷。
+已從正式 `55489a9c` 的 S0.2B 完成局部 candidate（`review/s02c/`），在 Michael＋Julia review 接受後原樣升為正式 S0.2C。1–97 的 keys／bones／mesh 保護與 A／B 回歸通過；後段增加軀幹續轉／前折與右腳前移，最終右足心比左足心更靠本壘約 0.374 m。保持 205 格，右腳在 171 接地並保留後續回穩時間。交付正常速度 before／after、兩視角完整影片、接點／落地 contact sheets 及俯視診斷。
 
-數值驗證通過不等於人類動作接受。正常速度播放自看、runtime／GPU 測試未完成；C 的旋轉與重量感、手臂遮擋、後腳落地及最終平衡等待 Michael＋Julia review。A／B 已接受及正式 promotion 的狀態不變。完成後停止，不 promotion C、不進入 S1、不宣告整支投球或 M1 通過。
+Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成，S1 未開始。 Michael 已實際正常速度觀看並接受 C 的旋轉／前折、投球臂延續、右腳跨前與 recovery 節奏；Codex 正常速度播放自看及 runtime／GPU 測試仍未完成。本次完成 promotion 後停止，等待下一個授權。
