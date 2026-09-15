@@ -1,6 +1,14 @@
-# 右投手 Authoring Sample（正式 Style Feet v1A；motion S0.2C）
+# 右投手 Authoring Sample（正式 Style Feet v1B；motion S0.2C）
 
-2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× planar footprint 已通過 human review 並原樣 promotion 為正式三檔；接受限於支撐尺寸，Foot Shape／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式三檔已 promotion 至 v1B；plant orientation／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+
+## Style Feet v1B promotion（2026-09-16）
+
+Michael＋Julia 已接受 v1B 的 toe／heel／upper／sole geometry，及保留的 v1A 1.25× footprint 尺寸。`review/style-feet-v1b/` 三檔已 byte-preserving promotion 為正式 asset，歷史 review artifact 保留；未重新保存 `.blend`、重跑 revision 或改 motion／metadata。正式 fixture 採用候選已驗證數值，只更新 acceptance 註解。
+
+Front-foot plant orientation 尚待量測／修正，geometry acceptance 不代表這項 motion style 已通過。Material／highlight、cleats、foot articulation、rubber arm 仍延後，S3 未開始。Promotion validator、source／GLB／round-trip 與 Debug／Release S2 motion regression 通過，詳見 environment 的 v1B promotion 紀錄。
+
+以下 v1B candidate 段落保存當時交付與觀察；其中「待 review／未 promotion」為當時狀態，現在以本節 acceptance 為準。歷史 `revise_shoe_shape.py`／`check_shoe_shape_export.py` 以 promotion 前 v1A 為比較基準，不應對目前正式 v1B 重跑 revision。
 
 ## Style Polish v1B：Shoe-like Foot Shape candidate
 

@@ -300,7 +300,7 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 
 ## S2：Runtime Pitcher Animation Playback／CPU Skinning（2026-09-16）
 
-S2 已通過 Michael＋Julia 技術與 human review：正式 S0.2C motion 能正確在 runtime 播放。Character Style debt 由 [Character Motion Rules](character-motion.md) 維護；不代表 style、release integration 或 M1 通過。v1A 的 1.25× planar footprint 已接受並原樣升為正式資產；Foot Shape v1B geometry candidate 待 human review、未 promotion；material／highlight、articulation／sole／cleats、rubber arm 仍待獨立工作，沿用此節 runtime code／契約。
+S2 已通過 Michael＋Julia 技術與 human review：正式 S0.2C motion 能正確在 runtime 播放。Character Style debt 由 [Character Motion Rules](character-motion.md) 維護；不代表 style、release integration 或 M1 通過。v1A 的 1.25× planar footprint 已接受並原樣升為正式資產；Foot Shape v1B geometry 已 human accepted／promoted，front-foot plant orientation 尚待量測／修正；material／highlight、articulation／sole／cleats、rubber arm 仍待獨立工作，沿用此節 runtime code／契約。
 
 - **Engine Native**：既有 `static_glb` 演進為 `mesh_glb`，因同一份 mesh 現在需要 local TRS、skin 與 clip，避免兩套 parser。只讀目前 sample 的 subset，不做 asset manager。`glb_pose.cpp` 提供取樣、parent composition、skin palette 與 CPU LBS，不知道投手／release／球場。
 - **Pawapuro Native**：concrete `PitcherMotion` 擁有 immutable CPU asset、可重用 pose／skin／triangles workspace、Ready／Playing／Complete、pause、integer tick／wall-time credit。每個完成的 240 Hz tick 計算 `min(tick / 240.0, duration)`；最多每次 advance 消化 16 ticks，保留 backlog，Complete 停在 816。Pause 不累積時間；minimize 自動 pause，restore 不補背景時間。沒有 render interpolation，畫面只用最後完成的 authoritative tick。

@@ -114,7 +114,7 @@ Michael＋Julia 的 S2 runtime human review 已確認：S0 已接受的 motion �
 
 仍保留以下獨立 Character Style debts：
 
-- **Foot Shape**：正式 v1A 仍像扁橢圓；v1B 已交付只改 toe／upper／sole geometry 的候選，待 Michael＋Julia human review，未 promotion。Accepted footprint、Motion Truth 與六條 rules 不變。
+- **Foot Shape**：v1B toe／heel／upper／sole geometry 已通過 Michael＋Julia human review 並 promotion；v1A footprint 尺寸保留。Front-foot plant orientation 尚待量測／修正，是 Rule 1／Rule 2 的具體 caller，不新增 Motion Rule。
 - **Material／highlight**：參考鞋面的 specular／highlight 延後，目前沒有 material／lighting framework。
 - **Articulation／sole／cleat detail**：彈性形變與鞋底細節延後，目前沒有真實 caller 要求 implementation。
 - **Rubber arm**：animated hard-elbow debt 保留，等待另一個獨立 polish task。

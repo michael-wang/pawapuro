@@ -936,3 +936,13 @@ Candidate SHA256：
 - 影片由實際 runtime tick captures 重組：60 fps／205 frames／1×／3.416667 s，首格 tick 0 Ready，非 wall-clock 錄影。已檢視 side／runtime paired sheets、鞋方向診斷、lifted／grounded close-up 與全段抽樣；**未完成正常速度連續影片自看**。Computer-use 初始化及重試均因 sandbox helper startup 失敗，依本輪指定的 v1A isolated launch workflow 沿用既有 app harness，沒有冒稱 UI 工具成功。
 
 證據全部留 ignored `build/style-feet-v1b/`。最初 relative Blender preview path 曾解析到 `C:/build/style-feet-v1b/side/`；已用 workspace 絕對路徑重製正式 evidence，沒有採用錯路徑內容。動作不變不代表新 shape 的完整 collision／dynamic readability 已接受；深色鞋在 Ready／landing 仍易重疊，batting view 的 upper／sole 分離度有限。造型是否通過由 Michael＋Julia 決定；material／highlight、articulation／sole／cleats、rubber arm 仍延後，S3 未開始。
+
+## Style Feet v1B promotion（2026-09-16）
+
+從 clean `482a116` 開始，HEAD／main／origin/main／live remote 一致，AGENTS.md 未改。Michael＋Julia 已接受 v1B geometry；candidate 三檔與該 commit 交付 hashes／bytes 一致，直接 copy 至正式，驗證後再次逐 byte 相同，沒有重新保存 source 或匯出。正式 fixture 採已驗證 candidate 數值，僅改 acceptance 註解。
+
+正式 SHA256：`.blend` `f54437abc9ddcf75474962c1b34d6c30e689144dd30adb806b7f03df1faa943b`；GLB `d6361c53ad3caf005e19e50f61991508cff856f068d1639b3f29bcc50e06c8fa`；TOML `25d17be36fcb6426030358a7450c9024f5bf4ecf9353812fe54d0ab535095f1b`。
+
+最小 regression：Khronos 0 errors／warnings／infos／hints；目前正式 source 唯讀 evaluated samples 與 accepted candidate 相同，既有 source／GLB／round-trip PASS；Debug／Release 原 S2 motion test PASS（all ticks、skin、contacts、fixed bones、chunking／pause／replay）。Runtime release alignment error 4.9151248e-7 m，原容差不變。沒有重製影片／screenshot，也沒有重跑歷史診斷或宣稱新 GPU 檢查；evidence 在 ignored `build/style-feet-v1b-promotion/`。
+
+v1B review artifact 保留。Front-foot plant orientation 尚待下一階段量測；material／highlight、cleats、foot articulation、rubber arm 延後，S3 未開始。
