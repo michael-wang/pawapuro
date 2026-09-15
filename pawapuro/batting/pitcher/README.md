@@ -2,6 +2,41 @@
 
 2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× planar footprint 已通過 human review 並原樣 promotion 為正式三檔；接受限於支撐尺寸，Foot Shape／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
 
+## Style Polish v1B：Shoe-like Foot Shape candidate
+
+2026-09-16：`review/style-feet-v1b/` 是從正式 v1A（`b102e02e`）製作的 **待 Michael＋Julia human review candidate**，沒有 promotion。正式三檔及正式 fixture 不變；本輪只改 shoe geometry，未新增 Motion Truth，S3 未開始。
+
+`revise_shoe_shape.py` 只讀目前已存檔 v1A，核對 source hash、拒絕覆寫 candidate。沿用每腳 220 vertices／原 triangles 與 rigid weights；實際改 438 個 POSITION，1922 個非腳部 vertices exact。既有 latitude rings 改成平底、較直且收束的 heel、rounded toe 與偏中後段較高的 upper；前端有小幅 rigid toe spring，以保留原 toe-down lift 的離地間隙。不是 articulation。沒有改 color、material、mesh topology、骨架、rest、IBMs、keys、grip、camera 或 staging。
+
+Foot rest basis 為 identity；Blender +Y 是鞋頭，經既有轉換成 GLB／game −Z（本壘）。兩脚 before／after 的 rest width × length × height 均約 **0.989187 × 1.163750 × 0.198450 m**；最大 bounds 差 2.98e-8 m（float rounding），完全在 accepted envelope 內。Planted world bottom Y 仍為 0.355 m、差值 0；全 205 格離地最小間隙為右腳 f86 的 0.000852719 m（v1A 0.001549684 m），未穿地。形狀改變使 airborne bottom 最大差 0.0361957 m；沒有改路徑補償。Landing 後 slide 仍為 0。
+
+Michael 優先看 ignored `build/style-feet-v1b/`：
+
+- `v1a-vs-v1b-runtime.jpg`：六個同 camera／tick 的正式 v1A（左）與 candidate（右）實際 app raster。
+- `candidate-runtime-1x.mp4`：完整 runtime tick 0–816，每 4 ticks 擷取一格，再以 60 fps 重組 1×；205 顯示 frames／3.416667 s，clip 仍為 3.4 s。不是 wall-clock 螢幕錄影。
+- `lifted-foot-closeup.jpg`：f49 既有 side camera 與實際 batting view 的乾淨 before／after；`grounded-feet-closeup.jpg` 看 Ready／front contact／rear landing。
+- `shoe-local-direction.jpg`：實際 saved mesh 的 top／side／斜側面診斷；wire 僅在診斷圖，不是新增材質。`candidate-motion-overview.jpg` 是整段抽樣。
+- `candidate-release/pawapuro.exe`：相同 S2 executable／DLL／staging 的隔離 copy，只替換該 copy 的 GLB／TOML。Space 播放、P 暫停、`.` 單步，正常 build 仍載入正式 v1A。
+
+已檢視乾淨 side／runtime 對照、lifted pose、接地與跨全段抽樣。平底和較直後跟可見，但低厚度、單一深色與 batting camera 距離仍讓 upper／sole 不易分開；Ready／landing 的雙鞋仍容易合成一片，f65 腳與衣襬仍有投影重疊。未發現抽樣畫面中的嚴重穿地，並非全身 collision 保證；是否一眼像球鞋與是否更笨重仍待 human review。**未完成 Codex 正常速度連續觀看**；已實測 app 正常速度執行完成，兩者分開記錄。
+
+日常 export 只匯出已存檔 candidate，不呼叫 revision script：
+
+```powershell
+$Blender = 'C:/astra-dev/tools/blender-4.5.13-windows-x64/blender.exe'
+$Pitcher = 'C:/astra-dev/pawapuro/pawapuro/batting/pitcher'
+$Asset = "$Pitcher/review/style-feet-v1b"
+$Evidence = 'C:/astra-dev/pawapuro/build/style-feet-v1b'
+& $Blender --background "$Asset/pitcher.blend" --python-exit-code 1 --python "$Pitcher/export_sample.py" -- --evidence $Evidence
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/verify_sample.py" -- --asset-dir $Asset --evidence $Evidence
+& $Blender --background "$Asset/pitcher.blend" --python-exit-code 1 --python "$Pitcher/inspect_motion.py" -- --output "$Evidence/motion-audit.json"
+& ./build/debug/pitcher_motion_test.exe "$Asset/pitcher.glb" "$Asset/pitcher.toml" ./pawapuro/batting/staging.toml "$Asset/motion_expected.txt"
+```
+
+`check_shoe_shape_export.py` 比較所有 GLB accessor bytes／metadata，並核對小型 candidate fixture；需要 evidence 的 source comparison、正式與候選 evaluated samples，預設唯讀 fixture，只有 `--write-fixture` 才更新候選 fixture。本次只改五格受 foot 影響的 bounds、16 個 foot sample points 及 hashes；grip／非腳部點原文不變。既有 validator／source／round-trip／motion assertions 與 tolerances 均保留，細節由 [environment](../../../docs/development/environment.md#style-polish-v1b-shoe-like-foot-shape2026-09-16) 維護。
+
+Material／highlight、articulation／sole／cleat detail 與 rubber arm 仍是獨立 debt。v1B 尚未接受，不自行 promotion。
+
 ## Style Polish v1A：1.25× planar feet candidate
 
 只改 `review/style-feet-v1a/pitcher.blend` 的 440 個 rigid foot vertices：Blender local X／Y（game X／Z）繞各 foot rest anchor 放大 1.25×，local Z／厚度不變。實際 398 個位置改變，中心軸 42 個不動；1922 個非腳部 vertices、全 weights／topology／colors／骨架／全部 animation channels／grip／marker 完全保留。現已將此接受版本 byte-preserving promotion 到正式本目錄三檔，rubber arm 未改；`review/style-feet-v1a/` 保留歷史 review artifact。

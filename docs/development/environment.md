@@ -915,3 +915,24 @@ Candidate SHA256：
 歷史 `check_ready_lift.py --scope ready-lift` 因其硬編碼的 pre-A baseline hash 拒絕 v1A 輸入，未執行該歷史 edit-comparison；B／C modes 也各鎖定當年的 pre-edit source，故不誤用。沒有刪 assert 或更換它的預期 hash。Promotion 另以忽略目錄的唯讀 `check_abc.py` 重用原 A／B／C absolute 門檻，並比較接受 candidate／正式來源全格一致性；這是 promotion audit，不新增 framework。歷史 checker 拒絕與替代檢查結果均保留在 `build/style-feet-v1a-promotion/`。
 
 本次沒有重製影片／screenshots，沒有重跑 app 視覺／GPU smoke；不把上一輪 GPU 通過寫成本輪重跑。接受限於 1.25× support footprint 與原厚度；Foot Shape、material／highlight、articulation／sole／cleats、rubber-arm 仍待獨立 task，S3 未開始。舊正式備份／logs／JSON 留在忽略目錄，不提交。
+
+## Style Polish v1B: Shoe-like Foot Shape（2026-09-16）
+
+基準 HEAD／main／origin/main／live remote 均為 `b102e02e6d752c5f2c347659d46124a555c0b1ff`，開始時 clean。正式 v1A 三檔及正式 fixture 未改；`review/style-feet-v1b/` 是待 human review 的 geometry-only candidate，非 promotion。沿用 Blender 4.5.13 LTS／既有 Khronos validator／S2 runtime，未加依賴或改 C++／HLSL／CMake／staging。
+
+| Candidate | SHA256 |
+|---|---|
+| pitcher.blend | `f54437abc9ddcf75474962c1b34d6c30e689144dd30adb806b7f03df1faa943b` |
+| pitcher.glb | `d6361c53ad3caf005e19e50f61991508cff856f068d1639b3f29bcc50e06c8fa` |
+| pitcher.toml | `25d17be36fcb6426030358a7450c9024f5bf4ecf9353812fe54d0ab535095f1b` |
+
+- Source：保存前、重開保存後，各比較 205 格；所有 bones／grip matrices、keys／handles、rest／hierarchy、weights、colors、indices、camera、contacts 與非腳部 mesh exact。仍為 2362 vertices／3936 triangles，每腳 220 vertices。只改 438 個 foot positions；rest envelope 最大差 2.98e-8 m，planted bottom 差 0（原 1e-7 m guard）、landing slide 0。空中最小 bottom 0.000852719 m，原 noncontact >1e-6／不穿地 guard 不變。
+- GLB：全部非 POSITION accessors byte-identical（含 animation times／TRS／IBMs／JOINTS／WEIGHTS／COLOR／indices）；1922 個非腳部 POSITION bytes exact，structure 除允許的 POSITION min/max 外相同。TOML 只改 source_sha256／glb_sha256。`check_shoe_shape_export.py` 未改任何 runtime/test tolerance。
+- Khronos validator：0 errors／warnings／infos／hints。既有 source→GLB 及 Blender round-trip PASS，最大 mesh 誤差分別 1.283924e-6／1.744900e-6 m；round-trip grip 最大 1.660393e-6 m，原 0.1 mm 容差不變。GLB release reference 誤差 5.454740e-7 m，與 v1A 相同。
+- `inspect_motion.py` 在 motion_revision=S0.2C 下完整 PASS：fixed lengths、grip binding、contacts、head proxy、opening 順序、release 前後向本壘延續均未跳過。舊 `check_ready_lift.py` 的歷史 pre-edit hash guards 不適用 v1A→v1B，未放寬；沿用原 ABC 絕對 checks 並配合全段 motion／非腳部 exact 比較：Ready front X −0.999999940、clasp q max 0.416655605（<0.8）、f79 glove home cosine 0.999961792（>0.98）、right arm ring ratio min 0.347049298（>0.25）、chest release −25°→min −108.964935°、rear landing slide 0。證據 `build/style-feet-v1b/abc-regression.json`。
+- Debug／Release configure、build、CTest 各 4/4 PASS。兩種 build 另外直接對 candidate 跑原 `pitcher_motion_test` 與 `static_pitcher_test` PASS（後者含 10 個 failure cases）。原 S2 all-ticks／chunking／pause／replay／contacts／骨長 checks 保留；grip source 最大誤差 1.35952e-6 m、runtime release error 4.9151248e-7 m，非腳部 fixture 與 v1A 完全相同。只新增候選 fixture 的五格 bounds、16 個 foot points；正式 fixture 不變。
+- 實際 app：既有 v1A harness 操作本輪 process 的 SDL 鍵盤輸入，PrintWindow 擷取實際 1920×1080 raster。Candidate Debug／Release 及正式 v1A Release 均 play／pause／817 single steps／replay／Complete／minimize→restore PASS、exit 0。正常速度 wall time 分別 3.4330／3.4364／3.4145 s；Complete tick 816，pause pixels 與 final hold 相同，背景時間不補入。
+- Candidate／正式七個 review tick 的完整 title（含 grip／state）exact；六個 comparison poses 的 pixel differences 只在鞋部。Executable／DLL／staging 為相同 build 的 byte copies，正式 launch GLB／TOML 仍為 v1A。Debug GPU-based validation 已啟用、0 errors，shutdown live report 只有供回報用的 device，無 child object；Release 不啟用 debug layer。
+- 影片由實際 runtime tick captures 重組：60 fps／205 frames／1×／3.416667 s，首格 tick 0 Ready，非 wall-clock 錄影。已檢視 side／runtime paired sheets、鞋方向診斷、lifted／grounded close-up 與全段抽樣；**未完成正常速度連續影片自看**。Computer-use 初始化及重試均因 sandbox helper startup 失敗，依本輪指定的 v1A isolated launch workflow 沿用既有 app harness，沒有冒稱 UI 工具成功。
+
+證據全部留 ignored `build/style-feet-v1b/`。最初 relative Blender preview path 曾解析到 `C:/build/style-feet-v1b/side/`；已用 workspace 絕對路徑重製正式 evidence，沒有採用錯路徑內容。動作不變不代表新 shape 的完整 collision／dynamic readability 已接受；深色鞋在 Ready／landing 仍易重疊，batting view 的 upper／sole 分離度有限。造型是否通過由 Michael＋Julia 決定；material／highlight、articulation／sole／cleats、rubber arm 仍延後，S3 未開始。

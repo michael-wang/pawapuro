@@ -198,6 +198,6 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 
 Debug／Release build、4/4 CTest、實際 app start／replay／pause／single-step／minimize／restore／Complete 已通過，Debug GPU validation 0 errors。八個 source review samples、release alignment、固定骨長、contact intervals 與舊 simulation tests 通過；完整數值與證據由 [environment](../development/environment.md#s2-runtime-pitcher-animation-playbackcpu-skinning2026-09-16) 保存。
 
-Michael＋Julia 已確認 authoring motion 正確在 runtime 播放，同時確認 footprint／hard-elbow style debt 仍存在。v1A 的 1.25× support footprint 已通過 Michael＋Julia review 並原樣升為正式 asset；foot visual style 未完成，下一步 debts 由 Character Motion Rules 維護，Foot Shape／rubber-arm／S3 均未開始。本次只升版 asset，camera／staging／physics 保持不變，未做球 attachment／release、render interpolation、GPU skinning 或 batter animation。
+Michael＋Julia 已確認 authoring motion 正確在 runtime 播放，同時確認 footprint／hard-elbow style debt 仍存在。v1A 的 1.25× support footprint 已通過 Michael＋Julia review 並原樣升為正式 asset；foot visual style 未完成，下一步 debts 由 Character Motion Rules 維護，Foot Shape v1B 只交付 geometry candidate、等待 Michael＋Julia review，未 promotion；rubber-arm／S3 均未開始。v1A promotion 只升版 asset，camera／staging／physics 保持不變，未做球 attachment／release、render interpolation、GPU skinning 或 batter animation。
 
 完成本輪後停止；後續 style polish 與 S3 都須另行授權，M1 未完成。
