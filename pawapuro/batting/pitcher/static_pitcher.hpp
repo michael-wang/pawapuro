@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/rendering/static_glb.hpp"
+#include "engine/rendering/mesh_glb.hpp"
 #include "pawapuro/batting/staging.hpp"
 
 namespace pawapuro {

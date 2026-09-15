@@ -187,6 +187,17 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 
 已依本輪授權接入正式 S0.2C GLB 的 static bind mesh，取代 procedural pitcher，並交付 actual app startup／crop。Debug／Release build、CTest 各 3/3、實際 release／Complete、pause／single-step／20 rethrows 與 Debug GPU 檢查通過；詳細結果與可開啟證據由 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16) 維護，使用方式見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)。
 
-**Michael＋Julia 已接受 S1 human review。** 接受限於基本位置、尺度、左右手／朝向、grounding、vertex colors 與 scene integration，renderer 無須擴張；不代表動畫／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 或 early-flight readability 已驗證。S0 authoring baseline 已接受，M1 尚未完成。下一技術切片 S2 的 pose／CPU skinning 尚未授權／開始，S3 未開始。
+**Michael＋Julia 已接受 S1 human review。** 接受限於基本位置、尺度、左右手／朝向、grounding、vertex colors 與 scene integration，renderer 無須擴張；不代表動畫／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 或 early-flight readability 已驗證。S0 authoring baseline 已接受，M1 尚未完成。S2 的現況見下節，S3 未開始。
 
-本次另交付 [Character Motion Rules v0.1](../design/character-motion.md)，作為後續 animation authoring 的 owning design doc，停在 Michael＋Julia design review gate。S1 bind-pose 的 footprint／elbow 輪廓 debt 由該文件維護，延後至 S2 能播放後的 Character Polish review；本次不改 code／asset，也不授權 S2。
+[Character Motion Rules v0.1](../design/character-motion.md) 已獲 Michael＋Julia design acceptance。S1 bind-pose 的 footprint／elbow 輪廓 debt 由該文件維護，現在可透過 S2 runtime 做 Character Polish review。
+
+
+## S2：Runtime Pitcher Animation Playback／CPU Skinning（2026-09-16）
+
+**Implemented candidate，待 Michael＋Julia human review。** 已交付單一 `pitch_R` 的 240 Hz pose／CPU LBS、concrete PitcherMotion owner 與固定容量 dynamic triangle stream；啟動 Ready 是 authoring frame 1，Complete 停在 frame 205。Space／P／`.` 只控制 animation，球仍是獨立 reference fixture。
+
+Debug／Release build、4/4 CTest、實際 app start／replay／pause／single-step／minimize／restore／Complete 已通過，Debug GPU validation 0 errors。八個 source review samples、release alignment、固定骨長、contact intervals 與舊 simulation tests 通過；完整數值與證據由 [environment](../development/environment.md#s2-runtime-pitcher-animation-playbackcpu-skinning2026-09-16) 保存。
+
+下一個 gate 由 Michael＋Julia 在實際 batting camera 正常速度觀看：authoring timing 是否原樣成立、detached feet 的 support／body coordination、hard elbow／footprint debt，以及 head／cap／glove／arm 的動態遮擋。截圖與 deterministic 數值不能替代這個接受。未修改 asset／camera／staging／physics，未做球 attachment／release、render interpolation、GPU skinning 或 batter animation。
+
+完成本輪後停止；style polish 與 S3 都須另行授權，M1 未完成。

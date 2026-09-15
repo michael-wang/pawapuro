@@ -8,6 +8,7 @@
 #include <array>
 #include <atomic>
 #include <span>
+#include <cstdint>
 
 namespace engine {
 struct Vertex {
@@ -15,15 +16,15 @@ struct Vertex {
     DirectX::XMFLOAT3 color;
 };
 
-// One window and immutable world/translated/overlay triangle ranges. Owns their GPU lifetime as a unit.
+// One window, immutable ranges and one dynamic triangle stream. Owns their GPU lifetime as a unit.
 struct D3D12View {
     D3D12View() = default;
     ~D3D12View();
     D3D12View(const D3D12View&) = delete;
     D3D12View& operator=(const D3D12View&) = delete;
-    void initialize(HWND window, UINT width, UINT height, std::span<const Vertex> vertices, UINT translated_vertex_start, UINT overlay_vertex_start);
+    void initialize(HWND window, UINT width, UINT height, std::span<const Vertex> vertices, UINT translated_vertex_start, UINT overlay_vertex_start, UINT dynamic_capacity = 0);
     void resize(UINT width, UINT height);
-    void draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation);
+    void draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices = {});
 
 private:
     void wait_for_gpu();
@@ -33,7 +34,12 @@ private:
     Microsoft::WRL::ComPtr<IDXGISwapChain3> swap_chain;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtv_heap, dsv_heap;
     std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> back_buffers;
-    Microsoft::WRL::ComPtr<ID3D12Resource> depth, vertex_buffer;
+    Microsoft::WRL::ComPtr<ID3D12Resource> depth, vertex_buffer, dynamic_buffer;
+    void* dynamic_mapped = nullptr;
+    UINT dynamic_capacity = 0;
+    D3D12_VERTEX_BUFFER_VIEW dynamic_view{};
+    double dynamic_upload_us = 0;
+    std::uint64_t dynamic_uploads = 0;
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator;
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commands;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> root_signature;

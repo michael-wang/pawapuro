@@ -2,7 +2,7 @@
 #include <SDL3/SDL_main.h>
 #include "batting/reference_scene.hpp"
 #include "batting/reference_pitch.hpp"
-#include "batting/pitcher/static_pitcher.hpp"
+#include "batting/pitcher/pitcher_motion.hpp"
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -39,12 +39,10 @@ int main(int argc, char** argv)
         pawapuro::ReferencePitch pitch(staging.release_position_m, staging.reference_velocity_mps, staging.strike_zone_plane_z());
         const auto prediction = pawapuro::predict_arrival(pitch);
         const float aspect = static_cast<float>(width) / static_cast<float>(height);
-        // Startup transport data is temporary; scene owns the copied triangles, then D3D12View copies them.
-        const auto scene = [&] {
-            const auto pitcher = pawapuro::load_static_pitcher(
-                utf8_path(base_path) / "batting/pitcher/pitcher.glb", staging);
-            return pawapuro::make_batting_reference(staging, prediction.state.position_m, aspect, pitcher.vertices);
-        }();
+        pawapuro::PitcherMotion motion(utf8_path(base_path)/"batting/pitcher/pitcher.glb",
+            utf8_path(base_path)/"batting/pitcher/pitcher.toml",staging);
+        const auto scene=pawapuro::make_batting_reference(staging,prediction.state.position_m,aspect,{});
+        std::fprintf(stderr,"S2 preview: Space plays animation only; ball/prediction remain independent reference fixtures.\n");
         const auto screen_point = [&](DirectX::XMFLOAT2 ndc) {
             return DirectX::XMFLOAT2{(ndc.x + 1) * width / 2, (1 - ndc.y) * height / 2};
         };
@@ -54,32 +52,14 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "Overlay bounds: left=%.6f top=%.6f right=%.6f bottom=%.6f; predicted pixel=[%.6f, %.6f]\n",
             zone_left_top.x, zone_left_top.y, zone_right_bottom.x, zone_right_bottom.y, predicted_screen.x, predicted_screen.y);
         engine::D3D12View view;
-        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start);
-        const auto report_arrival = [&] {
-            const auto& p = pitch.current.position_m;
-            const auto& v = pitch.current.velocity_mps;
-            std::fprintf(stderr, "Reference arrival: Complete tick=%llu time=%.9f s position=[%.6f, %.6f, %.6f] m "
-                "velocity=[%.6f, %.6f, %.6f] m/s previous_z=%.6f plane_z=%.6f\n",
-                pitch.tick, static_cast<double>(pitch.tick) / pawapuro::pitch_hz,
-                p.x, p.y, p.z, v.x, v.y, v.z, pitch.previous.position_m.z, pitch.evaluation_plane_z);
-            const auto arrival = pitch.arrival_at_plane();
-            const auto& evaluated = arrival.state.position_m;
-            const auto actual_screen = screen_point(pawapuro::project_batting_point(staging, evaluated, aspect));
-            const auto ball_screen = screen_point(pawapuro::project_batting_point(staging, p, aspect));
-            std::fprintf(stderr, "Plane evaluation: t=%.9f position=[%.6f, %.6f, %.6f] velocity=[%.6f, %.6f, %.6f] "
-                "pixel=[%.6f, %.6f] prediction_delta=[%.6f, %.6f]; rendered tick ball pixel=[%.6f, %.6f]\n",
-                arrival.time_s, evaluated.x, evaluated.y, evaluated.z,
-                arrival.state.velocity_mps.x, arrival.state.velocity_mps.y, arrival.state.velocity_mps.z,
-                actual_screen.x, actual_screen.y, actual_screen.x-predicted_screen.x, actual_screen.y-predicted_screen.y,
-                ball_screen.x, ball_screen.y);
-        };
+        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()));
         auto last_time = SDL_GetTicksNS();
         std::string last_title;
         bool running = true;
         while (running) {
             const auto now = SDL_GetTicksNS();
             // Account for the old state before handling this frame's input boundary.
-            if (pitch.advance(now - last_time)) report_arrival();
+            if (motion.advance(now - last_time)) std::fprintf(stderr,"Animation Complete: tick=%llu time=%.9f\n",motion.tick,motion.time_s());
             last_time = now;
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
@@ -87,23 +67,18 @@ int main(int argc, char** argv)
                     running = false;
                 if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
-                    if (event.key.scancode == SDL_SCANCODE_SPACE && pitch.release()) {
-                        // Idle time before this release belongs to the previous phase.
-                        last_time = SDL_GetTicksNS();
-                        const auto& p = pitch.current.position_m;
-                        const auto& v = pitch.current.velocity_mps;
-                        std::fprintf(stderr, "Reference release: InFlight tick=0 position=[%.6f, %.6f, %.6f] m "
-                            "velocity=[%.6f, %.6f, %.6f] m/s; 240 Hz; gravity-only fixture; owner=pawapuro/batting/reference_pitch.cpp\n",
-                            p.x, p.y, p.z, v.x, v.y, v.z);
+                    if (event.key.scancode == SDL_SCANCODE_SPACE && motion.start()) {
+                        last_time=SDL_GetTicksNS();
+                        std::fprintf(stderr,"Animation start/replay: tick=0; reference ball unchanged.\n");
                     }
-                    if (event.key.scancode == SDL_SCANCODE_P) pitch.toggle_pause();
-                    if (event.key.scancode == SDL_SCANCODE_PERIOD && pitch.single_step()) report_arrival();
+                    if (event.key.scancode == SDL_SCANCODE_P) motion.toggle_pause();
+                    if (event.key.scancode == SDL_SCANCODE_PERIOD) motion.single_step();
                 }
                 if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
-                    if (pitch.phase == pawapuro::PitchPhase::InFlight && !pitch.paused) pitch.toggle_pause();
-                    std::fprintf(stderr, "Window minimized; active pitch paused (P to resume).\n");
+                    if (motion.phase == pawapuro::MotionPhase::Playing && !motion.paused) motion.toggle_pause();
+                    std::fprintf(stderr, "Window minimized; active animation paused (P to resume).\n");
                 }
-                if (event.type == SDL_EVENT_WINDOW_RESTORED) std::fprintf(stderr, "Window restored.\n");
+                if (event.type == SDL_EVENT_WINDOW_RESTORED) { last_time=SDL_GetTicksNS(); std::fprintf(stderr,"Window restored; animation remains paused.\n"); }
             }
             if (!running) break;
             if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
@@ -112,19 +87,19 @@ int main(int argc, char** argv)
                 continue;
             }
             view.resize(static_cast<UINT>(width), static_cast<UINT>(height));
-            const auto& p = pitch.current.position_m;
             char title[512];
-            std::snprintf(title, sizeof(title), "Pawapuro | Right-handed pitcher vs left-handed batter | %s | tick=%llu | "
-                "ball=(%.3f, %.3f, %.3f) m | backlog=%llu | Space:release/rethrow P:pause .:step Esc:quit",
-                pitch.state_name(), pitch.tick, p.x, p.y, p.z, pitch.pending_ticks);
+            std::snprintf(title,sizeof(title),"Pawapuro | Pitcher animation preview | %s | tick=%llu | time=%.6f | "
+                "grip=(%.3f, %.3f, %.3f) | backlog=%llu | Independent reference ball | Space:play/replay P:pause .:step Esc:quit",
+                motion.state_name(),motion.tick,motion.time_s(),motion.grip_world[12],motion.grip_world[13],motion.grip_world[14],motion.pending_ticks);
             if (last_title != title) {
                 if (!SDL_SetWindowTitle(window.get(), title)) throw std::runtime_error(SDL_GetError());
                 last_title = title;
             }
-            const auto& origin = staging.release_position_m;
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
-                {p.x - origin.x, p.y - origin.y, p.z - origin.z});
+                {0,0,0},motion.triangles);
         }
+        if (motion.samples) std::fprintf(stderr,"CPU motion: samples=%llu pose_mean_us=%.3f skin_expand_basis_mean_us=%.3f\n",
+            motion.samples,motion.pose_us/static_cast<double>(motion.samples),motion.skin_us/static_cast<double>(motion.samples));
         // view is destroyed before window; SDL remains alive through both destructors.
     } catch (const std::exception& error) {
         std::fprintf(stderr, "Pawapuro: %s\n", error.what());

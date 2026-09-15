@@ -111,7 +111,7 @@ Prediction 環目前在各 phase 都顯示，僅為 development／gameplay explo
 - **Simple face first**：先用簡單眼睛、眉毛或帽簷／頭部方向；有實際情緒需求才擴充，不預建 facial animation。
 - **Proportions serve animation**：比例以未來投球／揮棒的力量、重心與節奏判讀為準，不以縮小真人或 static concept art 作唯一標準。
 
-先前用既有橢球／短圓柱驗證右投手 release 與左打者 ready 兩個固定姿勢。放大頭、鞋、球形手、bat，縮短軀幹並保留短褲與鞋之間空隙；手、帽與鞋的相依尺寸直接由共用比例計算。這不證明動態姿勢已成立。後續 S0 已完成右投手 authoring baseline；S1 app 改讀正式 GLB 的 static bind mesh（見末節），打者仍用此 static fixture；尚未接入動畫或 skinning。
+先前用既有橢球／短圓柱驗證右投手 release 與左打者 ready 兩個固定姿勢。放大頭、鞋、球形手、bat，縮短軀幹並保留短褲與鞋之間空隙；手、帽與鞋的相依尺寸直接由共用比例計算。這不證明動態姿勢已成立。後續 S0 已完成右投手 authoring baseline；S1 app 改讀正式 GLB 的 static bind mesh（見末節），打者仍用此 static fixture；目前 S2 pitcher 動畫接入見末節。
 
 ### 靜態人物 blockout
 
@@ -295,4 +295,18 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 - File bytes、cgltf parse tree 與 accessor 暫存僅在同步讀取期間存活，cgltf tree 先於 backing bytes 釋放。回傳資料自有；pitcher vertices 複製至 scene 後即釋放暫存，scene 活到 main scope 結束。既有 D3D12View 初始化複製至 immutable vertex buffer，renderer 擁有 GPU resource 並於 fence 完成後釋放，沒有借用 parser pointers。
 - Imported pitcher 是 ordinary world vertices；ball translated range 與 overlay range 不變，static batter／camera／field／Native simulation 保留。缺檔或不支援的顯示格式直接 startup fail，包含 source path、owner 與原因，沒有 procedural fallback。D3D12View／HLSL 不改。
 
-實際 subset／啟動入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)，依賴與本輪驗證見 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。Runtime animation／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 與 early-flight readability 尚未驗證，M1 未完成。下一技術切片 S2 尚未授權／開始，S3 未開始。後續 animation authoring 的動作關係與 Motion Brief 由 [Character Motion Rules v0.1](character-motion.md) 擁有；該文件待 design review，並記錄延後至真正 batting camera 播放動畫後再評估的 style debt。
+實際 subset／啟動入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)，依賴與本輪驗證見 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。Runtime animation／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 與 early-flight readability 尚未驗證，M1 未完成。以上是 S1 的接受邊界。S2 現況見下節，S3 未開始。[Character Motion Rules v0.1](character-motion.md) 已獲 Michael＋Julia design acceptance；六條 rules 不因 runtime 實作改寫。
+
+
+## S2：Runtime Pitcher Animation Playback／CPU Skinning（2026-09-16）
+
+S2 已實作，待 Michael＋Julia human review。沿用正式 S0.2C 的 mesh／weights／clip；目前只能證明資料傳送、取樣與實際 app 播放可運作，不能宣告動態遮擋、style 或 M1 通過。
+
+- **Engine Native**：既有 `static_glb` 演進為 `mesh_glb`，因同一份 mesh 現在需要 local TRS、skin 與 clip，避免兩套 parser。只讀目前 sample 的 subset，不做 asset manager。`glb_pose.cpp` 提供取樣、parent composition、skin palette 與 CPU LBS，不知道投手／release／球場。
+- **Pawapuro Native**：concrete `PitcherMotion` 擁有 immutable CPU asset、可重用 pose／skin／triangles workspace、Ready／Playing／Complete、pause、integer tick／wall-time credit。每個完成的 240 Hz tick 計算 `min(tick / 240.0, duration)`；最多每次 advance 消化 16 ticks，保留 backlog，Complete 停在 816。Pause 不累積時間；minimize 自動 pause，restore 不補背景時間。沒有 render interpolation，畫面只用最後完成的 authoritative tick。
+- **取樣與 skinning**：LINEAR 的 T／S 用 lerp，rotation 用 shortest-path quaternion slerp，重新組合 hierarchy。glTF column-vector 公式是 `sum(weight * jointWorld * inverseBind * position)`，直接產出 glTF world space；skinned mesh node transform 不再乘上。DirectX row-vector 表示使用轉置後的 `inverseBind * jointWorld`。依據 [glTF skins 規格](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skins) 與 [animation 規格](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#animations)，不是靠修改資產對齊。
+- **座標與 Data**：在 skin 完成後才反射 X、交換 winding 一次，公尺 scale=1，加 staging 唯一 placement。Grip 全矩陣用 `B * M * B` 改 basis 再平移，供 diagnostic 使用。TOML 只核對 export provenance、clip 時間與 release marker tick；不執行公式、不讀它的 placement 當第二份 Data。Authoring metadata 與 staging 保持原樣。
+- **Renderer／lifetime**：`D3D12View` 只新增一條 exact-capacity `Vertex` dynamic triangle stream，與原 static world／ball／overlay buffer 共存、同 shader。CPU triangles 在 draw 呼叫內借用並 memcpy 至 renderer 自有 persistently mapped upload heap；前一 draw 已等 GPU fence 才可覆寫。Shutdown 先等 GPU，再 Unmap／release；沒有 ring buffer 或跨 frame allocator。Asset parser／原始檔案 bytes 在 load 返回前釋放，owned CPU asset 活到 `PitcherMotion` 銷毀。
+- **球的邊界**：app 不再把 S1 bind pitcher 烘進場景，只畫 dynamic pitcher。Reference ball／prediction 是獨立靜態 fixture，Space 只播放動作；不 attachment、不隱藏／freeze handoff、不觸發 marker event。ReferencePitch simulation／prediction 與其 regression 保留，真正 ownership transfer 留給未授權的 S3。
+
+實際 subset、控制與 review ticks 由 [pitcher README](../../pawapuro/batting/pitcher/README.md#s2-runtime-animation-preview) 擁有；驗證、成本與工具限制見 [environment](../development/environment.md#s2-runtime-pitcher-animation-playbackcpu-skinning2026-09-16)。

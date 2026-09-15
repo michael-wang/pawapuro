@@ -5,6 +5,8 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <chrono>
+#include <limits>
 
 using Microsoft::WRL::ComPtr;
 namespace engine {
@@ -28,12 +30,15 @@ D3D12_RESOURCE_BARRIER transition(ID3D12Resource* resource,
 }
 
 void D3D12View::initialize(HWND window, UINT initial_width, UINT initial_height,
-    std::span<const Vertex> vertices, UINT translated_start, UINT overlay_start)
+    std::span<const Vertex> vertices, UINT translated_start, UINT overlay_start, UINT capacity)
 {
     if (translated_start > vertices.size() || translated_start % 3 != 0)
         throw std::runtime_error("Invalid translated triangle range.");
     if (overlay_start < translated_start || overlay_start > vertices.size() || overlay_start % 3 != 0)
         throw std::runtime_error("Invalid overlay triangle range.");
+    if (capacity % 3 != 0 || capacity > std::numeric_limits<UINT>::max()/sizeof(Vertex))
+        throw std::runtime_error("Invalid dynamic triangle capacity.");
+    dynamic_capacity=capacity;
     overlay_vertex_start = overlay_start;
     translated_vertex_start = translated_start;
     width = initial_width;
@@ -168,6 +173,14 @@ void D3D12View::initialize(HWND window, UINT initial_width, UINT initial_height,
     vertex_buffer->Unmap(0, nullptr);
     vertex_count = static_cast<UINT>(vertices.size());
     vertex_view = {vertex_buffer->GetGPUVirtualAddress(), static_cast<UINT>(vertices.size_bytes()), sizeof(Vertex)};
+    if (dynamic_capacity) {
+        buffer.Width=static_cast<UINT64>(dynamic_capacity)*sizeof(Vertex);
+        check(device->CreateCommittedResource(&upload,D3D12_HEAP_FLAG_NONE,&buffer,
+            D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&dynamic_buffer)),"Create dynamic triangle buffer");
+        check(dynamic_buffer->Map(0,&no_read,&dynamic_mapped),"Map dynamic triangles");
+        dynamic_view={dynamic_buffer->GetGPUVirtualAddress(),static_cast<UINT>(buffer.Width),sizeof(Vertex)};
+        std::fprintf(stderr,"Dynamic triangle stream: capacity=%u vertices, persistent upload, one frame in flight.\n",dynamic_capacity);
+    }
     check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)), "CreateFence");
     fence_event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     if (!fence_event) throw std::runtime_error("CreateEvent failed.");
@@ -225,10 +238,18 @@ void D3D12View::resize(UINT new_width, UINT new_height)
     std::fprintf(stderr, "Resized: %u x %u\n", width, height);
 }
 
-void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation)
+void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices)
 {
     // One frame in flight keeps this first slice's ownership explicit. The previous
     // frame's fence has completed before reusing the allocator, depth or constants.
+    if (dynamic_vertices.size()!=dynamic_capacity) throw std::runtime_error("Dynamic triangle count changed.");
+    if (dynamic_capacity) {
+        // Previous draw waits for its GPU fence; no GPU reader remains during this write.
+        const auto begin=std::chrono::steady_clock::now();
+        std::memcpy(dynamic_mapped,dynamic_vertices.data(),dynamic_vertices.size_bytes());
+        dynamic_upload_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-begin).count();
+        ++dynamic_uploads;
+    }
     check(allocator->Reset(), "Reset allocator");
     check(commands->Reset(allocator.Get(), pipeline.Get()), "Reset commands");
     commands->SetGraphicsRootSignature(root_signature.Get());
@@ -253,6 +274,11 @@ void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOA
     const float offset[4]{translation.x, translation.y, translation.z, 0};
     commands->SetGraphicsRoot32BitConstants(0, 4, zero_offset, 16);
     commands->DrawInstanced(translated_vertex_start, 1, 0, 0);
+    if (dynamic_capacity) {
+        commands->IASetVertexBuffers(0,1,&dynamic_view);
+        commands->DrawInstanced(dynamic_capacity,1,0,0);
+        commands->IASetVertexBuffers(0,1,&vertex_view);
+    }
     // Root constants are captured per draw; the immutable GPU buffer is never rewritten.
     commands->SetGraphicsRoot32BitConstants(0, 4, offset, 16);
     commands->DrawInstanced(overlay_vertex_start - translated_vertex_start, 1, translated_vertex_start, 0);
@@ -284,6 +310,10 @@ D3D12View::~D3D12View()
     pipeline.Reset();
     overlay_pipeline.Reset();
     root_signature.Reset();
+    if (dynamic_mapped) { dynamic_buffer->Unmap(0,nullptr); dynamic_mapped=nullptr; }
+    dynamic_buffer.Reset();
+    if (dynamic_uploads) std::fprintf(stderr,"Dynamic upload: samples=%llu mean_us=%.3f (CPU memcpy only)\n",
+        dynamic_uploads,dynamic_upload_us/static_cast<double>(dynamic_uploads));
     vertex_buffer.Reset();
     depth.Reset();
     for (auto& target : back_buffers) target.Reset();

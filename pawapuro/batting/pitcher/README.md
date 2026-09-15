@@ -1,6 +1,33 @@
 # 右投手 Authoring Sample（正式資產 S0.2C）
 
-2026-09-15：Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。2026-09-16：Michael＋Julia 已接受 S1 static bind-pose runtime import；下一技術切片 S2 尚未授權／開始，S3 未開始。
+2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已實作並完成技術驗證，待 human review。正式三檔沒有修改；球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+
+## S2 runtime animation preview
+
+啟動 `build/release/pawapuro.exe`（或 Debug），**Space** 播放一次 3.4 秒的完整 `pitch_R`；Complete 後再按 Space 重播。**P** 暫停／繼續，暫停時 **`.`** 前進一個 1/240 秒 tick，**Esc** 離開。Minimize 會暫停正在播放的 clip；restore 後按 P 繼續，不補背景時間。Startup 真正是 frame 1／tick 0 Ready，沒有自動 loop。
+
+App 從 executable 同目錄的 `batting/pitcher/pitcher.glb`／`pitcher.toml` 載入；CMake configure 複製正式三檔中的 GLB／TOML。`PitcherMotion` 檢查 GLB 實際 SHA256 與 metadata、clip／duration／release tick，啟動計算 release alignment 後回到 tick 0。Runtime 不讀 `.blend`、不執行 authoring scripts。TOML 的 source hash 是 provenance，runtime 不假裝現場驗證未部署的 `.blend`。
+
+實際 subset：一個 skin `PitcherRig`／13 joints、15 TRS nodes、一個 `pitch_R`／39 TRS channels，全部 LINEAR、共用 205 個 FLOAT SCALAR times；POSITION FLOAT VEC3、opaque COLOR_0 normalized UNSIGNED_SHORT VEC4、JOINTS_0 UNSIGNED_BYTE VEC4、WEIGHTS_0 FLOAT VEC4、inverse binds FLOAT MAT4、indices UNSIGNED_SHORT。2362 unique vertices，每 vertex 最多兩個 nonzero influences，weight sum 容差 2e-5；不正規化壞資料以掩飾錯誤。Unsupported subset 直接拒絕，沒有第二套 parser 或 fallback。
+
+`mesh_glb` → `glb_pose` → `pitcher_motion` → renderer dynamic stream。位置／full grip basis、ownership 與 GPU fence lifetime 由 [設計文件](../../../docs/design/batting-feel.md#s2runtime-pitcher-animation-playbackcpu-skinning2026-09-16) 說明。唯一 staging placement／scale=1 不變，reference ball 始終獨立，release tick 384 只是 diagnostic。
+
+| Review pose | Authoring frame | Runtime tick | Clip time，s |
+|---|---:|---:|---:|
+| Ready | 1 | 0 | 0 |
+| Coil | 49 | 192 | 0.8 |
+| Stride | 72 | 284 | 1.183333 |
+| Front contact | 79 | 312 | 1.3 |
+| Release pose | 97 | 384 | 1.6 |
+| Early follow-through | 108 | 428 | 1.783333 |
+| Rear-foot landing | 171 | 680 | 2.833333 |
+| Balanced | 205 | 816 | 3.4 |
+
+本機證據在忽略的 `build/pitcher-s2/`：先用 app 看完整 1×，再看 `release-motion-sheet.jpg`／`debug-motion-sheet.jpg` 及 `*-tick-*.png` 原始 1920×1080 圖。Sheet 是固定 crop 放大，camera 沒改。Codex 已檢視截圖並實測正常速度執行完成，**未以影片連續觀看，不以 sheet 宣稱正常速度自看通過**。Footprint、hard-elbow 與動態遮擋留待 human review，詳細成本／限制見 [environment](../../../docs/development/environment.md#s2-runtime-pitcher-animation-playbackcpu-skinning2026-09-16)。
+
+`pitcher_motion_test` 使用小型 `motion_expected.txt`：從既有 accepted promotion `source-samples.json` 選八格 grip、全 mesh bounds，以及每格 source vertex IDs 0／200／500／800／1100／1300／1500／1800／1900／2100／2300／2361，Blender 座標轉 `(-x,z,-y)` game local。GLB vertex ordering 可不同，因此點樣本比最近頂點距離，與 grip／bounds 同用原 0.1 mm 容差。Fixture 記錄 source／GLB hash，本輪另直接讀 saved `.blend` 的 evaluated animation 重核；CTest 不需要 Blender。它是 regression evidence，不是第二份 keyframes／runtime Data。
+
+S1 static regression 保留；以下 S1 段落是歷史交付入口，現行 app 使用上面的 S2 path。
 
 ## S1 static bind-pose runtime
 
@@ -12,7 +39,7 @@
 
 先看本機忽略目錄 `build/pitcher-s1/` 的 `debug-startup.png`／`release-startup.png`（1920×1080）及 `debug-pitcher-crop.png`／`release-pitcher-crop.png`（原圖固定區域 3× nearest 放大，非新增 camera）。`*-midflight.png`／`*-complete.png` 與 `*.log` 保留球路檢查；`baseline-*-startup.png` 是本輪開始前的 procedural app，不能當成動畫 before。完整 metrics、cgltf prepare 與測試命令見 [environment](../../../docs/development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16)。
 
-S1 human review 已接受基本位置／尺度／左右／顏色／grounding 與 scene integration，renderer 無須擴張；不代表 animation／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion／early-flight readability 或 M1 已驗證。Footprint 偏小與 elbow 輪廓的 bind-pose feedback 記於 [Character Motion Rules](../../../docs/design/character-motion.md#s1-acceptance-與延後的-polish)，延後至 S2 能在真正 batting camera 播放後再做 Character Polish review；不退回 importer、不推論所有 animated poses。本次 docs-only 不改資產，S2 尚未授權；後續 full motion authoring 先依該 owning doc 建立 Motion Brief。
+S1 human review 已接受基本位置／尺度／左右／顏色／grounding 與 scene integration，renderer 無須擴張；不代表 animation／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion／early-flight readability 或 M1 已驗證。Footprint 偏小與 elbow 輪廓的 bind-pose feedback 記於 [Character Motion Rules](../../../docs/design/character-motion.md#s1-acceptance-與延後的-polish)，延後至 S2 能在真正 batting camera 播放後再做 Character Polish review；不退回 importer、不推論所有 animated poses。S2 沿用此資產、不做 polish；後續 full motion authoring 仍先依該 owning doc 建立 Motion Brief。
 
 ## S0.2C 已接受並升為正式：Follow-through Rotation／Rear-Foot Recovery
 

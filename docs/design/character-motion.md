@@ -1,6 +1,6 @@
 # Pawapuro Character Motion Rules
 
-v0.1｜2026-09-16｜待 Michael＋Julia design review。
+v0.1｜2026-09-16｜Michael＋Julia design accepted。
 
 本文件定義超現實造型下仍須可信、可讀的 motion relationships，以及完整動作 authoring 前的推理方式。v0.1 由目前右投手的實作需求與 human feedback 長出；只有新的真實 caller 才新增規則，並非完整的角色身體力學理論。打者與守備動畫未來可沿用這些問題，但本版不預定其動作規格。
 
@@ -22,7 +22,7 @@ Detached feet、large flat feet、rubber-like continuous arms、spherical hands�
 
 Detached foot transforms、hidden bend joints、skin weights、grip node、authored contact intervals 與 release marker，都是目前 authoring sample 使用的方法。它們可更換，只要仍表達同一個 Motion Truth；不因此要求腳永久 parent 到 torso，或把目前 Blender／GLB hierarchy 升為永久角色架構。
 
-實際資產與工具契約由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。S0 authoring motion 已接受；S1 runtime 只顯示 static bind mesh，尚未播放或 skinning。Authoring 使用某種機制，不代表 app 已整合它。
+實際資產與工具契約由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。S0 authoring motion 與 S1 static import 已接受；S2 已實作 runtime clip playback／CPU skinning，待 human review。S2 的球仍是獨立 reference fixture；尚未實現 Rule 5 的 runtime 持有／釋放交接。
 
 ## 六條 v0.1 rules
 
@@ -104,6 +104,6 @@ S1 bind-pose human feedback 留下兩項 debt：
 - Feet footprint 視覺上偏小，站立感與 support readability 不足。
 - Arm silhouette 仍有可讀成 elbow joint 的折角，與 rubber-arm visual language 不完全一致。
 
-這些是目前 runtime bind pose 的回饋，不能推論所有 animated poses 都有同樣問題；不是 S1 importer failure，也不撤回 S0／S1 接受。待未來 S2 runtime animation 能在真正 batting camera 播放後，再做 Character Motion／Style Polish review。本輪不改 feet size、mesh、weights 或 motion。
+這些是目前 runtime bind pose 的回饋，不能推論所有 animated poses 都有同樣問題；不是 S1 importer failure，也不撤回 S0／S1 接受。S2 已能在真正 batting camera 播放，現在交由 Michael＋Julia 做 Character Motion／Style Polish review。Runtime review-tick 截圖仍看得到偏窄的支撐輪廓與部分 hard-elbow 折角；這是截圖觀察，不能代替完整 1× 動態接受。本輪不改 feet size、mesh、weights 或 motion。
 
-下一技術切片仍是 S2，**尚未授權、尚未開始**。本次只交付 v0.1 文件，停在 Michael＋Julia review gate；技術實測仍由 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16) 擁有。
+S2 為 implemented candidate，停在 Michael＋Julia review gate；S3 未開始、M1 未完成。本次只更新 acceptance／交付狀態，六條 rules 保持原文。技術實測由 [environment](../development/environment.md#s2-runtime-pitcher-animation-playbackcpu-skinning2026-09-16) 擁有。

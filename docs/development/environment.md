@@ -743,7 +743,7 @@ JSON／logs 在忽略的 `build/pitcher-s02c-promotion/`。未重製影片或 sc
 
 ## S1 Static Pitcher GLB Runtime Import（2026-09-16）
 
-最新 human review：Michael＋Julia 已接受 S1 static import；接受邊界與延後的 Character Style debt 見 [Character Motion Rules](../design/character-motion.md#s1-acceptance-與延後的-polish)。以下保留技術交付當時的紀錄；本次 docs-only 未執行新的 build／CTest／GPU validation，S2 尚未授權／開始。
+最新 human review：Michael＋Julia 已接受 S1 static import；接受邊界與延後的 Character Style debt 見 [Character Motion Rules](../design/character-motion.md#s1-acceptance-與延後的-polish)。以下保留 S1 技術交付當時的紀錄；S2 本輪實測另列於末節，不將舊的球路 app 測試當成本輪重跑結果。
 
 基準 cwd `C:/astra-dev/pawapuro`，branch main；HEAD／main／origin/main／live remote main 均為 `83408e4c8ba3188b2bb15a7fe185ec10cd4bff0c`，起始 workspace 乾淨，origin 為 canonical `michael-wang/pawapuro`。本輪完成 static GLB transport，待 Michael＋Julia review；S0 的 A／B／C authoring motion 已接受。未改正式三檔、motion、staging、simulation、D3D12View 或 HLSL。
 
@@ -799,3 +799,54 @@ ctest --test-dir build/release --output-on-failure
 Computer Use 初始化及 reset 重試均失敗（trusted Node kernel exited／Windows sandbox helper setup refresh errors），沿既有 process-targeted Windows key messages → SDL event loop、DPI-aware PrintWindow 方式操作本次啟動的 app。這是實際程序／畫面檢視，非人類手動試玩；暫存 smoke script 留在忽略目錄，沒有新增 runtime automation framework。
 
 已檢視 startup 全圖及投手放大：帽／臉朝本壘、球形右手在 game −X／手套在 +X、shirt／pants 配色與 detached feet 可見，未見 mesh 缺面；深色鞋並排時輪廓接近，原 reference release 指示圈／球位於臉旁。球沒有接手，此圖不證明 animated handoff、dynamic occlusion 或 early-flight readability。S1 保持 bind pose，即使 app simulation state 顯示 Ready 也不是 `.blend` frame 1。未重新製作 Blender comparison render，沒有 animation playback／skinning／release integration；停在 Michael＋Julia review，S2／S3 尚未開始、M1 未完成。
+
+
+## S2 Runtime Pitcher Animation Playback／CPU Skinning（2026-09-16）
+
+基準 cwd `C:/astra-dev/pawapuro`，main／HEAD／origin/main／live remote main 均為 `9eeb15147b18e54602f55745a512187b63f8a898`，origin `https://github.com/michael-wang/pawapuro.git`，起始 worktree 乾淨。S1 與 Character Motion Rules v0.1 已獲 Michael＋Julia 接受；本輪 S2 是 implemented candidate，待 human review，S3 未開始、M1 未完成。
+
+### 建置與重現
+
+沿用 S1 的 MSVC 14.44／Windows SDK 10.0.26100.0、SDL3／toml++／cgltf 1.15 與 RTX 5070 Ti。沒有新增 dependency 套件；GLB provenance hash 使用已安裝 Windows SDK 的 BCrypt API／`bcrypt.lib`。建置前曾沿既有 script 重跑同版 cgltf prepare，版本與 hash 未改。最終使用 `build/pitcher-s2/build-test.cmd`，不再 prepare／下載 dependency，依序 configure／build／CTest Debug 與 Release；命令與 S1 相同（略去 prepare）。`/W4 /WX` 保留。啟動與 controls／review ticks 見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s2-runtime-animation-preview)。
+
+所有暫時 logs／PNG／sheet／smoke scripts 留在忽略的 `build/pitcher-s2/`，沒有 runtime automation framework。`app_smoke.py` 對自己啟動的 app 送 Windows key messages，由 SDL 正常 event loop 處理：先 Space＋P 停在 tick 0，再逐一 single-step 816 ticks 擷取 review poses；測 final hold、Space 1× 重播；再次 replay 測 minimize／restore／P 繼續，最後 Esc 正常退出。
+
+### 技術結果
+
+| 檢查 | 本輪結果 |
+|---|---|
+| Debug／Release build＋CTest | 各 4/4 通過：pitcher_motion、static_pitcher、reference_pitch、batting_staging。 |
+| Loader／asset subset | 正式 skin／clip／13 個 joint-parent 與每 joint 的 TRS channels 通過；合法 influences、finite inverse binds、ordered finite times；10 個拒絕案例包含既有 5 個，另加非法 joint、負 weight、錯 weight sum、NaN inverse bind、未遞增 timeline。 |
+| Pose／timing | 八個 review ticks 重複 evaluate triangles byte-identical／world matrices 相同；30／60／120 FPS 的整數 nanosecond chunking 均到同 tick；pause、單步、backlog、end tick 816 clamp／hold、replay initial pose 通過。支援同一 Windows build 內 replay，不承諾跨 compiler／platform bit identity。 |
+| Skin／basis | Bind skin 與 rest geometry 在 0.1 mm 內；改 mesh-node translation 不重複套到 skin；antipodal quaternion keys 不改變 shortest-path 結果。整段 817 ticks vertices finite、數量／colors 不變。四段 arm bone lengths 差 <1e-5 m；既有 planted contact matrices 差 <1e-6。 |
+| Contact sample intervals | foot_R ticks 0–336、680–816；foot_L 0–64、312–816，依未改的 source contacts 對應。這是 sample-specific regression，沒有另建 authoring truth。 |
+| Source → runtime samples | 八格 grip／mesh bounds／96 個 source 點最大距離 **1.35952e-6 m**；原 tolerance 0.0001 m 不變。Sample ID／抽法見 pitcher README，並非全 mesh／全 subframe 與 Blender 的完整誤差證明。 |
+| 直接重讀 saved source | Blender 4.5.13 LTS（daeeeca98fb0）background 只讀 evaluated animation，未保存／匯出；八格 fixture 與 saved source 最大十進位截斷差 6.31123e-9 m（檢查 <1e-6）。`source-fixture-check.json`／`.log` 保留。 |
+| Runtime release diagnostic | metadata authoring frame 97 → tick 384 → 1.6 s；grip world 約 (−0.65,2.05,16.8) m，與 staging release reference 距離 **4.9151248e-7 m**，小於原 0.0001 m。未 snap／改 Data，未觸發 ball event。其他 review ticks 的 full transform finite，grip positions 記於測試輸出與 app title。 |
+| 實際 app 操作 | Debug／Release 各 1920×1080；start／replay、pause、817 次 single-step、minimize／restore、Complete tick 816／3.4 s、Esc exit 0 全部通過。Pause 及 Complete 等待前後逐像素相同；minimize／restore 停在 tick 39，背景時間未補入。 |
+| 正常速度執行 | 完整 1× replay 沒有逐格擷取／step，Debug wall time 3.4341 s、Release 3.4051 s 到 Complete；含視窗輸入／present／poll latency，clip authoritative time 均 3.4 s。不把此 wall time 當拍攝 FPS 或正常速度視覺接受。 |
+| Runtime 畫面差分 | 八張 Debug／Release 同 tick PNG 逐像素相同，記於 `render-comparison.json`。 |
+| GPU／shutdown | Debug layer＋GPU-based validation 0 errors／corruption；釋放後只有報告用 device，無 live child resources。兩版各完成 1379 frames、exit 0；Release 按既有 compile contract 沒啟用 debug layer，不宣稱兩次 GPU validation。 |
+| Simulation regression | 原 ReferencePitch source／prediction 與 staging Data 未改，既有 20 deterministic rethrows、30／60／120 chunking、pause／step、arrival／prediction／projection、44 staging 拒絕案例通過。S2 app 沒有重新發球，不把 unit regression 寫成舊 flight app smoke。 |
+
+### CPU 成本觀察
+
+既有 GPU 同步／present 與 app smoke 操作保持不變，使用 `steady_clock` 累計平均；同一輪各 2451 次 motion evaluations、1379 次 uploads，數字不是 performance target，也不是可移植 benchmark。
+
+| 平均成本，µs | Debug | Release |
+|---|---:|---:|
+| Pose sample／hierarchy／skin matrices | 26.242 | 3.054 |
+| CPU skin＋triangle expansion＋basis／grip | 523.374 | 40.952 |
+| Dynamic upload 的 CPU memcpy | 9.676 | 9.743 |
+
+2362 unique skinned vertices → 3936 triangles／11808 expanded vertices；每次 draw copy 283392 bytes 至 exact-capacity upload buffer。Upload 數字只計 CPU memcpy，不含 GPU 讀取／渲染或 fence wait；skin 數字包含 expansion／basis 的合併成本。沒有為小 sample 加入平行工作、GPU skinning 或 streaming allocator。
+
+### 資產、證據與 human review 限制
+
+正式 `.blend`／GLB／TOML SHA256 與 S1 末列三個 hash 完全一致；Debug／Release launch GLB／TOML bytes 均與正式檔相同。沒有 motion／weights／marker／camera／placement／scale／球半徑／physics／HLSL 變更，沒有重新 export 或跑 motion-edit scripts。只有 read-only Blender fixture 重核；沒有重跑完整 authoring validation，未把既有通過紀錄列為本輪重跑。
+
+先開 `build/release/pawapuro.exe` 以 Space 正常速度觀看，再看 `release-motion-sheet.jpg`／`debug-motion-sheet.jpg` 與八張 `*-tick-*.png`。Sheet 使用原圖固定 rectangle (645,385)–(925,645) 2× nearest 放大，並標 runtime tick／clip time；沒有調 runtime camera。`build-test.log`、`debug.log`／`release.log`、`*-smoke.json` 保存操作與成本結果。
+
+Computer Use 的 trusted Node 初始化與 reset 重試因 sandbox helper setup refresh errors 失敗；沿 S1 已用的 process-targeted key messages／DPI-aware PrintWindow 檢查本次 app。Codex 已檢視實際 startup 全圖與 Debug／Release review-tick sheets，**未以影片連續觀看正常速度 motion**；1× wall-time 執行與截圖觀察分開回報，由 Michael 在 app 補完整 motion review。
+
+截圖觀察：closed Ready／coil 抬腳集中、stride／前腳接觸與收勢姿態有變化；部分 Ready／late poses 的手臂仍讀得出硬折角，feet footprint 相對大頭／torso 偏窄，鞋重疊時支撐分離度有限。Stride／contact 的投球臂部分被頭／帽遮擋，手套靠近臉；獨立 reference ball／release ring 仍在臉與出手區附近干擾觀察。這些保留為 Character Motion／Style debt，不在本輪修改資產或球 owner，不替 Michael＋Julia 判定動態可讀性通過。

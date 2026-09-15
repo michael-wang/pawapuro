@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-16。狀態：已完成 M1 Step 0 與 Step 1 交付 1 的靜態場景驗證；另已完成 staging calibration／啟動 Data 與交付 2 的固定步長 reference pitch；已加入進壘區置中、authoritative gameplay 好球帶／本壘一致性、2D overlay／預測落點及同球重投驗證；M1 尚未完成。Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣升至 S0.2C，Right-handed Pitcher S0 的單一 pitch clip authoring motion baseline 通過。這只代表 Blender／GLB authoring baseline；app runtime animation、release integration、dynamic occlusion 與 early-flight readability 尚未驗證，正式遊戲品質與 M1 尚未完成。Michael＋Julia 已接受 S1 static GLB runtime import；下一技術切片 S2 尚未授權／開始，S3 未開始。Character Motion Rules v0.1 已整理，待 design review。
+更新：2026-09-16。M1 尚未完成。Michael＋Julia 已接受 Right-handed Pitcher S0（A／B／C）的 authoring motion baseline、S1 static GLB runtime import，以及 Character Motion Rules v0.1 design。S2 runtime 240 Hz animation playback／CPU skinning 已實作並完成技術驗證，**是待 Michael＋Julia human review 的 candidate**。App 可播放正式 S0.2C 單一 clip；球仍是獨立 reference fixture。Release integration、dynamic occlusion／early-flight readability 與正式遊戲品質尚未通過；S3 未開始。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 
@@ -25,4 +25,4 @@
 - 具體功能開始實作後，其 native、script、data 與短 README 靠近同一概念；此處保留跨概念決策並連向模組文件，不複製公式、參數清單或 API。
 - 新的獨立決策只有在取捨已無法清楚放進這兩份工作文件時，才新增 decision record。
 - 文件中的數字、控制方式與測試規模若標示「提案」，代表等待本次 review；沒有測試結果時不得宣稱已通過。
-- 目前程式提供單顆固定步長 reference pitch、pause／single-step；可在 Complete 後重投同球；右投手 authoring sample 見 [pitcher README](../pawapuro/batting/pitcher/README.md)；app 動畫接入等後續工作仍須另行授權。
+- 目前 app 的 Space 播放／重播 pitcher animation，P 暫停、`.` 單步；ReferencePitch 仍由原單元測試驗證，app 不發球。啟動與 review ticks 見 [pitcher README](../pawapuro/batting/pitcher/README.md)，後續 hand → simulation 交接須另行授權。

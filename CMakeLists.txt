@@ -17,15 +17,17 @@ set(CGLTF_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.deps/cgltf-1.15")
 if(NOT EXISTS "${CGLTF_DIR}/cgltf.h" OR NOT EXISTS "${CGLTF_DIR}/LICENSE")
     message(FATAL_ERROR "Prepare cgltf first: cmake -P cmake/PrepareCgltf.cmake")
 endif()
-add_library(static_glb STATIC engine/rendering/static_glb.cpp)
-target_compile_features(static_glb PUBLIC cxx_std_20)
-target_compile_options(static_glb PRIVATE /W4 /WX /permissive- /utf-8)
-target_compile_definitions(static_glb PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX)
-target_include_directories(static_glb PRIVATE "${CGLTF_DIR}")
+add_library(mesh_glb STATIC engine/rendering/mesh_glb.cpp engine/rendering/glb_pose.cpp)
+target_compile_features(mesh_glb PUBLIC cxx_std_20)
+target_compile_options(mesh_glb PRIVATE /W4 /WX /permissive- /utf-8)
+target_compile_definitions(mesh_glb PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX)
+target_include_directories(mesh_glb PRIVATE "${CGLTF_DIR}")
+target_link_libraries(mesh_glb PRIVATE bcrypt)
 
 # This is a generated launch copy; the authored Data stays beside its Native caller.
 configure_file(pawapuro/batting/staging.toml staging.toml COPYONLY)
 configure_file(pawapuro/batting/pitcher/pitcher.glb batting/pitcher/pitcher.glb COPYONLY)
+configure_file(pawapuro/batting/pitcher/pitcher.toml batting/pitcher/pitcher.toml COPYONLY)
 find_program(DXC dxc HINTS "$ENV{WindowsSdkVerBinPath}/x64" REQUIRED)
 
 set(shader_headers)
@@ -49,13 +51,13 @@ endforeach()
 
 add_executable(pawapuro WIN32 pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
     engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp
-    pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/static_pitcher.cpp ${shader_headers})
+    pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/pitcher_motion.cpp ${shader_headers})
 target_compile_features(pawapuro PRIVATE cxx_std_20)
 target_compile_options(pawapuro PRIVATE /W4 /WX /permissive- /utf-8)
 target_compile_definitions(pawapuro PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_include_directories(pawapuro PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(pawapuro PRIVATE static_glb SDL3::SDL3 tomlplusplus::tomlplusplus d3d12 dxgi dxguid)
+target_link_libraries(pawapuro PRIVATE mesh_glb SDL3::SDL3 tomlplusplus::tomlplusplus d3d12 dxgi dxguid)
 add_custom_command(TARGET pawapuro POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:SDL3::SDL3> $<TARGET_FILE_DIR:pawapuro>
@@ -68,13 +70,24 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(pitcher_motion_test pawapuro/batting/pitcher/pitcher_motion_test.cpp
+        pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(pitcher_motion_test PRIVATE cxx_std_20)
+    target_compile_options(pitcher_motion_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(pitcher_motion_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(pitcher_motion_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME pitcher_motion COMMAND pitcher_motion_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/pitcher/pitcher.glb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/pitcher/pitcher.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/pitcher/motion_expected.txt")
     add_executable(static_pitcher_test pawapuro/batting/pitcher/static_pitcher_test.cpp
         pawapuro/batting/pitcher/static_pitcher.cpp pawapuro/batting/staging.cpp
         pawapuro/batting/reference_scene.cpp)
     target_compile_features(static_pitcher_test PRIVATE cxx_std_20)
     target_compile_options(static_pitcher_test PRIVATE /W4 /WX /permissive- /utf-8)
     target_include_directories(static_pitcher_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_link_libraries(static_pitcher_test PRIVATE static_glb tomlplusplus::tomlplusplus)
+    target_link_libraries(static_pitcher_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
     add_test(NAME static_pitcher COMMAND static_pitcher_test
         "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/pitcher/pitcher.glb"
         "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml"

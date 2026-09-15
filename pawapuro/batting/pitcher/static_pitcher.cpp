@@ -8,10 +8,10 @@ namespace pawapuro {
 StaticPitcher load_static_pitcher(const std::filesystem::path& path, const BattingStaging& staging)
 {
     try {
-        auto mesh = engine::read_static_glb(path);
+        auto mesh = engine::read_mesh_glb(path);
         if (mesh.mesh_name != "PitcherMesh" || mesh.mesh_node_name != "PitcherMesh")
             throw std::runtime_error("expected PitcherMesh mesh/node");
-        const engine::StaticGlbNode* grip = nullptr;
+        const engine::MeshGlbNode* grip = nullptr;
         for (const auto& node : mesh.nodes) if (node.name == "grip") {
             if (grip) throw std::runtime_error("ambiguous grip node");
             grip = &node;

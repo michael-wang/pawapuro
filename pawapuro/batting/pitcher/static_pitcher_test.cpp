@@ -29,7 +29,7 @@ int main(int argc, char** argv)
         require(argc == 4, "expected GLB, staging and temporary output directory");
         const std::filesystem::path source = argv[1], temporary = argv[3];
         const auto staging = pawapuro::load_batting_staging(argv[2]);
-        const auto glb = engine::read_static_glb(source);
+        const auto glb = engine::read_mesh_glb(source);
         require(glb.mesh_name == "PitcherMesh" && glb.mesh_node_name == "PitcherMesh", "mesh identity");
         require(glb.nodes.size() == 15 && glb.source_vertex_count == 2362 && glb.triangles.size() == 11808,
             "official sample node/vertex/triangle counts");
@@ -110,8 +110,22 @@ int main(int argc, char** argv)
         const std::uint16_t invalid_index = 65535;
         std::memcpy(corrupt.data()+bin+94480,&invalid_index,2);
         fails(fixture("invalid-index.glb",corrupt),"invalid accessors, indices or hierarchy");
+        require(bin+118928+8<original.size(),"sample skin/timeline BIN layout changed");
+        corrupt=original; corrupt[bin+47240]=static_cast<char>(255);
+        fails(fixture("invalid-joint.glb",corrupt),"invalid joint index/weight");
+        corrupt=original; const float negative=-0.5f;
+        std::memcpy(corrupt.data()+bin+56688,&negative,4);
+        fails(fixture("negative-weight.glb",corrupt),"invalid joint index/weight");
+        corrupt=original; const float half=0.5f;
+        std::memcpy(corrupt.data()+bin+56688,&half,4);
+        fails(fixture("bad-weight-sum.glb",corrupt),"weight sum/nonzero influence count");
+        corrupt=original; std::memcpy(corrupt.data()+bin+118096,&nan,4);
+        fails(fixture("nonfinite-inverse-bind.glb",corrupt),"invalid inverse bind matrix");
+        corrupt=original; const float zero=0;
+        std::memcpy(corrupt.data()+bin+118928+4,&zero,4);
+        fails(fixture("unordered-time.glb",corrupt),"animation times must be finite and strictly increasing");
         std::cout << "Static pitcher: official subset, finite geometry/color, 3936 triangles, bind hierarchy, "
-            "basis/winding, scale=1, staging placement/grounding, ball/overlay isolation and 5 failures passed.\n";
+            "basis/winding, scale=1, staging placement/grounding, ball/overlay isolation and 10 failures passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n'; return 1;
