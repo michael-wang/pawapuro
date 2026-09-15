@@ -686,3 +686,34 @@ Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，
   - `pitcher.toml`：`f5206448621d7bcd5cb1e43c2327ff23bbc4815801eb2789e93cbaf4712aeaf0`
 
 證據 JSON／logs 留在忽略的 `build/pitcher-s02b-promotion/`。本次未新增影片觀看、正常速度播放自看、runtime／GPU／C++ 測試，不把此前未完成項目補寫為完成。沒有 production C++／renderer／staging 變更。完成後停止，等待下一個授權。
+
+
+### S0.2C Follow-through／Rotation／Rear-Foot Recovery（2026-09-15）
+
+實際 cwd `C:/astra-dev/pawapuro`；起始 branch main、HEAD／main／origin/main／live remote 均為 `55489a9c46b947903da79e6435d586ecad471a02`，工作樹乾淨。Before 是正式三檔的 byte copy，保存在忽略的 `build/pitcher-s02c/before/`；沒有從 review/s02b 重新開始或執行舊 revision scripts。`revise_follow_through.py` 僅對 source S0.2B hash 作一次局部 98–205 編輯。先渲染一版候選的兩視角十格局部 pose，再選定相同 bytes 到 review/s02c，才完整匯出及渲染最終影片；沒有反覆重渲整包。
+
+| 實際驗證 | 結果 |
+|---|---|
+| 1–97 全 13 bones／2362 vertices、protected keys | 矩陣／mesh 最大差 0，keys exact；原 1e-6 容差。 |
+| 左腳全段、mesh／weights／rest／hierarchy／camera／timeline／contacts | 左腳矩陣差 0；常數 exact。正式三檔與 before bytes 相同。 |
+| A／B 回歸 | Closed Ready front −X、default frame 1；clasp q 0.416656 < 0.8；f79 glove cosine 0.999962 > 0.98。 |
+| B 右臂 deformation | 全段 ring 半徑最小比例 0.347049 > 原 0.25；每格每圈與 baseline 半徑最大差 4.767e-7 m < 1e-6，weights 未改。 |
+| Grip／骨長／motion | 固定 binding 矩陣最大差 5.734e-7；既有骨長、head proxy、opening 順序與 release 方向 assertions 全通過。C revision 沒有跳過原 checks。 |
+| 右腳 world/game landing | f171：R Z 16.476601 m、L Z 16.850599 m，差 −0.373999 m。R X −0.410 m、L X 0.3675 m。 |
+| Contact support | R 86–170 離地底部最小 0.001550 m > 1e-6；171–205 底部誤差 0、world translation slide 0。原左腳 contact 不變。 |
+| Chest 續轉＋前折 | yaw f97 −25° → f144 −108.965° → f205 −65°；前折 f97 28° → f127 56.322° → f205 8°。Pelvis／head 不同時序。 |
+| Release 接點 | Grip 97→98→99 速度 12.709／7.809／8.740 m/s；baseline 12.709／7.737／8.551，既有 release 速度對比保留，沒有新增 hold。 |
+| Khronos validator | 0 errors／warnings／infos／hints。 |
+| Source／GLB／round-trip | GLB mesh 最大差 1.283923e-6 m；round-trip mesh 1.744900e-6 m、grip 1.660393e-6 m；release alignment 5.454740e-7 m。全部在原 0.1 mm 容差內。 |
+
+`check_ready_lift.py --scope follow-through` 增加 sample-specific C 分支，原 A／B assertions 不刪改；舊 B scope 亦實際重跑 PASS。`inspect_motion.py` 新增 lean 觀測值並讓 C 執行原 assertions。沒有放寬 tolerance、新增 dependency 或 framework。Candidate export 讀取已存檔 source，未重新保存；來源與匯出 hashes 由 TOML／validator 核對。
+
+Candidate SHA256：
+
+- blend：`8b76ae4a40377fa07021ebdf18c98b3bd73dddf132154961fbcf7131c63c3bca`
+- GLB：`c151f41798432c777464beea590b9ea5241e019cfb88bff6a99b9b2b1092d038`
+- TOML：`9c982e1486642cc54d7071aa832bd4a0f720d75c113f56b7ecdc9f31cc55cf21`
+
+Evidence 在 `build/pitcher-s02c/`，影片／renders／logs 不提交。四支 MP4 以既有 Blender decoder 核對 60 fps、repeat=1／playback=1×：完整 side／batting 為 205 顯示 frames、3.416667 s、首格 1；before／after 收勢各 109 frames、1.816667 s、97–205。沒有拉伸時間或新增 0.25×。已檢視兩視角局部／最終 contact sheets、release 97–108 與 landing 164–176 連續格、全段抽樣與等比例 world top diagnostic；正常速度播放自看未完成，不把 decoder 檢查寫成觀看。
+
+視覺限制：斜側面中段約 115–160 的右臂部分被 torso 遮擋，深色雙鞋近接時分離度有限；batting-view 原畫面人物小，sheet 只作固定 crop 放大。數值／proxy 不保證完整 self-collision 或人類重量感。沒有調 camera、比例、lighting、場地或 Native pitch 初始條件；沒有 production C++／HLSL／renderer／staging 變更，沒有 runtime／GPU／C++ build 測試。C 尚待 Michael＋Julia review，正式 S0.2B 不覆寫，停止於 gate、不進入 S1。

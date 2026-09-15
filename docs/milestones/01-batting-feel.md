@@ -174,3 +174,10 @@ S0 通過後仍須另行授權 S1：只把單一 GLB 的靜態姿勢接入 app�
 已交付獨立右臂／手套 candidate、f77／79／81 兩角度比較、Ready／coil 回歸、手套姿勢與正常速度預覽。Michael 對左腳抬起／蓄力連動的接受已記錄，逐格保護未改。Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。
 
 既有匯出／motion 檢查與 B 的區段保護均通過；正常速度播放自看與 runtime／GPU 測試未完成。證據入口見 [pitcher README](../../pawapuro/batting/pitcher/README.md)，實測見 environment。Promotion 後既有驗證再次通過，保留 review/s02b 作為歷史驗收 artifact。完成後停止，等待下一個授權。
+
+
+### S0.2C：Follow-through Rotation＋Rear-Foot Recovery
+
+已從正式 `55489a9c` 的 S0.2B 完成局部 candidate（`review/s02c/`），正式資產不覆寫。1–97 的 keys／bones／mesh 保護與 A／B 回歸通過；後段增加軀幹續轉／前折與右腳前移，最終右足心比左足心更靠本壘約 0.374 m。保持 205 格，右腳在 171 接地並保留後續回穩時間。交付正常速度 before／after、兩視角完整影片、接點／落地 contact sheets 及俯視診斷。
+
+數值驗證通過不等於人類動作接受。正常速度播放自看、runtime／GPU 測試未完成；C 的旋轉與重量感、手臂遮擋、後腳落地及最終平衡等待 Michael＋Julia review。A／B 已接受及正式 promotion 的狀態不變。完成後停止，不 promotion C、不進入 S1、不宣告整支投球或 M1 通過。

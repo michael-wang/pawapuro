@@ -1,4 +1,4 @@
-"""Sample-specific A/B comparisons; each scope retains its own protection rules."""
+"""Sample-specific A/B/C comparisons; each scope retains its own protection rules."""
 import argparse
 import hashlib
 import json
@@ -10,7 +10,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 p=argparse.ArgumentParser()
-p.add_argument('--scope',choices=('ready-lift','arm-glove'),default='ready-lift')
+p.add_argument('--scope',choices=('ready-lift','arm-glove','follow-through'),default='ready-lift')
 p.add_argument('--before',type=Path,required=True)
 p.add_argument('--after',type=Path,required=True)
 p.add_argument('--output',type=Path,required=True)
@@ -35,7 +35,7 @@ def snapshot(path):
         for strip in layer.strips:
             for bag in strip.channelbags:
                 for fc in bag.fcurves:
-                    keys.append((fc.data_path,fc.array_index,[(list(k.co),k.interpolation) for k in fc.keyframe_points if k.co.x>=72]))
+                    keys.append((fc.data_path,fc.array_index,[(list(k.co),k.interpolation) for k in fc.keyframe_points if (k.co.x<=97 if a.scope=='follow-through' else k.co.x>=72)]))
     rows={}; containment=[]
     default_frame=s.frame_current
     for f in range(1,206):
@@ -66,8 +66,70 @@ def snapshot(path):
     return constants,keys,rows,containment,list(rot@Vector((0,0,-1))),default_frame
 
 expected='18894d26d6b2bc29aa2ff2e2a58c3479cf17eb9e1361890f8c8b2e3c2dedadcb' if a.scope=='arm-glove' else '562f1237a3066c89eb0ccb88423e0b227c7c02861b1b014ed9f222be30a11be0'
+if a.scope=='follow-through': expected='b3dcccd38ad7c216b18ccb69b4a664240051de0b988618f449737611748dd366'
 assert hashlib.sha256(a.before.read_bytes()).hexdigest()==expected, 'Wrong baseline for selected scope'
 before=snapshot(a.before);after=snapshot(a.after)
+
+if a.scope=='follow-through':
+    # All original A/B constants stay exact, including B's weights and rest roll.
+    assert before[0]==after[0], 'Mesh/weights/rest/hierarchy/camera/timing/contacts changed'
+    assert before[1]==after[1], 'Protected keys at or before release changed'
+    def position(data,f,n):
+        m=data[2][f]['bones'][n];return Vector((m[3],m[7],m[11]))
+    matrix_error=max(abs(x-y) for f in range(1,98) for n in before[2][f]['bones'] for x,y in zip(before[2][f]['bones'][n],after[2][f]['bones'][n]))
+    mesh_error=max((Vector(x)-Vector(y)).length for f in range(1,98) for x,y in zip(before[2][f]['mesh'],after[2][f]['mesh']))
+    left_error=max(abs(x-y) for f in range(1,206) for x,y in zip(before[2][f]['bones']['foot_L'],after[2][f]['bones']['foot_L']))
+    assert matrix_error<1e-6 and mesh_error<1e-6 and left_error<1e-6, 'Protected evaluated motion changed'
+    assert after[4][0]<-.99999 and abs(after[4][2])<1e-5 and after[5]==1, 'Closed Ready/default frame changed'
+    assert max(after[3])<.8, 'Clasp ball containment changed'
+    direction=B.inverted()@(position(after,79,'hand_L')-position(after,79,'arm_L'))
+    home_cos=-direction.z/math.hypot(direction.x,direction.z)
+    assert home_cos>.98, 'B glove direction regressed'
+    binding=max(abs(x-y) for f in range(1,206) for x,y in zip(before[2][f]['grip_binding'],after[2][f]['grip_binding']))
+    assert binding<1e-5, 'Fixed grip binding changed'
+    ratios={};before_ratios={}
+    for label,data,target in [('before',before,before_ratios),('after',after,ratios)]:
+        for f in range(1,206):
+            rings=[]
+            for ring in range(13):
+                vs=[Vector(v) for v in data[2][f]['mesh'][2050+ring*12:2050+(ring+1)*12]]
+                centre=sum(vs,Vector())/12
+                radius=2.45*(.055*(1-ring/12)+.04*ring/12)
+                rings.append(min((v-centre).length for v in vs)/radius)
+            target[f]=rings
+    assert min(min(v) for v in ratios.values())>.25, 'Right tube ring collapsed'
+    # Common rigid carry should preserve every B ring radius, not merely pass a low threshold.
+    radius_delta=max(abs(x-y)*2.45*(.055*(1-i/12)+.04*i/12) for f in ratios for i,(x,y) in enumerate(zip(ratios[f],before_ratios[f])))
+    assert radius_delta<1e-6, 'B right-arm deformation regressed under carry'
+    placement=Vector(before[0]['placement'])
+    final={n:list(B.inverted()@position(after,205,n)+placement) for n in ('foot_R','foot_L')}
+    assert final['foot_R'][2]<final['foot_L'][2], 'Right foot must land closer to home'
+    # Existing inspect_motion checks evaluated sole support in/out of these intervals.
+    landing=json.loads(after[0]['contacts'])['foot_R'][-1][0]
+    slide=max((position(after,f,'foot_R')-position(after,landing,'foot_R')).length for f in range(landing,206))
+    assert slide<1e-6, 'Right foot slides after landing'
+    def yaw(data,f,n):
+        flat=data[2][f]['bones'][n];m=Matrix([flat[i:i+4] for i in range(0,16,4)])
+        rest=Matrix([data[0]['bones'][n][0][i:i+4] for i in range(0,16,4)])
+        forward=B.inverted()@(m.to_3x3()@rest.to_3x3().inverted())@B@Vector((0,0,-1))
+        return math.degrees(math.atan2(-forward.x,-forward.z))
+    chest={f:yaw(after,f,'chest') for f in range(97,206)}
+    assert min(chest.values())<chest[97]-10, 'No continued chest rotation after release'
+    added=[f for f in range(1,206) if after[2][f]['left_arm_head_q']<1 and before[2][f]['left_arm_head_q']>=1]
+    assert not added, 'New glove-arm/head proxy intrusion'
+    boundary={label:{n:[{'frame':f,'speed_mps':(position(data,f,n)-position(data,f-1,n)).length*60} for f in range(94,106)] for n in ('chest','grip','foot_R')} for label,data in [('before',before),('after',after)]}
+    report={'status':'PASS','scope':a.scope,'before_sha256':expected,'after_sha256':hashlib.sha256(a.after.read_bytes()).hexdigest(),
+            'protected_frames':[1,97],'protected_keys_exact':True,'constants_including_weights_exact':True,
+            'protected_bone_matrix_max_abs':matrix_error,'protected_mesh_max_m':mesh_error,'left_foot_matrix_max_abs':left_error,
+            'matrix_and_mesh_tolerance':1e-6,'grip_binding_matrix_max_abs':binding,'clasp_q_max':max(after[3]),
+            'ready_front_game':after[4],'glove_home_cosine_f79':home_cos,'right_ring_min_ratio':min(min(v) for v in ratios.values()),
+            'right_ring_radius_max_delta_m':radius_delta,'right_final_contact_frame':landing,'final_feet_game_m':final,
+            'right_minus_left_game_z_m':final['foot_R'][2]-final['foot_L'][2],'right_contact_slide_m':slide,
+            'chest_release_yaw_deg':chest[97],'chest_min_yaw_deg':min(chest.values()),'chest_min_yaw_frame':min(chest,key=chest.get),
+            'boundary_speeds':boundary,'normal_speed_visually_reviewed':False,'runtime_verified':False}
+    a.output.write_text(json.dumps(report,indent=2),encoding='utf-8')
+    print(json.dumps({k:v for k,v in report.items() if k!='boundary_speeds'},indent=2))
+    sys.exit(0)
 
 if a.scope=='arm-glove':
     def pos(data,f,n):

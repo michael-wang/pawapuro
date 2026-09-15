@@ -2,6 +2,47 @@
 
 2026-09-15：Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。
 
+## S0.2C candidate：Follow-through Rotation／Rear-Foot Recovery
+
+正式 S0.2B（`55489a9c46b947903da79e6435d586ecad471a02`）保持不變；本版可編輯來源及匯出為 `review/s02c/pitcher.blend`／GLB／TOML。**C 尚待 Michael＋Julia human review；不自動 promotion，不進入 S1。** A／B 的既有接受仍有效，不代表整支投球或 M1 通過。
+
+先看忽略目錄 `build/pitcher-s02c/`：
+
+- `before-follow-side.mp4`／`after-follow-side.mp4`：正式 S0.2B／C 同一斜側面，97–205，1×／60 fps，各 109 frames／1.816667 s。
+- `after-full-side.mp4`／`after-full-batting.mp4`：完整 1–205，首格 Ready，1×／60 fps，各 205 顯示 frames／3.416667 s；GLB clip time 仍為 0–3.4 s。
+- `follow-before-after.jpg`／`follow-batting.jpg`：97／108／137／151／171／205，frame／clip time 標示；固定 crop 放大原 camera raster，沒有改 camera。
+- `top-diagnostic.jpg`：evaluated pelvis／chest 朝向、肩線、足心 world/game positions 與 −Z 本壘方向；鞋輪廓是 footprint guide，不是碰撞測試，也沒有新增保存的 camera。
+- `release-continuous.jpg`、`landing-continuous.jpg`、`full-overview.jpg`：release 接點、落地前後連續格與全段抽樣。
+
+### C 修改與結果
+
+`revise_follow_through.py` 只讀目前正式 S0.2B，核對 hash，拒絕覆寫既有 candidate。僅寫 frames 98–205 的局部 TRS；沒有呼叫任何舊 generator／revision script。Pelvis 的額外轉動較早、chest 繼續帶過；前移與右腳空中向前路徑重疊，落地後身體逐漸回穩。頭部轉動較小；雙臂沿原局部收勢隨胸口整體帶動，保留 B 的 roll／weights 品質，沒有重新設計副手。
+
+- Chest yaw：release −25.000° → f144 −108.965° → f205 −65.000°；前折從 release 28° 到 f127 約 56.322°，最後回到 8°。Pelvis／head 使用不同曲線及時序，不是全部同步轉動。
+- 最終右足心 world/game Z **16.476601 m**、左足心 **16.850599 m**；右腳比左腳更靠本壘 **0.373999 m**。右腳 X −0.410 m，左腳 X 0.3675 m；沒有再拉成大跨步。
+- 沿用已接受的右腳離地高度／鞋底旋轉，增加與軀幹重疊的前移。實測 landing 仍為 f171，因此 source contacts 維持右腳 1–85／171–205、左腳 1–17／79–205；沒有假造新接觸時間。離地底部最小 0.001550 m，171–205 底部誤差與 world translation slide 均 0。
+- 不延長 clip：171 落地後仍有 34 格軀幹／頭／手回穩；最後姿勢沒有用複製 hold 補長。Release 97、grip binding、release alignment、camera／scale／staging 全部保留。
+
+### C 匯出與驗證
+
+沿用既有 `$Blender`／`$Pitcher` 路徑（見下方 B 操作）。僅在明確保存 candidate 編輯後才 export；日常 export 不執行 revision script：
+
+```powershell
+$Candidate = "$Pitcher/review/s02c"
+$Evidence = 'C:/astra-dev/pawapuro/build/pitcher-s02c'
+& $Blender --background --factory-startup "$Candidate/pitcher.blend" --python-exit-code 1 --python "$Pitcher/export_sample.py" -- --evidence $Evidence
+& 'C:/astra-dev/tools/gltf-validator-2.0.0-dev.3.10/gltf_validator.exe' -o -a "$Candidate/pitcher.glb" > "$Evidence/validator.json"
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/verify_sample.py" -- --asset-dir $Candidate --evidence $Evidence
+& $Blender --background --factory-startup "$Candidate/pitcher.blend" --python-exit-code 1 --python "$Pitcher/inspect_motion.py" -- --output "$Evidence/motion-audit.json"
+& $Blender --background --factory-startup --python-exit-code 1 --python "$Pitcher/check_ready_lift.py" -- --scope follow-through --before "$Evidence/before/pitcher.blend" --after "$Candidate/pitcher.blend" --output "$Evidence/local-comparison.json"
+```
+
+C scope 比較 1–97 全 bones／mesh／keys 與左腳全段，原 1e-6 容差不變；實測皆 0。Weights／rest／mesh／camera／marker 常數完全相同。保留 A 藏球／Closed Ready、B 手套方向及 ring checks，並檢查後足 Z、落地 slide、chest 續轉；沒有把合法的 release 後 motion 誤判成全段 mesh 差值失敗。`inspect_motion.py` 對 C 仍執行全部原 assertions。舊 B scope 也重跑通過。
+
+已檢視最終兩視角 contact sheets、release／landing 連續格、全段抽樣及俯視診斷。編碼後用既有 decoder 核對四支影片 60 fps、frame count、首尾 frame 與 1×，**未完成正常速度播放自看**；不能用逐格或 decoder 檢查取代 human motion review。斜側面約 115–160 部分右臂被 torso 遮擋，兩隻深色鞋接近時分離度有限；原始 batting-view 人物較小。這些可讀性、整體重量感及最後平衡仍須 Michael＋Julia 判定。沒有 runtime／GPU／C++ 測試，沒有修改 production／renderer／staging。
+
+具體匯出誤差、hash 與驗證入口見 [environment](../../../docs/development/environment.md#s02c-follow-throughrotationrear-foot-recovery2026-09-15)。
+
 ## S0.2B：先看這些
 
 證據在忽略的 `build/pitcher-s02b/`：

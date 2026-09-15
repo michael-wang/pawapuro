@@ -275,3 +275,12 @@ Authoring 使用分開的 shape-preserving 曲線；投球階段以 FK 方向的
 Michael 接受「抬腳尤其左腳現在很棒」：保留該左腳／蓄力連動，不擴大解讀為整支投球通過。本輪固定整段 body／head／feet 與右手／grip 軌跡，僅修右臂 tube 的 pose roll／局部 weights，以及左臂 50–96 的展開／指向／回收。手套指向以 world game −Z 為準，不用 chest-local forward；97 起接回既有左臂。LBS／rest／hierarchy／topology、唯一 release marker、camera、staging／Native 物理均不變。
 
 兩個局部策略比較後，選用協調 roll 加肘附近有限混合 weights；不新增骨骼／solver／corrective shapes，也不換 skinning。Saved source candidate 與操作入口由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。Michael＋Julia 已接受 A 的 Closed Ready、藏球與左腳／蓄力連動，以及 B 的右臂 deformation 修正與跨步手套朝本壘。正式三檔已由接受的 review/s02b 原樣複製升至 S0.2B。C 的 release 後軀幹續轉／前折、右腳跟進並落在比左腳更靠本壘的位置、完整 follow-through／recovery 仍待處理及 review。S1 未開始，整支 pitch motion 與 M1 尚未通過。 `review/s02b/` 保留驗收基準。
+
+
+### S0.2C Follow-through／Rear-Foot Recovery candidate
+
+以已正式 promotion 的 S0.2B 為 baseline，只修改 release 97 之後：pelvis 較早延續開轉，chest 帶動原局部手臂收勢並繼續旋轉／前折，頭部較小幅跟隨；身體前移與右腳空中跟進重疊，最後右腳比固定左腳更靠本壘。保留 detached feet，不加入 IK／grounding／solver；不是分開補一段胸口轉動與一段腳滑行。
+
+本候選維持 1–205、60 fps、release 97；1–97 的 evaluated bones／mesh、左腳全段、B weights／rest／hierarchy、camera／scale／staging／Native 球路不變。右腳實際仍在 171 落地，contact metadata 保留原區間；171 後身體繼續回穩，不增加 idle hold。局部數值與畫面入口見 pitcher README／environment。
+
+`review/s02c/` 是待 Michael＋Julia review 的 candidate，正式三檔仍為已接受的 S0.2B。C 不自動升版；沒有進入 S1，整支 pitch motion 與 M1 尚未通過。
