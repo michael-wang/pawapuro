@@ -21,29 +21,29 @@ BarrelApproach closest_barrel_point(DirectX::XMFLOAT3 c,BatBarrelSample b)
     const double dx=double(c.x)-q.x,dy=double(c.y)-q.y,dz=double(c.z)-q.z;
     return {q,u,std::sqrt(dx*dx+dy*dy+dz*dz)};
 }
-ContactSample sample_contact(const BallState& initial,double release,const BatterMotion& batter,double time,engine::GlbPose& scratch)
+ContactSample sample_contact(const BallState& initial,double release,const BatterMotion& batter,double time,engine::GlbPose& scratch,double phase_offset)
 {
-    const auto ball=sample_reference_pitch(initial,time-release);const auto bat=batter.sample_barrel(time,scratch);
+    const auto ball=sample_reference_pitch(initial,time-release);const auto bat=batter.sample_barrel(time+phase_offset,scratch);
     return {time,ball,bat,closest_barrel_point(ball.position_m,bat)};
 }
-ContactProbe probe_contact(const BallState& initial,double release,const BatterMotion& batter,unsigned refinement)
+ContactProbe probe_contact(const BallState& initial,double release,const BatterMotion& batter,unsigned refinement,double phase_offset)
 {
     if (refinement!=32 && refinement!=64 && refinement!=128) throw std::runtime_error("Contact study supports fixed 32/64/128 refinements.");
     const double marker=static_cast<double>(batter.contact_area_tick)/pitch_hz;
     const double low=marker-8.0/pitch_hz,high=marker+8.0/pitch_hz;
     if (low<release || high>static_cast<double>(batter.end_tick)/pitch_hz) throw std::runtime_error("Contact window outside flight/clip.");
     engine::GlbPose scratch;
-    auto best=sample_contact(initial,release,batter,low,scratch);
+    auto best=sample_contact(initial,release,batter,low,scratch,phase_offset);
     constexpr unsigned coarse=16*16;
     const double step=(high-low)/coarse;
     unsigned index=0;
     for (unsigned i=1;i<=coarse;++i) {
-        const auto candidate=sample_contact(initial,release,batter,low+i*step,scratch);
+        const auto candidate=sample_contact(initial,release,batter,low+i*step,scratch,phase_offset);
         if (candidate.approach.distance_m<best.approach.distance_m) {best=candidate;index=i;}
     }
     const double a=low+(index?index-1:0)*step,b=low+std::min(index+1,coarse)*step;
     for (unsigned i=0;i<=refinement;++i) {
-        const auto candidate=sample_contact(initial,release,batter,a+(b-a)*i/refinement,scratch);
+        const auto candidate=sample_contact(initial,release,batter,a+(b-a)*i/refinement,scratch,phase_offset);
         if (candidate.approach.distance_m<best.approach.distance_m) best=candidate;
     }
     return {best,low,high,refinement,best.preview_time_s==low || best.preview_time_s==high};

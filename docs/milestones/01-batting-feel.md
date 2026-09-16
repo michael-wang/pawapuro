@@ -216,4 +216,7 @@ Debug／Release build 與 CTest 各 5/5，含 delivery 邊界、20 replay、30�
 Bat Contact S0 bounded continuous closest-approach probe 已獲 Michael＋Julia acceptance。Debug／Release 各 9/9 CTest 與本輪 actual Debug app／GPU validation 通過；數值與限定 geometry 意義由 batter README 維護。本輪不決定 hit／miss、半徑、response 或 input timing，M1 未完成。
 
 
-Bat Contact S1 first continuous contact event candidate 已交付、待 Michael＋Julia review。第一 envelope／one-shot event 不改球；Debug／Release 各10/10 CTest、20 replay／30/60/120、actual app／GPU regression 通過。數值與 evidence 見 batter README；本輪不進入 response、sweet spot 或 player input，M1 未完成。
+Bat Contact S1 first continuous contact event 已獲 Michael＋Julia acceptance。第一 envelope／one-shot event 不改球；Debug／Release 各10/10 CTest、20 replay／30/60/120、actual app／GPU regression 通過。數值與 evidence 見 batter README；本輪不進入 response、sweet spot 或 player input，M1 未完成。
+
+
+Bat Contact S2 timing-to-contact geometry map 已完成，待Michael＋Julia review：offline phase sweep、五例diagnostic與一次local refinement；Debug／Release各11/11 CTest、20 replay／30/60/120 map一致、正式runtime state不變。較超前側Contact到+60 ms仍未結束，未超出授權範圍繼續搜尋。Response／sweet spot／player input未開始，M1未完成。

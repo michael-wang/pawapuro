@@ -11,7 +11,8 @@ struct BatContact {
 };
 // Fixed substeps bracket first entry, then 24 bisections retain the inside end.
 // Contract is the current smooth accepted clip/window, not arbitrary-motion CCD.
+// Only offline study supplies phase offset: clip time = preview time + offset.
 std::optional<BatContact> first_bat_contact(const BallState& initial,double release_time_s,
     const BatterMotion& batter,BatContactEnvelope envelope,double interval_start_s,double interval_end_s,
-    unsigned substeps=64);
+    unsigned substeps=64,double diagnostic_phase_offset_s=0);
 }

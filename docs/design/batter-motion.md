@@ -1,6 +1,6 @@
 # Batter Motion S0 — Reference Study & Motion Brief
 
-2026-09-16｜Motion Brief 已獲 Michael＋Julia review accepted。Batter Authoring S0 已獲 Michael＋Julia human review accepted；Batter Runtime S1 static import 已 human accepted；S2 synchronized swing playback 已獲 Michael＋Julia human acceptance。Bat Contact S0 geometry study 已接受，contact_area 仍非 collision truth。S1 continuous contact event candidate 待 review；response／contact presentation 尚未開始，S2 不定義正式玩家 input timing。
+2026-09-16｜Motion Brief 已獲 Michael＋Julia review accepted。Batter Authoring S0 已獲 Michael＋Julia human review accepted；Batter Runtime S1 static import 已 human accepted；S2 synchronized swing playback 已獲 Michael＋Julia human acceptance。Bat Contact S0 geometry study 已接受，contact_area 仍非 collision truth。S1 continuous contact event 已接受；S2 phase-offset study 待 review，正式runtime仍為offset0；response／contact presentation 尚未開始，S2 不定義正式玩家 input timing。
 
 ## Reference scope／provenance
 
@@ -129,7 +129,7 @@ Evidence 留在 ignored `build/batter-motion-s0-study/supplement/`：`pitcher-re
 - **已補足（supplemental observations）**：原 brief 缺少投打同步準備的直接證據；本片支持 early leg lift 時 mostly ready、投手前移／arm loads 時 late gather、plant 先於主加速。出手附近的 stride／下降只支持一個跨 release 的窗口，不支持 exact phase locking。
 - **仍未知**：原遊戲 authoritative timing／FPS 與 f166–170 near-hold 原因；supplemental 的原始拍攝／播放倍率；精確 foot-contact tick、world-space 零滑動、Pawapuro 應採的 lift 幅度／phase 時長。沒有直接將 capture 秒數換算成 authoring keys。
 - Pelvis 相對 chest 的精確發動差、精確 plant tick、收勢另一手是否放開與最終 rear-foot 接觸狀態，單視角／遮擋不足以查證；首版候選不為這些未知新增系統。
-- **Brief 與 S0 authoring baseline 已接受**：compact Ready、late gather、lift／short stride、plant before acceleration、body turn→hands／bat lag、短促加速、contact-area pass 與完整 finish 均獲 Michael＋Julia 接受。S1 static transport／placement／attachment／grounding／composition 已接受；S2 同步 swing playback 亦已 human accepted；Bat Contact S0 probe 已接受，S1 第一 envelope／continuous event candidate 待 review，尚未定義 response／sweet spot 或正式 input timing。
+- **Brief 與 S0 authoring baseline 已接受**：compact Ready、late gather、lift／short stride、plant before acceleration、body turn→hands／bat lag、短促加速、contact-area pass 與完整 finish 均獲 Michael＋Julia 接受。S1 static transport／placement／attachment／grounding／composition 已接受；S2 同步 swing playback 亦已 human accepted；Bat Contact S0 probe 已接受，S1 第一 envelope／continuous event 已接受；S2只作phase-offset geometry study，尚未定義 response／sweet spot 或正式 input timing。
 - **不需新增 Character Motion Rule**：support／detached coordination 是 Rule 1／2，器材 lag 是 Rule 3，elastic arm 是 Rule 4，持棒是 Rule 5，follow-through／finish 是 Rule 6。此 caller 沒有暴露無法涵蓋的新 Motion Truth。
 
 Evidence：ignored `build/batter-motion-s0-study/` 的 `reference-timeline.jpg`、`pre-contact-sequence.jpg`、`contact-area-sequence.jpg`、`follow-through-hero-sequence.jpg`，全部標 source timestamp／0-based frame；crop 僅為看清打者，cut 前後仍是不同 source camera。原片不複製進 repo，影格／解碼腳本／metadata 留在 build、不 commit。

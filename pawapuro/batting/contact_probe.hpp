@@ -16,7 +16,7 @@ struct ContactSample {
     BarrelApproach approach;
 };
 ContactSample sample_contact(const BallState& initial,double release_time_s,const BatterMotion& batter,
-    double preview_time_s,engine::GlbPose& scratch);
+    double preview_time_s,engine::GlbPose& scratch,double diagnostic_phase_offset_s=0);
 struct ContactProbe {
     ContactSample minimum;
     double window_start_s=0,window_end_s=0;
@@ -25,7 +25,7 @@ struct ContactProbe {
 };
 // One bounded marker +/- 8-tick window. Fixed 16/tick coarse grid, then a
 // fixed subdivision of the two coarse cells adjacent to the best sample.
-ContactProbe probe_contact(const BallState& initial,double release_time_s,const BatterMotion& batter,unsigned refinement);
+ContactProbe probe_contact(const BallState& initial,double release_time_s,const BatterMotion& batter,unsigned refinement,double diagnostic_phase_offset_s=0);
 struct ContactVelocity {
     DirectX::XMFLOAT3 bat_point,relative;
 };

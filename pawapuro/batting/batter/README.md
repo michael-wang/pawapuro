@@ -286,7 +286,7 @@ Velocity 用 minimum 的 **固定 u material point**，以 ±0.1 ms central diff
 
 ## Bat Contact S1 — first continuous contact event candidate
 
-**已實作，待 Michael＋Julia review。** 從 accepted S0 query 接入一次性的 authoritative sphere–capsule contact detection。只記錄第一次進入 envelope，不改 ball trajectory／ownership、animation、camera、arrival 或完成時間。Sweet spot、response、exit velocity／spin／hit quality 與 player input 均未開始；不增加 Motion Rule。
+**Bat Contact S1 已獲 Michael＋Julia acceptance。** 從 accepted S0 query 接入一次性的 authoritative sphere–capsule contact detection。只記錄第一次進入 envelope，不改 ball trajectory／ownership、animation、camera、arrival 或完成時間。Sweet spot、response、exit velocity／spin／hit quality 與 player input 均未開始；不增加 Motion Rule。
 
 ### Gameplay Data／owner
 
@@ -346,3 +346,57 @@ Normal 是 **closest capsule axis point Q → ball center C**。以下為 game-w
 - Ignored `build/bat-contact-s1/` 保存 `contact-release.log`、Debug／Release CTest／build logs、`debug.log`、`debug-smoke.json`、actual `debug-contact/0477..0481.png`、`regression-evidence.json`。不重製影片或新增 runtime overlay。
 
 Repo root 重現數值：`build/release/bat_contact_test.exe pawapuro/batting pawapuro/batting/staging.toml`。App 原 Space／P／`.` controls 不變；首次 contact 僅輸出 `BatContact:` 一行（time／fractional tick／u／normal／velocities），event 可直接由 Native owner 讀取。完成後停止，等待 review；不做 contact response。
+
+
+## Bat Contact S2 — timing-to-contact geometry map（2026-09-17）
+
+**Read-only study 已完成，待 Michael＋Julia review。** S1 已接受的 truth 是現行 synchronization 產生一次 continuous contact：first time 約1.994995922549 s／tick478.799、70 mm envelope、約1.535 ms overlap，事件不改球。Sweet spot、hit quality、response、player timing window 仍未定；本節不授權它們。
+
+### 範圍／取樣與重現
+
+同一份 pitch initial state、正式 swing_L、37／33 mm envelope；只在 non-mutating query 使用 `batter_sample_time = preview_time + diagnostic_phase_offset_s`。正值表示同一 pitch time 下打者 phase 超前，負值落後，**不是 player input delay**。正式 BattingPreview 不傳此 study 參數，維持 offset=0；沒有快捷鍵、Data override 或 runtime retiming。
+
+Reuse S1 的 first-entry detection、surface material-point velocity、64 substeps＋24 bisections；S0 minimum query 同樣只偏移 bat sample。Ball absolute time／release-relative time不變，first-contact time 不直接加減 offset，而由相遇幾何求得。Surface velocity 的 ±0.1 ms samples 也套相同 phase，避免取錯 motion phase。`normal closing speed = −dot(ball_velocity − bat_surface_velocity, normal)`，正值為靠近；不是 relative speed 的長度，也不是 exit velocity。
+
+離線 `contact_phase_test` 先檢查 offset0 的 S1 time／u／normal，並與正式 runtime event 全欄位 exact 比對，成功才 sweep。第一輪 **−40..+40 ms、2 ms、41 samples**；+40仍 Contact，因此依授權擴為 **−60..+60 ms、2 ms、61 samples**。+60仍 Contact，**較超前側的外緣尚未找到；不擴到更大範圍**。每個 offset 的時間搜尋仍為 preview ticks472–488，各 minimum 均非時間窗邊界。
+
+只對粗掃描發現 normal.y 轉正的 **+16..+26 ms** 做一次 **0.5 ms／21 samples** refinement；沒有 optimizer、第二個局部搜尋或挑選正式 timing。
+
+Repo root 重現（使用既有 build；不需要 Blender 或新 dependency）：
+
+```powershell
+& build/release/contact_phase_test.exe pawapuro/batting pawapuro/batting/staging.toml build/bat-contact-s2 16 26
+```
+
+### Map 結果與邊界
+
+- **已取樣 Contact：−8..+60 ms**；已取樣 NoContact：−60..−10 ms。落後側的 transition 只定位在 **(−10,−8] ms**：−10的 minimum為70.335663 mm，−8為64.655560 mm。沒有另做邊界 optimizer，不能把−8當精確 threshold。超前側的 NoContact boundary 未知；+60的 minimum仍為55.953163 mm。
+- First-contact u 在−8..+10的2 ms samples都是0；**+12..+52為interior**，由約0.0094移向0.9282；+54..+60為tip endpoint u=1。這是接觸位置，**不是 sweet-spot score**。
+- normal.y 隨超前 phase由負轉正；coarse +18為−0.002623、+20為+0.029230。唯一 local refinement 將零點夾在 **+18.0（−0.002623）與+18.5（+0.005302）ms**，這時u已約0.087–0.094。
+- 因而 coarse **+20..+52 ms**，加上 local **+18.5..+26 ms** 的實測點，同時有 **0<u<1、normal.y>0**。可供 review 的小區段如+20..+26：normal closing約64.47–64.78 m/s。只可稱有用的 upward geometry candidate，不推算 launch、飛行距離或 Perfect Hit。
+- 全部 Contact samples：relative speed **64.168561–71.764794 m/s**，normal closing **27.285285–69.543583 m/s**。兩者不同；offset0 closing為56.257127 m/s。+8→+10附近的速度變化保留為既有 LINEAR motion取樣結果，沒有平滑或改asset。
+
+| 代表 phase offset | 狀態／first time（s） | u | normal.y | relative／closing（m/s） | Minimum（mm） |
+|---:|---|---:|---:|---:|---:|
+| +54 ms | Contact／1.973412534 | 1.000000 | +0.331264 | 68.591／64.342 | 13.844 |
+| +24 ms | Contact／1.985739261 | 0.183617 | +0.094278 | 64.989／64.779 | 0.686 |
+| 0 ms | Contact／1.994995923 | 0 | −0.531813 | 71.465／56.257 | 43.298 |
+| −8 ms | Contact／1.998691568 | 0 | −0.896869 | 71.149／27.285 | 64.656 |
+| −10 ms | NoContact | 不適用 | 不適用 | 不適用 | 70.336 |
+
+Offset0仍 exact 重現 S1：u=0、normal `(0.195123181,−0.531813264,0.824076235)`。+24的0.686 mm是 **後續 minimum centerline separation**，不是first-contact separation或穿透深度；所有contact仍以70 mm envelope首次entry求得。
+
+和S0／S1一樣，本圖使用解析球路取樣，不用 frozen Complete位置。部分落後phase的幾何contact時間在原gameplay Complete之後（例如−8 ms）；這不會讓正式app的球恢復積分，也不等於已設計新的delivery completion／input rule。
+
+### Evidence／驗證
+
+Ignored `build/bat-contact-s2/`：
+
+- **`phase-map.png`**：offset對u、normal.y、first-contact time、minimum separation、relative／closing speed，以及唯一local refinement。圖只在Contact點畫event量；NoContact仍有minimum。
+- **`representative-cases.png`**：上述五例，accepted batting-camera projection＋共同zoom，標C、barrel→tip、Q、normal與u。它們是離線geometry diagrams，沒有假造retimed runtime screenshots；NoContact只畫minimum，不填入不存在的contact normal。
+- `coarse-41.csv`、`phase-map.csv`（61）、`local-refinement.csv`（21），完整ball／bat／relative velocity vectors、normal、minimum與screen coordinates。NoContact的event欄位留空。
+- `summary.json`、build／CTest／phase logs。Plot使用既有Windows Charting library，沒有安裝matplotlib或其他dependency。
+
+Debug／Release build、各 **11/11 CTest** 通過。新study test涵蓋：offset0 exact S1／runtime、正負sign、repeat map deterministic、全部61點的32／64／128 Contact／NoContact分類與entry收斂、30／60／120 chunking、20次replay之後完整map相同；study前後preview／delivery ticks、pause／debt、raw ball state、兩份pose、batter triangles／sample count與stored event均未改。既有S0／S1、S2／S3、assets／arrival／prediction tests保留。NoContact邊界穩定指已取樣分類穩定，不宣稱找到sub-ms threshold。
+
+本輪沒有重跑app GPU smoke：main／renderer／HLSL／BattingPreview controls／正式asset／staging未改；上輪S1 GPU驗證紀錄保留，不能冒稱是S2新驗證。新的pure query參數只由offline caller提供，正式runtime offset0由direct tests與20 replay確認。完成後停止，待Michael＋Julia review；不做response、sweet spot、hit quality或正式player input。
