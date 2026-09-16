@@ -1,6 +1,6 @@
 # Hit Authorization S0 — Gameplay Contact Model
 
-2026-09-17；**design candidate，待 Michael＋Julia review**。僅定責任與 normalized examples；沒有 production authorization、input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
+2026-09-17；**Hit Authorization S0 五層責任已獲 Michael＋Julia human review accepted；S0.1 Reticle Semantics amendment 待 review**。僅定責任與 normalized examples；沒有 production authorization、input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
 
 ## Reference：觀察與解讀分開
 
@@ -16,7 +16,7 @@
 
 | 層 | 回答與輸出 | 不負責 |
 |---|---|---|
-| Player Aim / Intent | 玩家希望送到 strike-zone／contact plane 的位置；未來附 input tick、mode 與版本 provenance | 不是 bat centerline、capsule 或 rendered mesh |
+| Player Aim / Intent | 保留 aim center、signed error (dx, dy)、normalized error (ex, ey)、q magnitude 與 swing mode；未來附 input tick 與版本 provenance | 不是 bat centerline、capsule 或 rendered mesh |
 | Hit Authorization | 依 mode、Contact 與 spatial aim error，允許或拒絕一次有效接觸嘗試 | 不擴大物理半徑、不保證實際命中、不給 Perfect |
 | Contact Resolution | 授權後，在有限合法候選內以 continuous geometry 找 time、barrel location u、normal、relative motion | 不決定能力、不憑空指定接觸點 |
 | Contact Quality | 未來解讀 aim、修正成本與真實接觸訊號 | 本輪無 score、weights、sweet spot 或等級門檻 |
@@ -28,11 +28,44 @@ Authorization 是必要 permission，**不是充分接觸保證**。允許嘗試
 
 黃色 ellipse 應表達 **gameplay authorization region**；中心是 player intent，dx／dy 是 relevant pitch point 相對中心的 aim error。比較點究竟採何 contact plane／crossing，以及 input 鎖定時刻，由實際 caller 決定，保留既有 strike-zone truth。
 
-`q = (dx/rx)^2 + (dy/ry)^2`：q=0 中心，q=1 邊緣，q>1 外側。rx／ry 尚無公尺值，UI 不必永遠使用解析橢圓。這是 mode-specific normalized design coordinate，不是從 reference 像素反算的公式。
+保留 `aim_error = (dx, dy)`，以及 `ex = dx/rx`、`ey = dy/ry`；`q = ex^2 + ey^2` 只摘要 normalized 偏離程度，不能取代 signed vector。q 是平方量，不是距離本身：q=0 中心，q=1 邊緣，q>1 外側。rx／ry 尚無公尺值，UI 不必永遠使用解析橢圓。這是 mode-specific normalized design coordinate，不是從 reference 像素反算的公式。
 
 - **Normal**：較大 authorization ellipse、較多 rescue 空間。Contact 第一版只影響其 spatial aim 範圍；不預設擴大 timing window、增加 Power 或改 response。
 - **Power**：顯著較小 region、較少 correction budget；需要更精準的 intent，Power 的較高 upside 留給未來 response。Power 不放大 aim region。
 - **硬邊界**：Contact／mode 都不改 physical ball sphere 或 bat capsule，不用 hidden giant bat／radius multiplier。Power 的取捨不應靠縮小 physical bat，否則把操作能力混成器材尺寸，破壞同一 physical truth。
+
+## S0.1 — Reticle Semantics amendment（待 review）
+
+### Observed：靜態 UI，不是內部公式
+
+已實際檢視本次對話附圖：Normal `codex-clipboard-f375b0df-6554-4987-853a-c9e482f9ae84.png` 可見黃色寬橢圓、中央黑色菱形小核心，水平／垂直黑線以核心為中心，視覺上分成四個區域；Power `codex-clipboard-95624e63-322b-43ad-9f75-2098c8f94aa4.png` 可見顯著較小的黃色 circle 與中央準星。這些是直接觀察，不能證明四區是原遊戲的正式判定規則，也不能推出完整公式。
+
+### Intent center 與方向保留
+
+中央核心記為 **reticle intent center / sweet-spot intent center**：Player Aim space 的理想中心候選。它不等於 3D physical bat segment sweet spot；兩者未來可以協調，但不得直接視為同一概念。
+
+Normal ellipse 除了 authorization region，也可能提供 2D batting-intent coordinate。`(ex, ey)=(+0.5, 0)` 與 `(-0.5, 0)` 都有 q=0.25，方向卻相反；因此只保存 q 會不可逆地丟失方向。原始 signed error、normalized vector 與 aim center／mode 都須在概念上保留；這不是本輪定義正式 struct 或 production formula。
+
+Authorization 消費 intent 決定是否允許 attempt，但整條資料流不能只剩 authorized／rejected 或 q。Resolution 不應只收到 q 而丟失方向；Quality／Response 未來可選擇消費 signed aim intent，目前不定公式或方向權重。既有 normalized table 僅比較偏離程度，不描述完整 intent 或 directional outcome。
+
+### Hypothesis：Michael 提出的 directional intent
+
+Michael 的強烈設計假說是：上方 aim error 可能增加 fly／lift tendency，下方可能增加 ground tendency，左右 signed error 可能影響 spray direction。**尚未查證為原遊戲 mechanic，也未成為 Pawapuro response 規則。** 靜態圖不能決定 exact field mapping、handedness mirror、launch-angle formula，或證明四象限各有獨立判定。
+
+沿用本文件 error 為 relevant pitch point 相對 aim center 的描述；未來測試仍須明示這個差向量與「玩家把準星移向哪裡」的反向關係，不能混用兩種正負號。正式 gameplay direction 不採 screen left／screen right；batting／contact plane basis、batter handedness、pull／opposite-field 等 body-relative 或 field-relative 語意尚待定義。目前只保留 signed horizontal／vertical components，不決定 field mapping。
+
+Normal／Power 第一版可共用同一類 Player Aim space 與上述資訊保留責任，各 mode 使用不同 region／correction budget。不能推定兩者 quadrant response 相同、Power 中心以外沒有 quality gradient，或小 circle 就是 physical bat size。
+
+### Future testable questions
+
+1. Horizontal signed aim 是否控制 spray tendency？
+2. Vertical signed aim 是否控制 ground／fly tendency？
+3. Mapping 是否隨 batter handedness mirror？
+4. Normal／Power 是否共享同一 directional mapping？
+5. Reticle intent center 與 physical sweet spot 應如何協調？
+6. Aim intent 與 actual 3D contact normal 衝突時，誰有多少 authority？
+
+以上等待 future caller 與可對照證據，本輪不回答、不新增 Motion Rule。此次 amendment 僅修改本文件並檢查 diff；未實作 input、UI、timing、collision、correction、quality 或 response，未執行 C++／GPU 測試。
 
 ## 小型 normalized table（示意，不是 balance）
 
@@ -59,7 +92,7 @@ Power 的 budget 較少，因此同為 high pressure 不代表同樣救得回來
 
 Player timing judgment 是獨立 gameplay dimension。S2 的 physical Contact／NoContact phase 邊界不是 Perfect／Good／Late input window；correction 的 phase budget 也不等於玩家 timing 寬容度。
 
-未來 quality 可讀：normalized aim error q、correction used、segment u、contact normal、normal closing speed、relative velocity、eventual player timing error。本輪不合成分數、不給權重；normal.y>0、interior u 或高速本身都不宣告高品質。
+未來 quality 可讀：signed aim error (dx, dy)／(ex, ey)、normalized magnitude q、correction used、segment u、contact normal、normal closing speed、relative velocity、eventual player timing error。本輪不合成分數、不給權重；normal.y>0、interior u 或高速本身都不宣告高品質。
 
 ## 最小 Data／owner 提案與未決事項
 
