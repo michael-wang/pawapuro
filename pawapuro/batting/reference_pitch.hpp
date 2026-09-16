@@ -31,7 +31,9 @@ struct ReferencePitch {
     bool paused = false;
     std::uint64_t tick = 0;
     std::uint64_t pending_ticks = 0;
+    void reset();
     bool release();
+    bool step_tick(); // One deterministic fixed tick; no wall-time consumption.
     void toggle_pause();
     bool single_step(); // True only on the one arrival transition.
     bool advance(std::uint64_t elapsed_ns);

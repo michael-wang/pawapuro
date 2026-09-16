@@ -21,6 +21,7 @@ struct PitcherMotion {
     void reset();
     void toggle_pause();
     bool single_step();
+    bool step_tick(); // Concrete clock owner advances one tick; does not consume wall time.
     bool advance(std::uint64_t elapsed_ns);
     double time_s() const;
     const char* state_name() const;
@@ -29,6 +30,5 @@ private:
     DirectX::XMFLOAT3 placement;
     std::size_t grip=0;
     std::uint64_t fractional_credit=0;
-    bool step();
 };
 }

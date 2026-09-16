@@ -1,6 +1,23 @@
 # 右投手 Authoring Sample（正式 Style Feet v1B；motion S0.2C＋Whip Timing v1A）
 
-2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式鞋為 v1B、motion 已升為 Whip Timing v1A；projected shoe readability／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式鞋為 v1B、motion 已升為 Whip Timing v1A；projected shoe readability／material／articulation／rubber-arm debts 仍保留。S3 delivery candidate 已接入持球／release／Native flight，待 Michael＋Julia review，M1 未完成。
+
+## S3 Pitch Delivery Runtime Candidate
+
+啟動 `build/release/pawapuro.exe`（或 Debug）：**Space** 從 Ready 投完整一球，只有整個 delivery Complete 才可 Space replay；**P** 暫停／繼續、**`.`** 暫停時前進一個 240 Hz delivery tick、**Esc** 離開。Minimize 自動暫停，restore 後以 P 繼續，不補背景時間。
+
+Title 顯示 delivery／animation tick、Hand／Simulation owner、pitch tick 與 backlog。Release log 記錄同 tick grip／初始球位／速度與對齊誤差；Arrival 分別列 raw Complete state、plane evaluation 與 prediction delta。Tick 384 交接但 pitch tick 仍為 0；385 才積分一次。Gameplay 在 479 完成，Recovering 期間結果已可取得；816 動畫完成後才允許 replay。完整責任與時間契約見 [Batting Feel](../../../docs/design/batting-feel.md#s3pitch-delivery-single-clock2026-09-16)。
+
+Michael 優先檢視 ignored `build/pitcher-s3/`：
+
+- `delivery-runtime-1x.mp4`：實際 app authoritative tick captures，ticks 0–816 每 4 ticks 一格，60 fps／1×／205 格／3.416667 s（動作本身 3.4 s，含最後顯示格）。不是 wall-clock 螢幕錄影；另有實際不間斷 wall-time app 測試。
+- `release-boundary.jpg`：ticks 382／383／384／385／386／388，同 camera，標示 owner／pitch tick。
+- `held-ball-poses.jpg`：Ready／coil／stride／front contact。
+- `early-flight.jpg`、`flight-arrival-complete.jpg`：早期追球、球路結果與 recovery 完成。
+
+Codex 已檢視上述影格：Ready／coil 的球藏於合手處；stride／front-contact 在此視角受頭／手套遮擋，不能由數值通過宣稱視覺可追蹤。Release 邊界未見明顯交接跳動；早期球影與頭／手／cyan release 圈鄰近或重疊，連續追球可讀性仍待 human review。未宣稱 Codex 連續觀看正常速度影片；完整 1× 影片供 Michael review。沒有改 camera／overlay／motion 來掩蓋問題。
+
+正式三檔、motion fixture、staging、renderer／HLSL 完全保留 Whip Timing v1A＋v1B shoe baseline；Rubber Arm artifact 未 promotion，v1C shoe 仍 rejected。以下各節保留先前切片的交付紀錄；其中「S3 未開始」描述的是當時狀態。數值、build 與 GPU 結果由 [environment](../../../docs/development/environment.md#s3-pitch-delivery2026-09-16) 維護。
 
 ## Throwing Arm Whip Timing v1A promotion（2026-09-16）
 

@@ -51,7 +51,7 @@ endforeach()
 
 add_executable(pawapuro WIN32 pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
     engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp
-    pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/pitcher_motion.cpp ${shader_headers})
+    pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp ${shader_headers})
 target_compile_features(pawapuro PRIVATE cxx_std_20)
 target_compile_options(pawapuro PRIVATE /W4 /WX /permissive- /utf-8)
 target_compile_definitions(pawapuro PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
@@ -70,6 +70,17 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(pitch_delivery_test pawapuro/batting/pitcher/pitch_delivery_test.cpp
+        pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
+        pawapuro/batting/reference_pitch.cpp pawapuro/batting/reference_scene.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(pitch_delivery_test PRIVATE cxx_std_20)
+    target_compile_options(pitch_delivery_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(pitch_delivery_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(pitch_delivery_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME pitch_delivery COMMAND pitch_delivery_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/pitcher/pitcher.glb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/pitcher/pitcher.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml")
     add_executable(pitcher_motion_test pawapuro/batting/pitcher/pitcher_motion_test.cpp
         pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/staging.cpp)
     target_compile_features(pitcher_motion_test PRIVATE cxx_std_20)

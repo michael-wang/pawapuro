@@ -51,7 +51,7 @@ PitcherMotion::PitcherMotion(const std::filesystem::path& glb, const std::filesy
     const float error=std::sqrt(dx*dx+dy*dy+dz*dz);
     require(error<0.0001f,"release-tick grip differs from staging reference (>0.1 mm)");
     std::fprintf(stderr,"PitcherMotion: source=%s clip=pitch_R scale=1 joints=%zu vertices=%zu triangles=%zu end_tick=%llu "
-        "release_diagnostic_tick=%llu error_m=%.9g; ball attachment/release=off\n",
+        "release_tick=%llu error_m=%.9g; sequencing owned by caller\n",
         glb.string().c_str(),asset.joints.size(),skinned.size(),triangles.size()/3,end_tick,release_tick,error);
     reset(); pose_us=skin_us=0; samples=0;
 }
@@ -85,13 +85,14 @@ bool PitcherMotion::start()
     reset(); phase=MotionPhase::Playing; return true;
 }
 void PitcherMotion::toggle_pause() { if (phase==MotionPhase::Playing) paused=!paused; }
-bool PitcherMotion::step()
+bool PitcherMotion::step_tick()
 {
+    if (phase!=MotionPhase::Playing) return false;
     if (tick<end_tick) { ++tick; evaluate(); }
     if (tick==end_tick) { phase=MotionPhase::Complete; paused=false; pending_ticks=fractional_credit=0; return true; }
     return false;
 }
-bool PitcherMotion::single_step() { return phase==MotionPhase::Playing && paused ? step() : false; }
+bool PitcherMotion::single_step() { return phase==MotionPhase::Playing && paused ? step_tick() : false; }
 bool PitcherMotion::advance(std::uint64_t elapsed_ns)
 {
     if (phase!=MotionPhase::Playing || paused) return false;
@@ -101,7 +102,7 @@ bool PitcherMotion::advance(std::uint64_t elapsed_ns)
     const auto whole=std::min(elapsed_ns/ns,remaining/animation_hz+1)*animation_hz;
     fractional_credit+=(elapsed_ns%ns)*animation_hz;
     pending_ticks=std::min(remaining,pending_ticks+whole+fractional_credit/ns); fractional_credit%=ns;
-    for (unsigned n=0;n<16 && pending_ticks;++n) { --pending_ticks; if (step()) return true; }
+    for (unsigned n=0;n<16 && pending_ticks;++n) { --pending_ticks; if (step_tick()) return true; }
     return false;
 }
 const char* PitcherMotion::state_name() const

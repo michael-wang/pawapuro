@@ -2,6 +2,16 @@
 #include <stdexcept>
 
 namespace pawapuro {
+void ReferencePitch::reset()
+{
+    previous = current = initial;
+    tick = pending_ticks = fractional_credit = 0;
+    paused = false; phase = PitchPhase::Ready;
+}
+bool ReferencePitch::step_tick()
+{
+    return phase == PitchPhase::InFlight ? integrate_tick() : false;
+}
 bool ReferencePitch::release()
 {
     if (phase == PitchPhase::InFlight) return false;

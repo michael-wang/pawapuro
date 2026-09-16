@@ -2,7 +2,7 @@
 #include <SDL3/SDL_main.h>
 #include "batting/reference_scene.hpp"
 #include "batting/reference_pitch.hpp"
-#include "batting/pitcher/pitcher_motion.hpp"
+#include "batting/pitcher/pitch_delivery.hpp"
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -36,13 +36,28 @@ int main(int argc, char** argv)
         int width = 0, height = 0;
         if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
         std::fprintf(stderr, "Window: %d x %d pixels, fixed windowed 16:9\n", width, height);
-        pawapuro::ReferencePitch pitch(staging.release_position_m, staging.reference_velocity_mps, staging.strike_zone_plane_z());
-        const auto prediction = pawapuro::predict_arrival(pitch);
-        const float aspect = static_cast<float>(width) / static_cast<float>(height);
-        pawapuro::PitcherMotion motion(utf8_path(base_path)/"batting/pitcher/pitcher.glb",
+        pawapuro::PitchDelivery delivery(utf8_path(base_path)/"batting/pitcher/pitcher.glb",
             utf8_path(base_path)/"batting/pitcher/pitcher.toml",staging);
+        auto& motion=delivery.motion;
+        const auto prediction=pawapuro::predict_arrival(delivery.pitch);
+        const float aspect = static_cast<float>(width) / static_cast<float>(height);
         const auto scene=pawapuro::make_batting_reference(staging,prediction.state.position_m,aspect,{});
-        std::fprintf(stderr,"S2 preview: Space plays animation only; ball/prediction remain independent reference fixtures.\n");
+        std::fprintf(stderr,"S3 delivery: one 240 Hz clock; ball Hand -> Simulation at animation marker.\n");
+        bool arrival_reported=false;
+        const auto report_arrival=[&] {
+            if (arrival_reported || delivery.pitch.phase!=pawapuro::PitchPhase::Complete) return;
+            arrival_reported=true;
+            const auto& pitch=delivery.pitch;const auto a=pitch.arrival_at_plane();
+            const auto raw=pitch.current.position_m, v=pitch.current.velocity_mps, p=a.state.position_m;
+            const auto projected=pawapuro::project_batting_point(staging,p,aspect);
+            const auto predicted=pawapuro::project_batting_point(staging,prediction.state.position_m,aspect);
+            std::fprintf(stderr,"Arrival: delivery_tick=%llu pitch_tick=%llu raw Complete position=(%.9g,%.9g,%.9g) "
+                "velocity=(%.9g,%.9g,%.9g); plane=(%.9g,%.9g,%.9g) time=%.12g "
+                "prediction_delta_m=(%.9g,%.9g,%.9g) delta_px=(%.9g,%.9g)\n",
+                motion.release_tick+pitch.tick,pitch.tick,raw.x,raw.y,raw.z,v.x,v.y,v.z,p.x,p.y,p.z,a.time_s,
+                p.x-prediction.state.position_m.x,p.y-prediction.state.position_m.y,p.z-prediction.state.position_m.z,
+                (projected.x-predicted.x)*width/2,(projected.y-predicted.y)*height/2);
+        };
         const auto screen_point = [&](DirectX::XMFLOAT2 ndc) {
             return DirectX::XMFLOAT2{(ndc.x + 1) * width / 2, (1 - ndc.y) * height / 2};
         };
@@ -59,7 +74,8 @@ int main(int argc, char** argv)
         while (running) {
             const auto now = SDL_GetTicksNS();
             // Account for the old state before handling this frame's input boundary.
-            if (motion.advance(now - last_time)) std::fprintf(stderr,"Animation Complete: tick=%llu time=%.9f\n",motion.tick,motion.time_s());
+            if (delivery.advance(now - last_time)) std::fprintf(stderr,"Delivery Complete: tick=%llu animation_tick=%llu pitch_tick=%llu\n",delivery.tick,motion.tick,delivery.pitch.tick);
+            report_arrival();
             last_time = now;
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
@@ -67,19 +83,20 @@ int main(int argc, char** argv)
                     running = false;
                 if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
-                    if (event.key.scancode == SDL_SCANCODE_SPACE && motion.start()) {
-                        last_time=SDL_GetTicksNS();
-                        std::fprintf(stderr,"Animation start/replay: tick=0; reference ball unchanged.\n");
+                    if (event.key.scancode == SDL_SCANCODE_SPACE && delivery.start()) {
+                        last_time=SDL_GetTicksNS(); arrival_reported=false;
+                        std::fprintf(stderr,"Delivery start/replay: delivery_tick=0 animation_tick=0 owner=Hand pitch_tick=0; debt cleared.\n");
                     }
-                    if (event.key.scancode == SDL_SCANCODE_P) motion.toggle_pause();
-                    if (event.key.scancode == SDL_SCANCODE_PERIOD) motion.single_step();
+                    if (event.key.scancode == SDL_SCANCODE_P) delivery.toggle_pause();
+                    if (event.key.scancode == SDL_SCANCODE_PERIOD) delivery.single_step();
                 }
                 if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
-                    if (motion.phase == pawapuro::MotionPhase::Playing && !motion.paused) motion.toggle_pause();
-                    std::fprintf(stderr, "Window minimized; active animation paused (P to resume).\n");
+                    if (delivery.phase == pawapuro::DeliveryPhase::Delivering && !delivery.paused) delivery.toggle_pause();
+                    std::fprintf(stderr, "Window minimized; active delivery paused (P to resume).\n");
                 }
-                if (event.type == SDL_EVENT_WINDOW_RESTORED) { last_time=SDL_GetTicksNS(); std::fprintf(stderr,"Window restored; animation remains paused.\n"); }
+                if (event.type == SDL_EVENT_WINDOW_RESTORED) { last_time=SDL_GetTicksNS(); std::fprintf(stderr,"Window restored; delivery remains paused.\n"); }
             }
+            report_arrival();
             if (!running) break;
             if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
             if ((SDL_GetWindowFlags(window.get()) & SDL_WINDOW_MINIMIZED) || width == 0 || height == 0) {
@@ -88,15 +105,17 @@ int main(int argc, char** argv)
             }
             view.resize(static_cast<UINT>(width), static_cast<UINT>(height));
             char title[512];
-            std::snprintf(title,sizeof(title),"Pawapuro | Pitcher animation preview | %s | tick=%llu | time=%.6f | "
-                "grip=(%.3f, %.3f, %.3f) | backlog=%llu | Independent reference ball | Space:play/replay P:pause .:step Esc:quit",
-                motion.state_name(),motion.tick,motion.time_s(),motion.grip_world[12],motion.grip_world[13],motion.grip_world[14],motion.pending_ticks);
+            const auto ball=delivery.ball_center();
+            std::snprintf(title,sizeof(title),"Pawapuro | Pitch delivery | %s | delivery_tick=%llu animation_tick=%llu owner=%s pitch_tick=%llu "
+                "ball=(%.6f,%.6f,%.6f) | backlog=%llu | Space:play/replay P:pause .:step Esc:quit",
+                delivery.state_name(),delivery.tick,motion.tick,delivery.owner_name(),delivery.pitch.tick,
+                ball.x,ball.y,ball.z,delivery.pending_ticks);
             if (last_title != title) {
                 if (!SDL_SetWindowTitle(window.get(), title)) throw std::runtime_error(SDL_GetError());
                 last_title = title;
             }
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
-                {0,0,0},motion.triangles);
+                delivery.ball_translation(),motion.triangles);
         }
         if (motion.samples) std::fprintf(stderr,"CPU motion: samples=%llu pose_mean_us=%.3f skin_expand_basis_mean_us=%.3f\n",
             motion.samples,motion.pose_us/static_cast<double>(motion.samples),motion.skin_us/static_cast<double>(motion.samples));

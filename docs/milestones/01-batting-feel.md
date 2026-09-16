@@ -187,7 +187,7 @@ Michael＋Julia 已完成 A／B／C human review；正式 pitcher 三檔原樣�
 
 已依本輪授權接入正式 S0.2C GLB 的 static bind mesh，取代 procedural pitcher，並交付 actual app startup／crop。Debug／Release build、CTest 各 3/3、實際 release／Complete、pause／single-step／20 rethrows 與 Debug GPU 檢查通過；詳細結果與可開啟證據由 [environment](../development/environment.md#s1-static-pitcher-glb-runtime-import2026-09-16) 維護，使用方式見 [pitcher README](../../pawapuro/batting/pitcher/README.md#s1-static-bind-pose-runtime)。
 
-**Michael＋Julia 已接受 S1 human review。** 接受限於基本位置、尺度、左右手／朝向、grounding、vertex colors 與 scene integration，renderer 無須擴張；不代表動畫／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 或 early-flight readability 已驗證。S0 authoring baseline 已接受，M1 尚未完成。S2 的現況見下節，S3 未開始。
+**Michael＋Julia 已接受 S1 human review。** 接受限於基本位置、尺度、左右手／朝向、grounding、vertex colors 與 scene integration，renderer 無須擴張；不代表動畫／skinning、rubber-arm 動態造型、release／ball attachment、dynamic occlusion 或 early-flight readability 已驗證。S0 authoring baseline 已接受，M1 尚未完成。S2 與 S3 的現況見下節。
 
 [Character Motion Rules v0.1](../design/character-motion.md) 已獲 Michael＋Julia design acceptance。S1 bind-pose 的 footprint／elbow 輪廓 debt 由該文件維護，現在可透過 S2 runtime 做 Character Polish review。
 
@@ -201,3 +201,11 @@ Debug／Release build、4/4 CTest、實際 app start／replay／pause／single-s
 Michael＋Julia 已確認 authoring motion 正確在 runtime 播放，同時確認 footprint／hard-elbow style debt 仍存在。v1A 的 1.25× support footprint 已通過 Michael＋Julia review 並原樣升為正式 asset；foot visual style 未完成，下一步 debts 由 Character Motion Rules 維護，Foot Shape v1B geometry 已通過 Michael＋Julia review 並 promotion，front-foot orientation 已診斷正確，v1C shoe silhouette 已 human rejected、未 promotion；Rubber Arm v1A 暫緩 promotion；Throwing Arm Whip Timing v1A 已 human accepted 並原樣 promotion，主要改善為 post-release timing compression 與速度對比，S3 未開始。v1A promotion 只升版 asset，camera／staging／physics 保持不變，未做球 attachment／release、render interpolation、GPU skinning 或 batter animation。
 
 完成本輪後停止；後續 style polish 與 S3 都須另行授權，M1 未完成。
+
+## S3：Pitch Delivery Candidate（2026-09-16）
+
+已完成唯一 240 Hz `PitchDelivery`、held grip → release-once → 原 Native flight；Space／P／`.` 改為控制整個 delivery。Gameplay arrival 在 tick 479 立即成立，presentation recovery 到 816 才結束；不截斷 accepted follow-through。上節 S2 的獨立 reference ball／未開始 S3 是歷史交付狀態，現行契約見 Batting Feel。
+
+Debug／Release build 與 CTest 各 5/5，含 delivery 邊界、20 replay、30／60／120 chunking、原 asset／motion／physics regression；實際 app 操作及 Debug GPU validation 通過。證據與數值由 environment 維護。正式 asset、camera、renderer、staging 不改，沒有 style polish。
+
+**停在 Michael＋Julia human-review gate**：請用完整 delivery／release 連續影格確認 ownership handoff、頭／帽／手套遮擋及 early-flight tracking。數值連續不等於視覺通過，cyan release diagnostic 仍是 presentation debt。M1 未完成，不自行開始下一階段。

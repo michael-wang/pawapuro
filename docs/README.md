@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-16。M1 尚未完成。Michael＋Julia 已接受 Right-handed Pitcher S0（A／B／C）的 authoring motion baseline、S1 static GLB runtime import，以及 Character Motion Rules v0.1 design。S2 runtime 240 Hz animation playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。Style Feet v1A 的 1.25× planar footprint 已通過 Michael＋Julia human review 並原樣 promotion 為正式資產；接受限於支撐 footprint 尺寸，Foot Shape v1B geometry 已通過 human review 並原樣升為正式資產；front-foot orientation 已診斷正確，v1C shoe silhouette 已 human rejected，正式鞋保持 v1B；Rubber Arm v1A 暫緩 promotion；Throwing Arm Whip Timing v1A 已 human accepted 並原樣 promotion，主要改善為 post-release timing compression 與速度對比，其他 style debts 保留。App 可播放正式 S0.2C 單一 clip；球仍是獨立 reference fixture。Release integration、dynamic occlusion／early-flight readability 與正式遊戲品質尚未通過；S3 未開始。
+更新：2026-09-16。M1 尚未完成。Michael＋Julia 已接受 Right-handed Pitcher S0（A／B／C）的 authoring motion baseline、S1 static GLB runtime import，以及 Character Motion Rules v0.1 design。S2 runtime 240 Hz animation playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。Style Feet v1A 的 1.25× planar footprint 已通過 Michael＋Julia human review 並原樣 promotion 為正式資產；接受限於支撐 footprint 尺寸，Foot Shape v1B geometry 已通過 human review 並原樣升為正式資產；front-foot orientation 已診斷正確，v1C shoe silhouette 已 human rejected，正式鞋保持 v1B；Rubber Arm v1A 暫緩 promotion；Throwing Arm Whip Timing v1A 已 human accepted 並原樣 promotion，主要改善為 post-release timing compression 與速度對比，其他 style debts 保留。S3 PitchDelivery 已實作為待 Michael＋Julia review 的 candidate：同一 240 Hz clock 驅動 held ball → release → Native flight，球路結果先完成、投手繼續 recovery。Dynamic occlusion／early-flight readability 與正式遊戲品質尚未通過。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 
@@ -25,4 +25,4 @@
 - 具體功能開始實作後，其 native、script、data 與短 README 靠近同一概念；此處保留跨概念決策並連向模組文件，不複製公式、參數清單或 API。
 - 新的獨立決策只有在取捨已無法清楚放進這兩份工作文件時，才新增 decision record。
 - 文件中的數字、控制方式與測試規模若標示「提案」，代表等待本次 review；沒有測試結果時不得宣稱已通過。
-- 目前 app 的 Space 播放／重播 pitcher animation，P 暫停、`.` 單步；ReferencePitch 仍由原單元測試驗證，app 不發球。啟動與 review ticks 見 [pitcher README](../pawapuro/batting/pitcher/README.md)，後續 hand → simulation 交接須另行授權。
+- 目前 app 的 Space 播放／於 Complete 重播完整 delivery，P 暫停、`.` 前進一個 240 Hz tick；控制涵蓋投手與球。啟動、release 邊界與 review evidence 見 [pitcher README](../pawapuro/batting/pitcher/README.md#s3-pitch-delivery-runtime-candidate)。

@@ -1031,3 +1031,41 @@ Michael 正常速度 human review 接受 v1A timing direction：改善來自 pos
 Evidence：ignored `build/style-arm-whip-v1a-promotion/`；沒有新的影片／visual review，也沒有 production code 變更。Regression 後再核對正式三檔與 accepted candidate 仍 byte-identical。
 
 Whip review artifact 保留。Rubber Arm 舊 timing candidate 不 promotion／merge，待新正式 timing 下重新評估；v1C shoe 維持 rejected artifact，material／highlight／cleats／articulation 延後。六條 Character Motion Rules 原文不變，S3 未開始，M1 未完成。
+
+## S3 Pitch Delivery（2026-09-16）
+
+Preflight cwd `C:/astra-dev/pawapuro`，main／HEAD／origin/main／live remote 均為 `5160ce59d2c9f7de61b0fff60563788dc4b0eebb`，workspace clean，origin 為 canonical GitHub repository。本輪是 S3 implementation candidate，待 Michael＋Julia review；沒有 authoring／asset／staging／renderer／HLSL 修改或新增依賴。唯一 owner／tick ordering 由 Batting Feel 維護。
+
+| 本輪實測 | 結果 |
+|---|---|
+| Debug／Release | configure、build、CTest 各 **5/5 PASS**；`build/pitcher-s3/final-build-test.log`。保留 staging、ReferencePitch、S1 static asset、S2 motion tests，加 concrete `pitch_delivery_test`。 |
+| Delivery Native | 每個 held tick owner=Hand、physics Ready／tick0、球心=同 tick grip；384 release-once／pitch0，385 pitch1。後續逐 tick state 與原 standalone ReferencePitch exact 相同。 |
+| Gameplay／presentation | 479 時 PitchArrival 立即可用且等於 prediction；raw Complete state 不吸附 plane，球不再積分。Animation 繼續至 816，整個 Complete 才可 replay。另以 in-memory slow velocity fixture 驗證 animation 先完成、ball 繼續飛行，未修改正式 Data。 |
+| Determinism／controls | 30／60／120 FPS-equivalent chunks 的同 tick pose／ball state／release count exact；20 replay 路徑／arrival 相同、credit 清空。跨 release pause／step、fractional credit、backlog cap 與 Complete hold 通過。 |
+| Actual Release／Debug app | 完整 paused 816 ticks、383／384／385／479 freeze pixels、recovery replay 拒絕、Complete hold、正常 wall-time play、replay、minimize／restore／resume 均通過；背景不加 debt，exit0。實際 uninterrupted completion 約 3.422／3.424 s，非新的 animation timing 規格。`release-smoke.json`／`debug-smoke.json` 保存結果。 |
+| Debug GPU | D3D12 debug／GPU validation **0 errors**，正常 shutdown；live-object report 只有為 reporting 保留的 device，沒有新增 live child resources。`debug.log`。 |
+| 成本 | 保留現有 pose／skin／upload 計時，未新增 profiler；delivery orchestration 未單獨隔離量測，不宣稱新增成本為零。 |
+
+Held-ball samples（game world 公尺）：
+
+| Delivery tick | Grip 與 rendered center | Center delta |
+|---|---|---:|
+| 0 Ready | (-0.689502716, 1.63655627, 18.5157185) | 0 |
+| 192 Coil | (-0.808222055, 1.76355672, 18.7815952) | 0 |
+| 284 Stride | (-0.214193240, 2.10244799, 19.1380138) | 0 |
+| 312 Front contact | (-0.486800104, 2.18459344, 18.8772202) | 0 |
+| 383 Last held | (-0.699140608, 2.06282139, 16.8106422) | 0 |
+
+Release tick 384 grip `(-0.649999857, 2.05000043, 16.7999992)` → existing physics initial `(-0.649999976, 2.04999995, 16.7999992)`，同 tick ownership discontinuity **4.9151248e-7 m／0.0000430641 px**（1920×1080），小於原 0.0001 m tolerance。Last held tick 383 到 initial tick 384 的 **0.0518889613 m／3.87178969 px** 含正常手部一 tick 位移，不能誤稱交接誤差。初速仍 `(1.65464437, -1.31941378, -41.6669998)` m/s。
+
+Arrival：delivery 479／pitch95，raw Complete position `(0.00496328995, 0.759458899, 0.306803882)`、velocity `(1.65464437, -5.20121908, -41.6669998)`；plane evaluation `(-4.49712388e-7, 0.775000632, 0.431800008)`、release-relative time `0.392833450437 s`。Prediction world／screen delta 均 **0**。Raw state 與 interpolated plane 分開保留；479–816 有結果且球不再積分。
+
+Runtime evidence 全部在 ignored `build/pitcher-s3/`，review 入口由 pitcher README 維護。60 fps／1× full clip 由實際 app ticks 0–816 每 4 ticks 的 captures 重組，共 205 格／3.416667 s；不是 wall-clock 螢幕錄影。另有實際正常 wall-time app run。Codex 已檢視 held／release boundary／early-flight／mid-flight／Complete sheets，沒有宣稱連續觀看正常速度影片。Ready／coil 藏球正常；stride／front contact 受頭／手套遮擋，早期球影與頭／手／cyan release 圈鄰近，連續追蹤仍待 human review，不為此改 camera／overlay。
+
+正式三檔 SHA256 保持 accepted Whip Timing v1A：
+
+- `.blend`：`f6e437cf18aece5bdde97069e4f9ef3ec5ee3d0151c99e90cd31bfaca2a923f2`
+- `.glb`：`98a126e42de3e5b4a1856cf56454bee196144dbc6620e0bc28dcc771b4450a9e`
+- `.toml`：`bf59cb5da49d487b25304ea93bbe59570738366eb24144ac5173c916d836aae5`
+
+未重跑 Blender export／round-trip／Khronos validator：資產 bytes 未改，本輪新增 runtime 整合由 S1／S2／S3 CTest 驗證；不把上一輪 export checks 寫成本輪執行。Rubber Arm 未 promotion，v1C rejected artifact 保留；鞋／material／highlight／cleats／articulation debts 延後。六條 Character Motion Rules 原文不改；S3 待 review、M1 未完成。
