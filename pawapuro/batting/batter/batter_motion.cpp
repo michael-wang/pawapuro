@@ -74,6 +74,17 @@ BatterMotion::BatterMotion(const std::filesystem::path& glb,const std::filesyste
     std::fprintf(stderr,"BatterMotion: source=%s clip=swing_L scale=1 gather_tick=%llu plant_tick=%llu contact_area_tick=%llu end_tick=%llu vertices=%zu; no wall clock\n",
         glb.string().c_str(),gather_tick,plant_tick,contact_area_tick,end_tick,triangles.size());
 }
+BatBarrelSample BatterMotion::sample_barrel(double time,engine::GlbPose& scratch) const
+{
+    if (!std::isfinite(time) || time<0 || time>static_cast<double>(end_tick)/animation_hz)
+        throw std::runtime_error("Bat semantic study time outside accepted clip.");
+    engine::evaluate_glb_pose(asset,static_cast<float>(time),scratch);
+    const auto point=[&](std::size_t node) {
+        const auto& m=scratch.world[node];
+        return DirectX::XMFLOAT3{-m[12]+placement.x,m[13]+placement.y,m[14]+placement.z};
+    };
+    return {point(barrel),point(tip)};
+}
 void BatterMotion::evaluate_tick(std::uint64_t authoritative_tick)
 {
     tick=std::min(authoritative_tick,end_tick);

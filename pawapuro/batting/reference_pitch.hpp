@@ -45,5 +45,7 @@ private:
     std::uint64_t fractional_credit = 0;
     bool integrate_tick();
 };
+// Read-only geometry-study query; no Complete-state clamp or simulation mutation.
+BallState sample_reference_pitch(const BallState& initial, double pitch_time_s);
 PitchArrival predict_arrival(const ReferencePitch& pitch);
 }

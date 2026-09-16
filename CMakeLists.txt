@@ -72,6 +72,16 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(contact_probe_test pawapuro/batting/contact_probe_test.cpp pawapuro/batting/contact_probe.cpp
+        pawapuro/batting/batting_preview.cpp pawapuro/batting/batter/batter_motion.cpp
+        pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
+        pawapuro/batting/reference_pitch.cpp pawapuro/batting/reference_scene.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(contact_probe_test PRIVATE cxx_std_20)
+    target_compile_options(contact_probe_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(contact_probe_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(contact_probe_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME contact_probe COMMAND contact_probe_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting" "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml")
     add_executable(batter_motion_test pawapuro/batting/batter/batter_motion_test.cpp
         pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/staging.cpp)
     target_compile_features(batter_motion_test PRIVATE cxx_std_20)

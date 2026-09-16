@@ -326,8 +326,11 @@ S2 已通過 Michael＋Julia 技術與 human review：正式 S0.2C motion 能正
 
 ## Batter Runtime S2：synchronized swing playback（2026-09-16）
 
-已實作 candidate，待 Michael＋Julia human review。Concrete `BattingPreview` owns 唯一 240 Hz wall accumulator，上層逐 tick 驅動 `PitchDelivery` 與無時鐘的 `BatterMotion`；原 standalone delivery advance 保留。兩份 pose／triangles 合併至 app 的預配置 CPU vector，一次送入原 dynamic stream，renderer／HLSL 不改。
+已獲 Michael＋Julia human acceptance。Concrete `BattingPreview` owns 唯一 240 Hz wall accumulator，上層逐 tick 驅動 `PitchDelivery` 與無時鐘的 `BatterMotion`；原 standalone delivery advance 保留。兩份 pose／triangles 合併至 app 的預配置 CPU vector，一次送入原 dynamic stream，renderer／HLSL 不改。
 
 三個完成邊界分開：ball arrival tick 479 立即有 gameplay result，PitchDelivery tick 816 保持原 Complete，BatterMotion／BattingPreview tick 896 才 Complete。球不再 integration、投手停 final，打者繼續 finish；Space 只在 Ready／整體 Complete 開始／replay，P／`.` 同步控制全部。TOML contact_area tick 480 與 arrival 相差 +1 tick，僅是 diagnostic，不產生 collision 或 snap。
 
 這支 swing_L 的 origin 是 delivery start，包含 automatic late gather；本輪只驗證 authored choreography 在共同 timeline 的表現，**不建立玩家 input starts swing_L at delivery tick 0 的規則**。真正 swing input／commit semantics 等真實 gameplay caller 另行設計。Ownership／lifetime、metadata／source 抽樣、實測與 review evidence 由 [batter README](../../pawapuro/batting/batter/README.md#batter-runtime-s2--synchronized-swing-playback-candidate) 維護；source assets、staging／camera／球路及六條 Motion Rules 不變。
+
+
+Bat Contact S0 在 accepted S2 上新增 read-only geometry study：球用 authoritative initial state 的 constant-acceleration query，棒用 scratch pose 取既有 barrel→tip semantics，在 contact_area ±8 ticks 固定 refinement。只量 point-to-segment centerline separation，不使用 frozen Complete 球、visual ball radius 或 bat mesh thickness 決定接觸。App sequencing／simulation／renderer 不變；結果、收斂與證據由 [batter README](../../pawapuro/batting/batter/README.md#bat-contact-s0--continuous-closest-approach-probe) 擁有。Collision envelope／hit rule／response 與正式 swing input 尚未設計，probe 停在 Michael＋Julia review gate。

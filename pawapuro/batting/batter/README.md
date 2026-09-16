@@ -1,6 +1,6 @@
-# Left-handed Batter — S0 / S1 accepted, Runtime S2 candidate
+# Left-handed Batter — S0 / Runtime S1 / S2 accepted
 
-2026-09-16。Michael＋Julia 已接受 Left-handed Full Swing S0 authoring baseline：compact Ready、late gather、抬腳／短步、plant 先於主加速、body turn→手棒 lag、短促 acceleration、contact-area pass 與完整 finish。本目錄原有三檔就是 canonical accepted source，沒有再 promotion／save／export。**Batter Runtime S1 static import 已獲 Michael＋Julia human acceptance；S2 synchronized swing playback 已實作，待 human review**；不代表 runtime animation、碰撞、hit quality、contact presentation 或 M1 通過。設計與來源觀察由 [batter-motion.md](../../../docs/design/batter-motion.md) 擁有。
+2026-09-16。Michael＋Julia 已接受 Left-handed Full Swing S0 authoring baseline：compact Ready、late gather、抬腳／短步、plant 先於主加速、body turn→手棒 lag、短促 acceleration、contact-area pass 與完整 finish。本目錄原有三檔就是 canonical accepted source，沒有再 promotion／save／export。**Batter Runtime S1 static import 已獲 Michael＋Julia human acceptance；S2 synchronized swing playback 已獲 Michael＋Julia human acceptance**；不代表 runtime animation、碰撞、hit quality、contact presentation 或 M1 通過。設計與來源觀察由 [batter-motion.md](../../../docs/design/batter-motion.md) 擁有。
 
 ## S0 authoring review evidence（歷史交付）
 
@@ -137,7 +137,7 @@ Ignored `build/batter-runtime-s1/`：先看 `debug-ready.png`（完整 1920×108
 
 ## Batter Runtime S2 — synchronized swing playback candidate
 
-**S2 已實作，待 Michael＋Julia human review。** 這是 accepted authoring choreography 的同步 development preview；不是「玩家按鍵就從 delivery tick 0 起播 swing_L」的正式 input／commit 規則。`contact_area` 仍不是 collision truth。不修改 source、球路、camera、staging 或六條 Character Motion Rules。
+**S2 已獲 Michael＋Julia human review accepted。** 以下保留 S2 交付量測與當時 evidence 限制。 這是 accepted authoring choreography 的同步 development preview；不是「玩家按鍵就從 delivery tick 0 起播 swing_L」的正式 input／commit 規則。`contact_area` 仍不是 collision truth。不修改 source、球路、camera、staging 或六條 Character Motion Rules。
 
 ### 操作與 review evidence
 
@@ -212,4 +212,73 @@ Ignored `build/batter-runtime-s2/`：
 
 Runtime contact 連續影格可見短促 bat sweep；follow-through 中手棒會被大頭遮住，torso 的簡化輪廓仍淡。球於 arrival 停住、棒繼續經過它是保留既有 raw Complete 的 preview 語意，不是碰撞回應。數值對齊不能宣告 late gather、hands／bat lag、雙角色 readability 或 contact timing 已通過 human review。
 
-Accepted batter `.blend`／GLB／TOML、pitcher assets、staging／camera 完全未改；S1 acceptance 保留。S2 停在 Michael＋Julia review gate，不開始 bat-ball collision、正式 swing input／commit、hit quality、VFX、contact presentation 或新的 Motion Rule；M1 未完成。
+Accepted batter `.blend`／GLB／TOML、pitcher assets、staging／camera 完全未改；S1 acceptance 保留。S2 現已 human accepted；其 acceptance 不定義 collision、正式 swing input／commit、hit quality 或 contact presentation。Bat Contact S0 現況見下節；六條 Motion Rules 不變，M1 未完成。
+
+
+## Bat Contact S0 — continuous closest-approach probe
+
+本輪是 **geometry study，待 Michael＋Julia review**；只量 ball center 到 `[bat_barrel, bat_tip]` semantic centerline segment 的距離。`contact_area` 仍是 authoring marker，不是 collision truth。沒有 ball／bat radius、sweet spot、hit／miss、penetration 或 response，沒有使用 enlarged visual ball marker 或 rendered mesh thickness 作 collision envelope；player swing input 尚未設計。
+
+### 查詢與重現
+
+- Pawapuro `sample_reference_pitch(initial,t)` 使用既有 gravity 與 authoritative initial state 的 constant-acceleration equation，時間是 release-relative；只讀取初始值，不依 frozen Complete state，不前進 tick／phase。可在 plane 後解析取樣，但不延伸 mutable simulation。與 float integration 有微小捨入差，不宣稱 bit-identical。
+- `BatterMotion::sample_barrel(clip_time,scratch)` 只在 caller-owned `GlbPose` 評估既有 LINEAR clip，傳回同 basis／staging placement 的 barrel／tip world points；不 skin、不改 authoritative tick、pose、triangles 或 perf samples。Scratch 只活在 study 呼叫中，沒有 global cache。
+- `contact_probe.*` 是 concrete Pawapuro geometry study；沒有 Engine／generic collision framework。由獨立 `contact_probe_test` 執行並可寫 JSON；app main／renderer 完全未改，也不自動加入 per-tick probe 或 hit log。
+- 搜尋 marker ±8 ticks，即 **[472,488]**／[1.966667,2.033333] s，包含原 plane arrival。先每 tick 16 substeps，取 coarse 最佳點相鄰的兩格，再固定 32／64／128 subdivisions。各層都保留已找到的最小值；本版 minimum 在 window 內部，無須擴窗。這是有收斂證據的 bounded numerical minimum，不是已證明適用任意 clip 的 CCD solver。
+
+Repo root 重跑（既有 Debug／Release build）：
+
+```powershell
+& build/release/contact_probe_test.exe pawapuro/batting pawapuro/batting/staging.toml build/bat-contact-s0/diagnostic.json
+```
+
+Ignored `build/bat-contact-s0/`：先看 **`closest-approach.png`**。它使用 production `project_batting_point` 的 accepted 1920×1080 batting camera；cross／segment／Q／最短線為 fractional-time sample 的離線投影，背景明確標為 actual runtime tick479，不是 sub-tick runtime render。下方為本輪 Debug app 實際 ticks477–481，原 PNG 在 `debug-contact/`。圖中的既有大球／prediction 圈只是 visual markers，不是半徑判定。另有 Debug／Release diagnostic JSON、build／CTest／app logs 與 smoke JSON。No new runtime overlay。
+
+### Bounded minimum 與時間基準
+
+| 項目 | 實測 |
+|---|---:|
+| Centerline separation | **0.043298393 m（約 43.30 mm）** |
+| Absolute preview time | **1.995764160 s** |
+| Fractional preview tick | **478.983398438** |
+| Segment u | **0：barrel endpoint；Q=A** |
+| 相對 plane arrival（1.992833450 s／tick478.280028） | **+2.930710 ms** |
+| 相對 gameplay Complete tick479（1.995833333 s） | **−0.069173 ms** |
+| 相對 contact_area tick480（2.0 s） | **−4.235840 ms** |
+
+Plane arrival 使用原 `PitchArrival.time_s`（最後一個 physics interval 的內插 sample），gameplay result 仍在 tick479 才可取得。本次不改 prediction／arrival semantics。Probe window 的後段繼續用解析 ball path，沒有拿 tick480 frozen ball 與動棒宣告距離或 miss；本次 minimum 本身略早於 raw Complete tick。
+
+Minimum 的 game-world vectors，position 為 m，velocity 為 m/s：
+
+| 項目 | (X,Y,Z) |
+|---|---|
+| Ball C | (0.004848963, 0.759819031, 0.309694052) |
+| Ball velocity | (1.654644370, −5.200534344, −41.666999817) |
+| Barrel A／closest Q | (−0.011291265, 0.799904287, 0.306970805) |
+| Tip B | (−0.346702099, 0.788144112, 0.252554268) |
+| Bat point velocity | (−1.250505447, −1.477599144, 29.923170090) |
+| Relative velocity：ball − bat | (2.905149937, −3.722935200, −71.590171814) |
+
+Velocity 用 minimum 的 **固定 u material point**，以 ±0.1 ms central difference 估算；不是任由 u 滑動的最近點 locus derivative。Ball speed **42.022878 m/s**、bat point speed **29.985716 m/s**、relative speed **71.745751 m/s**，僅作 diagnostic，不推算 exit velocity／response。
+
+| 相對 minimum | −2 ms | −1 ms | minimum | +1 ms | +2 ms |
+|---|---:|---:|---:|---:|---:|
+| Separation（mm） | 149.530342 | 83.666817 | 43.298393 | 83.751207 | 149.798993 |
+
+### 收斂與回歸
+
+| Refinement subdivisions（coarse 16/tick 相同） | 最小 tick | Separation（mm） |
+|---|---:|---:|
+| 32 | 478.984375000 | 43.299399 |
+| 64 | 478.982421875 | 43.298988 |
+| 128 | 478.983398438 | 43.298393 |
+
+三層距離 spread 約 **0.001006 mm**、時間 spread **8.138 µs**；nested distances 逐次下降，minimum time 在小區間內擺動。128 的 refinement spacing 約 4.069 µs；GLB evaluator 仍使用 float time／transforms，不把表格的小數位當成物理精度。收斂 assert：32→128 距離差 <1e-5 m、時間差 <2e-5 s；沒有改既有容差。
+
+- Debug／Release build，**各 9/9 CTest 通過**；Debug／Release 完整 probe JSON 相同。
+- Ball query 與 t0 至 arrival 的全部 integer ticks：最大 position error **8.1093e-6 m**，velocity error **6.1989e-6 m/s**；沿用 reference integration 的 0.0002 tolerance，另核對 plane sample 與 Complete 不變。
+- Bat query 在 tick0／Gather／Plant／479／contact_area／final 與 runtime semantics 最大差 **0 m**，沿用 1e-4 m tolerance。Probe 前後 authoritative tick、pose、triangles、sample count 不變。
+- Closest point 覆蓋 interior、barrel endpoint、tip endpoint、degenerate segment；repeat exact，30／60／120 render chunking 完成後的 probe 結果 exact 相同。既有 S2／S3 20 replays、pause／step／debt、release ownership、arrival／prediction、asset／animation tests 全保留。
+- 本輪重跑一次 actual Debug app smoke：0–896 逐 tick、start／pause／single-step／replay／Complete／minimize restore、正常 wall-time playback（約 3.767 s）；Debug GPU validation **0 errors／corruption、無 live child resources、exit0**。新 actual ticks477–481 已檢視。App pixels 與 S2 同 ticks 比對一致（見本輪 evidence 檢查）。
+
+正式 assets、motion、staging、main／renderer／HLSL 未改。這個結果只描述既有 motion／pitch 的時空距離；collision envelope、hit rule、player input 與 contact response 都仍未決定。完成後停止，不開始下一階段。

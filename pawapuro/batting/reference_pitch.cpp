@@ -1,7 +1,15 @@
 #include "reference_pitch.hpp"
 #include <stdexcept>
+#include <cmath>
 
 namespace pawapuro {
+BallState sample_reference_pitch(const BallState& initial, double t)
+{
+    if (!std::isfinite(t) || t < 0) throw std::runtime_error("Pitch study time must be finite and nonnegative.");
+    const auto& p=initial.position_m; const auto& v=initial.velocity_mps;
+    return {{static_cast<float>(p.x+v.x*t),static_cast<float>(p.y+v.y*t+0.5*earth_gravity_mps2*t*t),static_cast<float>(p.z+v.z*t)},
+        {v.x,static_cast<float>(v.y+earth_gravity_mps2*t),v.z}};
+}
 void ReferencePitch::reset()
 {
     previous = current = initial;
