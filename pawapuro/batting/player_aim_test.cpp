@@ -68,4 +68,3 @@ int main(int argc,char** argv) {
     std::puts("PASS PlayerAim: axes/projection, diagonal, clamps, recenter, dt cap, signed diagnostics, tuning, fixed-capacity geometry, center/corners unchanged full physical path/poses/contact.");return 0;
  }catch(const std::exception& e){std::fprintf(stderr,"FAIL %s\n",e.what());return 1;}
 }
-
