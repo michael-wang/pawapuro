@@ -83,7 +83,11 @@ BatBarrelSample BatterMotion::sample_barrel(double time,engine::GlbPose& scratch
         const auto& m=scratch.world[node];
         return DirectX::XMFLOAT3{-m[12]+placement.x,m[13]+placement.y,m[14]+placement.z};
     };
-    return {point(barrel),point(tip)};
+    engine::GlbMatrix world{};const auto& m=scratch.world[barrel];
+    for (std::size_t col=0;col<4;++col) for (std::size_t row=0;row<4;++row)
+        world[col*4+row]=m[col*4+row]*(col==0?-1.f:1.f)*(row==0?-1.f:1.f);
+    world[12]+=placement.x;world[13]+=placement.y;world[14]+=placement.z;
+    return {point(barrel),point(tip),world};
 }
 void BatterMotion::evaluate_tick(std::uint64_t authoritative_tick)
 {

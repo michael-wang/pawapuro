@@ -8,7 +8,9 @@ inline constexpr float rubber_distance_m = 18.4404f;
 inline constexpr float mound_center_z_m = rubber_distance_m - 0.4572f;
 
 // Startup-only snapshot. Missing keys use these defaults; invalid files are rejected.
+struct BatContactEnvelope { float ball_radius_m=0.037f,bat_radius_m=0.033f; };
 struct BattingStaging {
+    BatContactEnvelope bat_contact; // Gameplay candidate; independent of visual geometry.
     DirectX::XMFLOAT3 camera_position_m{-0.75f, 1.25f, -5.0f};
     DirectX::XMFLOAT3 camera_target_m{-0.75f, 1.30f, 16.8f};
     float vertical_fov_degrees = 36;

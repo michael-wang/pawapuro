@@ -2,19 +2,22 @@
 #include <algorithm>
 #include <cstdio>
 #include <limits>
+#include <stdexcept>
 
 namespace pawapuro {
 BattingPreview::BattingPreview(const std::filesystem::path& directory,const BattingStaging& staging)
     : delivery(directory/"pitcher/pitcher.glb",directory/"pitcher/pitcher.toml",staging),
-      batter(directory/"batter/batter.glb",directory/"batter/batter.toml",staging)
+      batter(directory/"batter/batter.glb",directory/"batter/batter.toml",staging),contact_envelope(staging.bat_contact)
 {
+    if (batter.contact_area_tick<8 || batter.contact_area_tick-8<delivery.motion.release_tick
+        || batter.contact_area_tick+8>batter.end_tick) throw std::runtime_error("Contact study window outside accepted delivery/clip.");
     std::fprintf(stderr,"BattingPreview: one 240 Hz clock, authored choreography only; release=%llu gather=%llu plant=%llu contact_area=%llu pitcher_end=%llu batter_end=%llu\n",
         delivery.motion.release_tick,batter.gather_tick,batter.plant_tick,batter.contact_area_tick,delivery.motion.end_tick,batter.end_tick);
 }
 void BattingPreview::reset()
 {
     delivery.reset();batter.evaluate_tick(0);tick=pending_ticks=fractional_credit=arrival_tick=0;
-    paused=false;phase=PreviewPhase::Ready;
+    contact.reset();contact_count=0;paused=false;phase=PreviewPhase::Ready;
 }
 bool BattingPreview::start()
 {
@@ -29,6 +32,19 @@ bool BattingPreview::step_tick()
     if (delivery.step_tick()) std::fprintf(stderr,"PitchDelivery Complete: preview_tick=%llu delivery_tick=%llu pitcher_tick=%llu\n",tick,delivery.tick,delivery.motion.tick);
     // Its own Complete remains final; never consume child wall time.
     if (!batter.complete()) batter.evaluate_tick(tick);
+    // Current accepted choreography's bounded contact window, not a marker trigger.
+    // Sample from immutable initial ball truth even if the plane evaluation completed.
+    if (!contact && tick>batter.contact_area_tick-8 && tick<=batter.contact_area_tick+8) {
+        contact=first_bat_contact(delivery.pitch.initial,static_cast<double>(delivery.motion.release_tick)/pitch_hz,
+            batter,contact_envelope,static_cast<double>(tick-1)/pitch_hz,static_cast<double>(tick)/pitch_hz);
+        if(contact) {
+            ++contact_count;const auto& c=*contact;const auto& s=c.sample;
+            std::fprintf(stderr,"BatContact: time_s=%.12f fractional_tick=%.9f dispatch_tick=%llu u=%.9f separation_m=%.9f normal=(%.9g,%.9g,%.9g) ball_velocity=(%.9g,%.9g,%.9g) bat_surface_velocity=(%.9g,%.9g,%.9g) relative_velocity=(%.9g,%.9g,%.9g); recorded only, no response\n",
+                s.preview_time_s,c.fractional_tick,tick,s.approach.u,s.approach.distance_m,c.normal.x,c.normal.y,c.normal.z,
+                s.ball.velocity_mps.x,s.ball.velocity_mps.y,s.ball.velocity_mps.z,c.bat_point_velocity.x,c.bat_point_velocity.y,c.bat_point_velocity.z,
+                c.relative_velocity.x,c.relative_velocity.y,c.relative_velocity.z);
+        }
+    }
     if (!arrival_tick && delivery.pitch.phase==PitchPhase::Complete) {
         arrival_tick=tick;
         const auto delta=static_cast<std::int64_t>(batter.contact_area_tick)-static_cast<std::int64_t>(arrival_tick);

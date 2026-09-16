@@ -3,7 +3,10 @@
 #include "pawapuro/batting/staging.hpp"
 
 namespace pawapuro {
-struct BatBarrelSample { DirectX::XMFLOAT3 barrel,tip; };
+struct BatBarrelSample {
+    DirectX::XMFLOAT3 barrel,tip;
+    engine::GlbMatrix barrel_world{}; // Same game basis; anchors a capsule surface material point.
+};
 // Owns one accepted swing asset and reusable CPU pose/geometry. No wall clock.
 struct BatterMotion {
     BatterMotion(const std::filesystem::path& glb,const std::filesystem::path& metadata,const BattingStaging& staging);

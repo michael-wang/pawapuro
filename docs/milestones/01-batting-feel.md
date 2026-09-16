@@ -213,4 +213,7 @@ Debug／Release build 與 CTest 各 5/5，含 delivery 邊界、20 replay、30�
 [Batter Motion Brief](../design/batter-motion.md) 已獲 Michael＋Julia 接受。Batter Authoring S0 左打 full-swing baseline 已獲 Michael＋Julia 接受。Batter Runtime S1 static import 已獲 Michael＋Julia human acceptance。S2 synchronized swing playback 已獲 Michael＋Julia human acceptance：一個 BattingPreview 240 Hz clock、兩角色 CPU skinning／共用 dynamic stream，保留球 479／投手 816 完成，打者及 preview 到 896。Debug／Release、各 8/8 CTest、實際 app controls 與 Debug GPU validation 通過，證據／誤差／成本由 [batter README](../../pawapuro/batting/batter/README.md#batter-runtime-s2--synchronized-swing-playback-candidate) 維護。這是 authored choreography preview，不定義正式 swing input；collision／contact presentation 未開始，M1 未完成。
 
 
-Bat Contact S0 bounded continuous closest-approach probe 已實作、待 Michael＋Julia review。Debug／Release 各 9/9 CTest 與本輪 actual Debug app／GPU validation 通過；數值與限定 geometry 意義由 batter README 維護。本輪不決定 hit／miss、半徑、response 或 input timing，M1 未完成。
+Bat Contact S0 bounded continuous closest-approach probe 已獲 Michael＋Julia acceptance。Debug／Release 各 9/9 CTest 與本輪 actual Debug app／GPU validation 通過；數值與限定 geometry 意義由 batter README 維護。本輪不決定 hit／miss、半徑、response 或 input timing，M1 未完成。
+
+
+Bat Contact S1 first continuous contact event candidate 已交付、待 Michael＋Julia review。第一 envelope／one-shot event 不改球；Debug／Release 各10/10 CTest、20 replay／30/60/120、actual app／GPU regression 通過。數值與 evidence 見 batter README；本輪不進入 response、sweet spot 或 player input，M1 未完成。

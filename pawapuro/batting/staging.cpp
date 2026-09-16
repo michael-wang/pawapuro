@@ -59,12 +59,13 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style"}, "");
-        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style"}) {
+        only_keys(table, {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact"}, "");
+        for (const char* section : {"camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
+                if (prefix == "bat_contact.") only_keys(fields, {"ball_radius_m", "bat_radius_m"}, prefix);
                 if (prefix == "camera.") only_keys(fields, {"preset", "position_m", "target_m", "vertical_fov_degrees"}, prefix);
                 if (prefix == "release.") only_keys(fields, {"position_m", "ball_marker_radius_m"}, prefix);
                 if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m", "home_dirt_radius_m"}, prefix);
@@ -84,6 +85,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
             std::fprintf(stderr, "Staging default: camera.preset = right_handed_pitcher_vs_left_handed_batter\n");
         }
         BattingStaging candidate;
+        candidate.bat_contact.ball_radius_m=number(table,"bat_contact.ball_radius_m",candidate.bat_contact.ball_radius_m,0.001f,0.2f);
+        candidate.bat_contact.bat_radius_m=number(table,"bat_contact.bat_radius_m",candidate.bat_contact.bat_radius_m,0.001f,0.2f);
         candidate.camera_position_m = vector(table, "camera.position_m", candidate.camera_position_m,
             {-1.5f, 0.8f, -10}, {1.5f, 2.2f, -2});
         candidate.camera_target_m = vector(table, "camera.target_m", candidate.camera_target_m,

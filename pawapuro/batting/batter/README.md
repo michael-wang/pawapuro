@@ -217,7 +217,7 @@ Accepted batter `.blend`／GLB／TOML、pitcher assets、staging／camera 完全
 
 ## Bat Contact S0 — continuous closest-approach probe
 
-本輪是 **geometry study，待 Michael＋Julia review**；只量 ball center 到 `[bat_barrel, bat_tip]` semantic centerline segment 的距離。`contact_area` 仍是 authoring marker，不是 collision truth。沒有 ball／bat radius、sweet spot、hit／miss、penetration 或 response，沒有使用 enlarged visual ball marker 或 rendered mesh thickness 作 collision envelope；player swing input 尚未設計。
+S0 probe 已獲 Michael＋Julia acceptance。以下是該輪 **geometry study** 紀錄；只量 ball center 到 `[bat_barrel, bat_tip]` semantic centerline segment 的距離。`contact_area` 仍是 authoring marker，不是 collision truth。沒有 ball／bat radius、sweet spot、hit／miss、penetration 或 response，沒有使用 enlarged visual ball marker 或 rendered mesh thickness 作 collision envelope；player swing input 尚未設計。
 
 ### 查詢與重現
 
@@ -281,4 +281,68 @@ Velocity 用 minimum 的 **固定 u material point**，以 ±0.1 ms central diff
 - Closest point 覆蓋 interior、barrel endpoint、tip endpoint、degenerate segment；repeat exact，30／60／120 render chunking 完成後的 probe 結果 exact 相同。既有 S2／S3 20 replays、pause／step／debt、release ownership、arrival／prediction、asset／animation tests 全保留。
 - 本輪重跑一次 actual Debug app smoke：0–896 逐 tick、start／pause／single-step／replay／Complete／minimize restore、正常 wall-time playback（約 3.767 s）；Debug GPU validation **0 errors／corruption、無 live child resources、exit0**。新 actual ticks477–481 已檢視。App pixels 與 S2 同 ticks 比對一致（見本輪 evidence 檢查）。
 
-正式 assets、motion、staging、main／renderer／HLSL 未改。這個結果只描述既有 motion／pitch 的時空距離；collision envelope、hit rule、player input 與 contact response 都仍未決定。完成後停止，不開始下一階段。
+正式 assets、motion、staging、main／renderer／HLSL 未改。這個結果只描述既有 motion／pitch 的時空距離；S0 當時未決定 collision envelope、hit rule、player input 或 response。S1 的第一 envelope／contact event candidate 見下節；S0 數值及原有 motion 未改。
+
+
+## Bat Contact S1 — first continuous contact event candidate
+
+**已實作，待 Michael＋Julia review。** 從 accepted S0 query 接入一次性的 authoritative sphere–capsule contact detection。只記錄第一次進入 envelope，不改 ball trajectory／ownership、animation、camera、arrival 或完成時間。Sweet spot、response、exit velocity／spin／hit quality 與 player input 均未開始；不增加 Motion Rule。
+
+### Gameplay Data／owner
+
+`staging.toml` 新增 `[bat_contact] ball_radius_m=0.037`、`bat_radius_m=0.033`，總和 0.070 m。**Reality is a consultant**：37／33 mm 是可調的第一 gameplay candidate，不是永久常數。不讀 `release.ball_marker_radius_m=0.085` 或 rendered bat thickness；原 staging geometry 所有欄位不變。沿用 startup Data parse／missing defaults／unknown-key rejection；個別 radius 必須有限且在 [0.001,0.2] m，這只是輸入 guard，不是可玩區間承諾。
+
+`BattingPreview` owns immutable envelope snapshot 與 `optional<BatContact>`。每次 start／replay 清成 NoContact；每個 authoritative tick 完成原 delivery／batter update 後，搜尋該 tick interval 的 earliest entry，找到後存成 Contact 並 log 一次。後續 tick 不再搜尋／trigger，保留結果到 replay。沒有 event bus／callback framework，也不讓事件控制任何 simulation owner。
+
+沿用當前 accepted choreography 的 marker ±8 ticks（472–488）作 bounded broad phase；marker 本身不 trigger，事件由 geometry 求得。每個 interval 固定 **64 substeps** 找第一個 outside→inside bracket，再 **24 次 bisection** 保留 inside 端。球由 immutable initial state 解析取樣，棒由 scratch pose 取 barrel→tip，endpoint hemispheres 合法；沒有 grip→tip 或 triangle collision。Scratch 為 query-local CPU storage，event 是 owned value，不保留 pose 指標或 GPU resource。
+
+此法經本版 32／64／128 對照驗證，**不是對任意新 motion／極窄 grazing contact 的通用 CCD 保證**；若未來 envelope／clip／球路改動，需重新檢查 bounded window 與 subdivision。初始中心線完全重合時 normal 未定義會明確報錯，未預建 overlap-response policy。Window 的解析查詢不延伸 mutable Complete ball。
+
+### First contact 實測
+
+| 項目 | 值 |
+|---|---:|
+| Absolute preview time | **1.994995922549 s** |
+| Fractional preview tick | **478.799021412** |
+| 記錄／dispatch tick | **479**，完成 interval [478,479] 後 |
+| Centerline separation | **0.069999976425 m**（約 70 mm） |
+| u at first contact | **0，barrel endpoint hemisphere** |
+| u at S0 minimum | **0**，不因此移動 semantic nodes 或定義 sweet spot |
+| contact_area time／delta | 2.000000000 s／**−5.004077451 ms** |
+| Envelope exit（test-only diagnostic） | 1.996531412704 s |
+| 連續 overlap 時窗 | **1.535490157 ms**，小於 240 Hz tick 的 4.166667 ms |
+
+本版整數 tick479 恰好落在 envelope 內，但不能以它代替 first entry；只檢查 tick samples 會丟失 sub-tick entry，亦不能保證其他相位的短窗不被跳過。`contact_area` tick480 不參與 contact 判定。Ball 仍在479 gameplay Complete、pitcher816、batter／preview896完成。
+
+Normal 是 **closest capsule axis point Q → ball center C**。以下為 game-world，positions m、velocities m/s：
+
+| 項目 | (X,Y,Z) |
+|---|---|
+| Ball C | (0.003577803, 0.763811409, 0.341704190) |
+| Barrel／closest Q | (−0.010080814, 0.801038325, 0.284018874) |
+| Tip | (−0.344117284, 0.789606929, 0.221658334) |
+| Capsule surface point Q + normal × Rbat | (−0.003641749, 0.783488512, 0.311213374) |
+| Normal | (0.195123181, −0.531813264, 0.824076235) |
+| Ball velocity | (1.654644370, −5.193000793, −41.666999817) |
+| Bat surface-point velocity | (−1.039765835, −1.456141472, 29.649436951) |
+| Relative velocity：ball − bat | (2.694410324, −3.736859322, −71.316436768) |
+
+速率為 ball **42.021946 m/s**、bat **29.703376 m/s**、relative **71.465083 m/s**。與 S0 不同，這裡記錄的是 **capsule surface material point**：在 entry 時將 Q+nRbat 轉入 bat semantic 的 rigid local frame，再以 ±0.1 ms 取同一 material point 的 central difference；不是滑動 Q 或 world normal 的 derivative。這些值只記錄，不推算 response。
+
+### 收斂／驗證與 evidence
+
+| Substeps per tick + 24 bisections | First time（s） | Separation（m） |
+|---|---:|---:|
+| 32 | 1.99499592254870 | 0.0699999764247533 |
+| 64（runtime） | 1.99499592254870 | 0.0699999764247533 |
+| 128 | 1.99499592254676 | 0.0699999764247533 |
+
+時間 spread 約 1.94e-12 s，sampled geometry 相同；這只描述 deterministic bracket/refinement 收斂。GLB evaluator 仍為 float time／transforms（此時間區域 float spacing 約 0.119 µs），不可把列印小數當成物理精度。
+
+- Debug／Release build、各 **10/10 CTest**；兩版 contact diagnostics 相同。原 S0、S2／S3、asset／animation／arrival／prediction tests 全保留，未放寬 tolerance。
+- 新測試：現行 first contact、entry 前後 ±1 µs outside／inside、normal unit、32／64／128 收斂、single-step crossing／pause、one-shot、20 replays、30／60／120 chunking exact invariant；20+20 mm artificial envelope 為 NoContact，40+40 mm earlier contact，visual marker 改0.15 m 不影響結果。
+- 每 tick 對照不含 contact owner 的 PitchDelivery／BatterMotion：球位置／速度與 ownership、兩份 pose、479／816／896完成時間不變。新 staging tests 覆蓋 radius overrides、visual separation、zero／negative／NaN／wrong type／unknown key。
+- Actual Debug app smoke 通過 start／pause／step／replay／Complete／minimize restore；三次 preview 各只有一個相同 BatContact log。GPU validation **0 errors／corruption、無 live child resources、exit0**。Ticks477–481 與 S0 畫面逐 pixel 相同；正式投打三檔 unchanged，main／renderer／HLSL 未改。
+- Ignored `build/bat-contact-s1/` 保存 `contact-release.log`、Debug／Release CTest／build logs、`debug.log`、`debug-smoke.json`、actual `debug-contact/0477..0481.png`、`regression-evidence.json`。不重製影片或新增 runtime overlay。
+
+Repo root 重現數值：`build/release/bat_contact_test.exe pawapuro/batting pawapuro/batting/staging.toml`。App 原 Space／P／`.` controls 不變；首次 contact 僅輸出 `BatContact:` 一行（time／fractional tick／u／normal／velocities），event 可直接由 Native owner 讀取。完成後停止，等待 review；不做 contact response。

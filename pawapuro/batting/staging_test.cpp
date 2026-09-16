@@ -6,7 +6,7 @@
 #include <string>
 
 namespace {
-std::array<float, 37> values(const pawapuro::BattingStaging& s)
+std::array<float, 39> values(const pawapuro::BattingStaging& s)
 {
     return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
@@ -14,7 +14,7 @@ std::array<float, 37> values(const pawapuro::BattingStaging& s)
         s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m, s.mound_height_m,
         s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m,
         s.pitcher_blockout_position_m.x, s.pitcher_blockout_position_m.y, s.pitcher_blockout_position_m.z, s.pitcher_blockout_height_m,
-        s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m, s.blockout_head_scale, s.blockout_foot_planar_scale, s.blockout_foot_height_scale, s.blockout_hand_scale, s.blockout_bat_thickness_scale};
+        s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m, s.blockout_head_scale, s.blockout_foot_planar_scale, s.blockout_foot_height_scale, s.blockout_hand_scale, s.blockout_bat_thickness_scale,s.bat_contact.ball_radius_m,s.bat_contact.bat_radius_m};
 }
 }
 int main(int argc, char** argv)
@@ -64,6 +64,10 @@ int main(int argc, char** argv)
         if (style.blockout_head_scale != 1.1f || style.blockout_foot_planar_scale != 1.7f || style.blockout_foot_height_scale != 0.8f
             || style.blockout_hand_scale != 1.4f || style.blockout_bat_thickness_scale != 1.2f)
             throw std::runtime_error("Character style overrides were not loaded.");
+        write("[bat_contact]\nball_radius_m=0.04\nbat_radius_m=0.03\n");
+        const auto contact=pawapuro::load_batting_staging(fixture);
+        if(contact.bat_contact.ball_radius_m!=.04f || contact.bat_contact.bat_radius_m!=.03f || contact.ball_marker_radius_m!=defaults.ball_marker_radius_m)
+            throw std::runtime_error("Gameplay envelope override mixed with visual radius.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
             catch (const std::runtime_error& error) {
@@ -77,6 +81,11 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[bat_contact]\nball_radius_m=0\n", "bat_contact.ball_radius_m"},
+            {"[bat_contact]\nbat_radius_m=-0.01\n", "bat_contact.bat_radius_m"},
+            {"[bat_contact]\nball_radius_m=nan\n", "bat_contact.ball_radius_m"},
+            {"[bat_contact]\nbat_radius_m='visual'\n", "bat_contact.bat_radius_m"},
+            {"[bat_contact]\nradius=0.07\n", "bat_contact.radius"},
             {"[character_style]\nfoot_height_scale=0\n", "character_style.foot_height_scale"},
             {"[character_style]\nfoot_scale=1.6\n", "character_style.foot_scale"},
             {"[character_style]\nhead_scale=nan\n", "character_style.head_scale"},
@@ -124,7 +133,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 44 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and 49 invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

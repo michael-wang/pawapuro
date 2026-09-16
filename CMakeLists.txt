@@ -51,7 +51,7 @@ foreach(stage IN ITEMS vs ps)
     list(APPEND shader_headers "${header}")
 endforeach()
 
-add_executable(pawapuro WIN32 pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/batting_preview.cpp pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
+add_executable(pawapuro WIN32 pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/batting_preview.cpp pawapuro/batting/bat_contact.cpp pawapuro/batting/contact_probe.cpp pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
     engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp
     pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp ${shader_headers})
 target_compile_features(pawapuro PRIVATE cxx_std_20)
@@ -72,8 +72,18 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(bat_contact_test pawapuro/batting/bat_contact_test.cpp pawapuro/batting/contact_probe.cpp
+        pawapuro/batting/batting_preview.cpp pawapuro/batting/bat_contact.cpp pawapuro/batting/batter/batter_motion.cpp
+        pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
+        pawapuro/batting/reference_pitch.cpp pawapuro/batting/reference_scene.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(bat_contact_test PRIVATE cxx_std_20)
+    target_compile_options(bat_contact_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(bat_contact_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(bat_contact_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME bat_contact COMMAND bat_contact_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting" "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml")
     add_executable(contact_probe_test pawapuro/batting/contact_probe_test.cpp pawapuro/batting/contact_probe.cpp
-        pawapuro/batting/batting_preview.cpp pawapuro/batting/batter/batter_motion.cpp
+        pawapuro/batting/batting_preview.cpp pawapuro/batting/bat_contact.cpp pawapuro/batting/batter/batter_motion.cpp
         pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
         pawapuro/batting/reference_pitch.cpp pawapuro/batting/reference_scene.cpp pawapuro/batting/staging.cpp)
     target_compile_features(contact_probe_test PRIVATE cxx_std_20)
@@ -93,8 +103,8 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/batter/batter.toml"
         "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml"
         "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/batter/motion_expected.txt")
-    add_executable(batting_preview_test pawapuro/batting/batting_preview_test.cpp
-        pawapuro/batting/batting_preview.cpp pawapuro/batting/batter/batter_motion.cpp
+    add_executable(batting_preview_test pawapuro/batting/batting_preview_test.cpp pawapuro/batting/contact_probe.cpp
+        pawapuro/batting/batting_preview.cpp pawapuro/batting/bat_contact.cpp pawapuro/batting/batter/batter_motion.cpp
         pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
         pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
     target_compile_features(batting_preview_test PRIVATE cxx_std_20)
