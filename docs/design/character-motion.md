@@ -117,6 +117,6 @@ Michael＋Julia 的 S2 runtime human review 已確認：S0 已接受的 motion �
 - **Foot Shape**：v1B toe／heel／upper／sole geometry 已通過 Michael＋Julia human review 並 promotion；v1A footprint 尺寸保留。Front-foot evaluated geometry 朝向已診斷正確；v1C 因過窄 upper 配寬 sole 的 mound-like silhouette 已 human rejected；暫停純 geometry shoe polish，presentation debt 延後至 material／後續 polish。Motion Truth 保留，不新增 Motion Rule。
 - **Material／highlight**：參考鞋面的 specular／highlight 延後，目前沒有 material／lighting framework。
 - **Articulation／sole／cleat detail**：彈性形變與鞋底細節延後，目前沒有真實 caller 要求 implementation。
-- **Rubber arm**：v1A geometry／weights candidate 正常速度改善不明顯，暫緩 promotion、保留 artifact。Human review 指出 post-release timing 過慢是主要瓶頸；另以正式 v1B 建立 Throwing Arm Whip Timing v1A，依既有 Rule 3／6，只改右臂 release 後 local timing，待 human review。
+- **Rubber arm**：v1A geometry／weights candidate 正常速度改善不明顯，暫緩 promotion、保留 artifact。Human review 指出 post-release timing 過慢是主要瓶頸；Throwing Arm Whip Timing v1A 依既有 Rule 3／6 的 post-release timing compression 已 human accepted／promoted。Rubber Arm 舊 geometry candidate 保留，之後須在新正式 timing 下重新 human review 才決定是否 polish。
 
 操作與證據見 [pitcher README](../../pawapuro/batting/pitcher/README.md#style-polish-v1a125-planar-feet-candidate)，技術結果由 [environment](../development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16) 擁有。S3 未開始、M1 未完成；六條 rules 原文不變。

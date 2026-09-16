@@ -1011,3 +1011,23 @@ Candidate `review/style-arm-whip-v1a/` SHA256：
 - 已檢視 authoring 局部 sequence、actual runtime f97–111 每格與全段抽樣；未連續觀看正常速度影片。快速收回後較長時間靠近胸口、hard-elbow 在更快 timing 下是否仍搶眼，留給 human review，不宣告通過。
 
 Evidence：ignored `build/style-arm-whip-v1a/`。正式三檔／fixture 不變，candidate 待 Michael＋Julia review、未 promotion；Rule 3／6 適用但六條原文不改，S3 未開始。
+
+
+## Throwing Arm Whip Timing v1A promotion（2026-09-16）
+
+Michael 正常速度 human review 接受 v1A timing direction：改善來自 post-release timing compression／速度對比。Preflight HEAD／main／origin/main／live remote 均為 accepted candidate commit `33714438bc94a4263e31919ff4fba27d5512e939`，workspace clean。正式三檔由 `review/style-arm-whip-v1a/` 原樣複製，逐 byte／SHA256 相同；fixture 也原樣同步已驗證的 candidate，沒有重新產生 samples。沒有重新保存 source、export、retime 或修改 metadata。
+
+正式 SHA256：
+
+- `pitcher.blend`：`f6e437cf18aece5bdde97069e4f9ef3ec5ee3d0151c99e90cd31bfaca2a923f2`
+- `pitcher.glb`：`98a126e42de3e5b4a1856cf56454bee196144dbc6620e0bc28dcc771b4450a9e`
+- `pitcher.toml`：`bf59cb5da49d487b25304ea93bbe59570738366eb24144ac5173c916d836aae5`
+
+- 唯讀正式 source：fresh evaluated samples 與 accepted candidate exact。對照舊 v1B，205 格 pelvis／chest／head／feet／left arm transforms exact；geometry／weights／rest skeleton／camera／contacts exact，鞋仍是 v1B。F1–97、f205 完整 bones／mesh exact；release f97／tick 384、clip 60 fps／1–205／3.4 s 不變。
+- Khronos 0 errors／warnings／infos／hints。Source／GLB／round-trip PASS，mesh max 2.098526e-6／1.706817e-6 m；release alignment 5.454740e-7 m。既有 motion checks PASS，grip binding、固定骨長、contacts、head proxy、opening／release guards 全部保留，未放寬容差。
+- Debug／Release configure／build／正式 CTest 各 4/4 PASS，含 S2 all-tick／skin／30、60、120 chunking determinism／pause／replay、fixed bones／contacts。實際 build 載入的 GLB／TOML bytes 已確認等於 promoted official。
+- 正式 Debug／Release app play／pause／817 steps／replay／Complete／minimize→restore PASS、exit 0；正常 wall time 3.4084／3.4280 s、Complete tick 816，背景時間不補入。Pause／final hold 使用記憶體內像素比較，不保存 screenshots。Debug GPU-based validation enabled、0 errors；shutdown live report 只有供 report 的 device，無 child objects。
+
+Evidence：ignored `build/style-arm-whip-v1a-promotion/`；沒有新的影片／visual review，也沒有 production code 變更。Regression 後再核對正式三檔與 accepted candidate 仍 byte-identical。
+
+Whip review artifact 保留。Rubber Arm 舊 timing candidate 不 promotion／merge，待新正式 timing 下重新評估；v1C shoe 維持 rejected artifact，material／highlight／cleats／articulation 延後。六條 Character Motion Rules 原文不變，S3 未開始，M1 未完成。

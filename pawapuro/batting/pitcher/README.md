@@ -1,12 +1,20 @@
-# 右投手 Authoring Sample（正式 Style Feet v1B；motion S0.2C）
+# 右投手 Authoring Sample（正式 Style Feet v1B；motion S0.2C＋Whip Timing v1A）
 
-2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式三檔已 promotion 至 v1B；projected shoe readability／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
+2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式鞋為 v1B、motion 已升為 Whip Timing v1A；projected shoe readability／material／articulation／rubber-arm debts 仍保留。球仍是獨立 reference fixture，S3 未開始，M1 未完成。
 
-## Throwing Arm Whip Timing v1A candidate（2026-09-16）
+## Throwing Arm Whip Timing v1A promotion（2026-09-16）
+
+Michael 已完成正常速度 human review，接受 release 後快速 sweep 與速度對比。正式三檔由 commit `33714438bc94a4263e31919ff4fba27d5512e939` 的 `review/style-arm-whip-v1a/` **byte-preserving promotion**，SHA256／bytes 全部相同；沒有保存 .blend、重跑 revision、改 keys／geometry／weights。正式 `motion_expected.txt` 也原樣同步 accepted candidate fixture，未重新產生 samples。
+
+舊 f112／126-equivalent 分別由 0.250／0.483 s 壓縮至 0.100／0.167 s，post-release hand peak 約 1.97×。Release f97／grip、body／feet／left arm timing、f205 final pose 保持；正式鞋仍是 accepted v1B。一次 promotion regression 全部通過，hashes／結果見 environment；沒有重製影片或 screenshots。
+
+Rubber Arm geometry candidate 暫緩 promotion，保留舊 timing artifact、不合併；待新 timing 下重新 human review。Rejected v1C shoe artifact 保留；shoe material／highlight、cleats／sole、articulation 仍延後。無新 Motion Rule，S3 未開始。
+
+### Whip v1A 原候選交付紀錄
 
 Runtime human review 指出主要 presentation bottleneck 是 post-release throwing-arm timing 過慢。Rubber Arm v1A 正常速度改善不明顯，**暫緩 promotion，保留 artifact、不永久 reject**；本輪完全從正式 v1B 開始，沒有混入該 geometry／weights。
 
-`review/style-arm-whip-v1a/` 是 **待 Michael＋Julia review 的單一 candidate、未 promotion**。依既有 Rule 3 lead／lag、Rule 6 momentum resolution，只 retime `arm_R`／`forearm_R`／`hand_R` 的 f98–204 local TRS；既有準備、body lead、release f97 與 final f205 保留。本版 0.1 s sweep 是候選目標，不是永久 Motion Rule。
+`review/style-arm-whip-v1a/` 已 **human accepted 並 promotion**；以下保留原單一候選的實作與測試紀錄。依既有 Rule 3 lead／lag、Rule 6 momentum resolution，只 retime `arm_R`／`forearm_R`／`hand_R` 的 f98–204 local TRS；既有準備、body lead、release f97 與 final f205 保留。本版 0.1 s sweep 是候選目標，不是永久 Motion Rule。
 
 `retime_arm_whip.py` 從 saved source evaluated local TRS 取樣，以 monotone Hermite time remap 烘焙回原 LINEAR 契約。Knots 為 **target→source（source frames／target frame slope）**：97→97（1）、103→112（3）、107→126（1.6）、127→140（0.6）、165→170（0.85）、205→205（1）。Source time 持續前進，不插 freeze；後半 settle 逐漸接回原終點。只改 local timing，equivalent local pose 不代表與舊 frame 相同的 world pose，因 torso 保持當下原 timing。
 
@@ -24,11 +32,11 @@ Runtime human review 指出主要 presentation bottleneck 是 post-release throw
 - `release-before-after-1x.mp4`：同 camera 左正式／右 candidate、f92–151、60 fps／1×、1.0 s；真實 runtime tick captures 重組，沒有時間拉伸。
 - `runtime-release-sequence.jpg`：要求的 f92／94／97／100／103／106／110／116，同 frame／tick；`every-frame-sweep.jpg` 是 f97–111 每一格 before／after。
 - `candidate-runtime-1x.mp4`：完整 205 frames／60 fps／3.416667 s，首格 Ready；`runtime-overview.jpg` 包含 settle／final。
-- `candidate-release/pawapuro.exe`：隔離 candidate app；一般 build 仍使用正式 v1B。
+- `candidate-release/pawapuro.exe`：隔離 candidate app；本次 promotion 後一般 build 已使用正式 Whip Timing v1A；鞋仍為 v1B。
 
-實際檢視局部 authoring、runtime 逐格 sweep 與全段抽樣：f98–103 下收更集中，隨後快速收近身體；torso 保持原節奏。長 settle 期間手臂靠胸口、變化較小，是否收得太早／像 teleport、hard-elbow 是否仍搶眼待 human review。已實測正常 wall-time 執行，未連續觀看正常速度影片，不宣告 timing／style 通過。
+實際檢視局部 authoring、runtime 逐格 sweep 與全段抽樣：f98–103 下收更集中，隨後快速收近身體；torso 保持原節奏。長 settle 期間手臂靠胸口、變化較小，交付時尚待 human review 判斷是否收得太早／像 teleport。其後 Michael 已正常速度觀看並接受 timing direction；hard-elbow 的後續 polish 仍延後。Codex 當時已實測正常 wall-time 執行，未連續觀看正常速度影片。
 
-保護與回歸：全部 geometry／weights／rest skeleton／camera／contacts exact；205 格 body／feet／left arm transforms exact，f1–97 與 f205 完整 evaluated mesh／bones exact，runtime 同段 pixels 也 exact。Blender 重算右臂鄰近 LINEAR keys 不使用的 AUTO handles，key 值／interpolation 與 release 前 evaluated pose 不變。Exporter post-release grip local baking 有 <1e-6 數值差，source grip binding 不改，release GLB outputs exact。`check_arm_whip_export.py` 只 patch f108／171 的 grip／arm bounds 及四個右臂／hand expected points、provenance；其他 fixture 記錄保留，正式 fixture 不改。完整測試結果見 environment。
+保護與回歸：全部 geometry／weights／rest skeleton／camera／contacts exact；205 格 body／feet／left arm transforms exact，f1–97 與 f205 完整 evaluated mesh／bones exact，runtime 同段 pixels 也 exact。Blender 重算右臂鄰近 LINEAR keys 不使用的 AUTO handles，key 值／interpolation 與 release 前 evaluated pose 不變。Exporter post-release grip local baking 有 <1e-6 數值差，source grip binding 不改，release GLB outputs exact。`check_arm_whip_export.py` 只 patch f108／171 的 grip／arm bounds 及四個右臂／hand expected points、provenance；其他 fixture 記錄保留，候選交付時正式 fixture 不改，本次 promotion 原樣同步 accepted fixture。完整測試結果見 environment。
 
 無 geometry／shoe／torso retime／runtime speed multiplier／release integration；六條 Character Motion Rules 不改，S3 未開始。
 
