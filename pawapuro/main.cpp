@@ -3,6 +3,7 @@
 #include "batting/reference_scene.hpp"
 #include "batting/reference_pitch.hpp"
 #include "batting/batting_preview.hpp"
+#include "batting/player_aim.hpp"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -38,6 +39,7 @@ int main(int argc, char** argv)
         if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
         std::fprintf(stderr, "Window: %d x %d pixels, fixed windowed 16:9\n", width, height);
         pawapuro::BattingPreview preview(utf8_path(base_path)/"batting",staging);
+        pawapuro::PlayerAim aim(staging);
         auto& delivery=preview.delivery;
         auto& batter=preview.batter;
         auto& motion=delivery.motion;
@@ -45,7 +47,7 @@ int main(int argc, char** argv)
         const float aspect = static_cast<float>(width) / static_cast<float>(height);
         const auto scene=pawapuro::make_batting_reference(staging,prediction.state.position_m,aspect,{});
         std::vector<engine::Vertex> dynamic_characters;
-        dynamic_characters.reserve(motion.triangles.size()+batter.triangles.size());
+        dynamic_characters.reserve(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count);
         double assembly_us=0; std::uint64_t assembly_samples=0;
         std::fprintf(stderr,"S3 delivery: one 240 Hz clock; ball Hand -> Simulation at animation marker.\n");
         bool arrival_reported=false;
@@ -72,8 +74,9 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "Overlay bounds: left=%.6f top=%.6f right=%.6f bottom=%.6f; predicted pixel=[%.6f, %.6f]\n",
             zone_left_top.x, zone_left_top.y, zone_right_bottom.x, zone_right_bottom.y, predicted_screen.x, predicted_screen.y);
         engine::D3D12View view;
-        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()+batter.triangles.size()));
+        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count));
         auto last_time = SDL_GetTicksNS();
+        auto last_input_time=SDL_GetTicksNS();
         std::string last_title;
         bool running = true;
         while (running) {
@@ -92,6 +95,7 @@ int main(int argc, char** argv)
                         last_time=SDL_GetTicksNS(); arrival_reported=false;
                         std::fprintf(stderr,"Preview start/replay: preview_tick=0 pitcher_tick=0 batter_tick=0 owner=Hand pitch_tick=0; debt cleared.\n");
                     }
+                    if (event.key.scancode == SDL_SCANCODE_R) { aim.recenter(); last_input_time=SDL_GetTicksNS(); }
                     if (event.key.scancode == SDL_SCANCODE_P) preview.toggle_pause();
                     if (event.key.scancode == SDL_SCANCODE_PERIOD) preview.single_step();
                 }
@@ -99,21 +103,32 @@ int main(int argc, char** argv)
                     if (preview.phase == pawapuro::PreviewPhase::Playing && !preview.paused) preview.toggle_pause();
                     std::fprintf(stderr, "Window minimized; active preview paused (P to resume).\n");
                 }
-                if (event.type == SDL_EVENT_WINDOW_RESTORED) { last_time=SDL_GetTicksNS(); std::fprintf(stderr,"Window restored; preview remains paused.\n"); }
+                if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED || event.type == SDL_EVENT_WINDOW_FOCUS_LOST) last_input_time=SDL_GetTicksNS();
+                if (event.type == SDL_EVENT_WINDOW_RESTORED) { last_input_time=SDL_GetTicksNS(); last_time=SDL_GetTicksNS(); std::fprintf(stderr,"Window restored; preview remains paused.\n"); }
             }
             report_arrival();
             if (!running) break;
             if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
             if ((SDL_GetWindowFlags(window.get()) & SDL_WINDOW_MINIMIZED) || width == 0 || height == 0) {
+                last_input_time=SDL_GetTicksNS();
                 SDL_Delay(20);
                 continue;
             }
             view.resize(static_cast<UINT>(width), static_cast<UINT>(height));
-            char title[512];
+            const auto input_now=SDL_GetTicksNS();
+            const double input_dt=double(input_now-last_input_time)/1e9;
+            last_input_time=input_now;
+            if (SDL_GetWindowFlags(window.get()) & SDL_WINDOW_INPUT_FOCUS) {
+                const bool* keys=SDL_GetKeyboardState(nullptr);
+                aim.move(float(keys[SDL_SCANCODE_RIGHT])-float(keys[SDL_SCANCODE_LEFT]),
+                    float(keys[SDL_SCANCODE_UP])-float(keys[SDL_SCANCODE_DOWN]),input_dt);
+            }
+            const auto ac=aim.center(); const auto ad=aim.diagnostic(prediction.state.position_m);
+            char title[768];
             const auto ball=delivery.ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | Batting preview | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
-                "ball=(%.6f,%.6f,%.6f) | backlog=%llu | Space:play/replay P:pause .:step Esc:quit",
-                preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
+            std::snprintf(title,sizeof(title),"Pawapuro | aim=(%.4f,%.4f) error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+                "ball=(%.6f,%.6f,%.6f) | backlog=%llu | Space:play/replay P:pause .:step Esc:quit Arrows:aim R:center",
+                ac.x,ac.y,ad.dx,ad.dy,ad.ex,ad.ey,ad.q,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
             if (last_title != title) {
                 if (!SDL_SetWindowTitle(window.get(), title)) throw std::runtime_error(SDL_GetError());
@@ -123,6 +138,7 @@ int main(int argc, char** argv)
             dynamic_characters.clear();
             dynamic_characters.insert(dynamic_characters.end(),motion.triangles.begin(),motion.triangles.end());
             dynamic_characters.insert(dynamic_characters.end(),batter.triangles.begin(),batter.triangles.end());
+            aim.append_triangles(dynamic_characters);
             assembly_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-assembly_start).count();
             ++assembly_samples;
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),

@@ -1,6 +1,6 @@
 # Hit Authorization S0 — Gameplay Contact Model
 
-2026-09-17；**Hit Authorization S0 五層責任已獲 Michael＋Julia human review accepted；S0.1 Reticle Semantics amendment 待 review**。僅定責任與 normalized examples；沒有 production authorization、input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
+2026-09-17；**Hit Authorization S0 五層責任已獲 Michael＋Julia human review accepted；S0.1 Reticle Semantics 亦已 human review accepted；Player Aim S0 interactive candidate 待 review**。僅定責任與 normalized examples；沒有 production authorization、正式 swing input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
 
 ## Reference：觀察與解讀分開
 
@@ -28,13 +28,13 @@ Authorization 是必要 permission，**不是充分接觸保證**。允許嘗試
 
 黃色 ellipse 應表達 **gameplay authorization region**；中心是 player intent，dx／dy 是 relevant pitch point 相對中心的 aim error。比較點究竟採何 contact plane／crossing，以及 input 鎖定時刻，由實際 caller 決定，保留既有 strike-zone truth。
 
-保留 `aim_error = (dx, dy)`，以及 `ex = dx/rx`、`ey = dy/ry`；`q = ex^2 + ey^2` 只摘要 normalized 偏離程度，不能取代 signed vector。q 是平方量，不是距離本身：q=0 中心，q=1 邊緣，q>1 外側。rx／ry 尚無公尺值，UI 不必永遠使用解析橢圓。這是 mode-specific normalized design coordinate，不是從 reference 像素反算的公式。
+保留 `aim_error = (dx, dy)`，以及 `ex = dx/rx`、`ey = dy/ry`；`q = ex^2 + ey^2` 只摘要 normalized 偏離程度，不能取代 signed vector。q 是平方量，不是距離本身：q=0 中心，q=1 邊緣，q>1 外側。Authorization 的 rx／ry 尚無正式 balance 值，UI 不必永遠使用解析橢圓；下節 Player Aim S0 的公尺尺寸僅是 development reticle 首版 tuning。這是 mode-specific normalized design coordinate，不是從 reference 像素反算的公式。
 
 - **Normal**：較大 authorization ellipse、較多 rescue 空間。Contact 第一版只影響其 spatial aim 範圍；不預設擴大 timing window、增加 Power 或改 response。
 - **Power**：顯著較小 region、較少 correction budget；需要更精準的 intent，Power 的較高 upside 留給未來 response。Power 不放大 aim region。
 - **硬邊界**：Contact／mode 都不改 physical ball sphere 或 bat capsule，不用 hidden giant bat／radius multiplier。Power 的取捨不應靠縮小 physical bat，否則把操作能力混成器材尺寸，破壞同一 physical truth。
 
-## S0.1 — Reticle Semantics amendment（待 review）
+## S0.1 — Reticle Semantics amendment（human accepted）
 
 ### Observed：靜態 UI，不是內部公式
 
@@ -102,7 +102,29 @@ Player timing judgment 是獨立 gameplay dimension。S2 的 physical Contact／
 
 真正 player-input caller 出現後才能定：aim space 與投影／crossing sample、何時鎖定 intent、swing commit／timing error 定義、能力尺度及 rx／ry、Power region 的 Contact 關係、修正上限與可達性、無解或未授權 overlap 的一致演出、quality／defensive outcome 的消費方式。Ball Response 數值另案決定。此次 review 只確認責任邊界，不用先決定 balance。
 
-## 保留的 physical truth 與驗證
+## Player Aim S0 — Interactive Normal-Swing Reticle（待 human review）
+
+S0／S0.1 的責任分層保持不變；這次只將 Player Aim 做成實際 app development input，沒有 production Hit Authorization、hit／miss、Power toggle 或 contact response。正式 player timing／swing commit／cursor lock 仍未設計，cursor input 尚未記入 authoritative replay。
+
+- **Owner／座標**：app 擁有 concrete [PlayerAim](../../pawapuro/batting/player_aim.hpp)，生命週期到 app 結束；與 `BattingPreview` 並列，沒有餵入 contact detector。保存 evaluation plane 上 game/world X/Y 公尺座標，不保存 screen pixels；現有 `project_batting_point` 測試確認 +X 向畫面右、+Y 向上（pixel Y 減少）。Engine 不知道 aim 語意。
+- **初始與 clamp**：startup=(0, 0.775) m，由 zone 中心決定，不追蹤 prediction。Center clamp 至 X=[−0.4318,+0.4318]、Y=[0.30,1.25] m；角落 ellipse 可超出 outline。這是首版候選，不是永久禁止 off-zone aim。Space replay 保留 aim，R 才 recenter。
+- **Data 候選**：[staging.toml](../../pawapuro/batting/staging.toml) `[player_aim]` 的 `normal_radius_x_m=0.26`、`normal_radius_y_m=0.13`、`cursor_speed_mps=0.65`。這是 visual／development control tuning，**不是 authorization balance**。有限正值、半徑小於 zone 對應整體尺寸；loader 另有防誤植範圍並報來源／key。未加入 stats 或倍率。
+- **操作**：held arrows 連續移動、diagonal normalized；R recenter。獨立使用 app frame elapsed，單次上限 50 ms、無 debt，不綁 240 Hz preview tick。Ready／Paused／Complete 皆可移動；失焦不移動，focus／restore 重設 input elapsed baseline，minimize 期間不移動。Space／P／`.`／Esc 原行為保留，Pause 只停 preview。
+- **Diagnostics**：window title 顯示 aim、`dx=predicted.x−aim.x`、`dy=predicted.y−aim.y`、ex／ey／q。Prediction 只供比較，不吸附、不設 gate，不逐 frame 寫 stderr。左上例 aim=(−0.4318,1.25)，predicted≈(−0.00000045,0.77500063)，error≈(+0.43179956,−0.47499937)，normalized≈(+1.66076756,−3.65384150)，q≈16.1087055；**仍不判 miss**。
+- **Rendering／lifetime**：32-segment yellow ring＋black cross＋small diamond 共 210 vertices，append 到原 combined dynamic vector；預先 reserve 總 capacity=26322，不逐 frame 配置。Gameplay truth 在 evaluation plane；ring 向固定 camera 側 −Z 偏 2 mm，cross／core 再各偏 1 mm，皆只改 rendering。App vector 活到退出，renderer 只在 draw 借用並 copy 到既有 fence 保護的 upload buffer；Engine／D3D12View／HLSL 未改。
+
+### 實測與 review evidence
+
+`build/player-aim-s0/` 是忽略目錄：
+
+- `debug-startup.png`、`debug-top-left.png`、`debug-bottom-right.png`：實際 1920×1080 app screenshots；已檢視。`aim-diagnostic.png` 是左上 screenshot 裁切加上比較點／數值標註，不是新增 runtime UI。
+- `player-aim-1x.mp4`：6.5 s、30 fps container／195 frames。實際 app wall-time capture 含 Ready 移動、開始 preview、投球途中移動及 Complete；78 個實際 samples 依 timestamp 最近鄰補格，**約 12 captures/s，不是原生 30 fps 錄影**，最大 sample/time 差約 73 ms，沒有拉伸動畫時間。`video-capture.json` 保存 timestamps／titles，`video-validation.json` 記錄實際 decode FPS。已檢視抽樣 sequence，不宣稱已正常速度自看影片；可閱讀 input／preview 關係，快速 swing 平滑度應以 app human review 為準。
+- Computer-use Node 初始化兩次皆以 `trusted Node process exited unexpectedly` 失敗；沿用既有 Win32 app test harness。最初測試未取得 foreground，已補明確 focus assertion 再驗證，沒有因此修改遊戲 input。較快 BitBlt capture 回傳空白，未作證據，保留成功的 PrintWindow 影片。
+- **Debug／Release build、各 12/12 CTest 通過**。新增 tests：startup、四向／projection、diagonal、四邊 clamp、recenter、dt cap、signed error／normalization／q、invalid tuning、固定 geometry count／capacity。Center／左上／右下各完整 896 ticks 的 path／velocity、投打 poses、contact existence／time／u／normal 與 baseline exact 相同。原 20 replay、30／60／120 chunking、arrival／prediction、PitchDelivery／Batter／Contact S0–S2 tests 保留。
+- **實際 Debug app**：move／recenter／start／pause／paused move／step／Complete／replay 通過；replay 不重設 aim。Minimize 中 held arrow 不移動，restore 後 aim／paused tick 不變。`debug-smoke.json` 保存各狀態；`debug.log` 顯示 GPU validation=0 errors、exit=0、shutdown 僅剩供報告用 device，沒有新增 live child resource。Combined assembly mean≈36.124 µs（含原 characters，不是 reticle-only benchmark）。
+- **已知 review 點**：world-plane ring 與 corner 可見，未發現需要改 overlay renderer 的 blocker；black core／cross 在深草地對比偏低，中心還有既有 orange prediction ring。是否需要更清楚的核心、尺寸／速度是否適合、球與 reticle 同時閱讀是否足夠，交由 Michael＋Julia 實際操作判斷，不宣告 human acceptance。
+
+## 保留的 physical truth 與 S0 design-study 驗證
 
 - S0 continuous closest approach 保留；moving ball／barrel 不能只測離散 frame。
 - S1 sphere／capsule earliest-entry event 保留；ball37／bat33 mm、endpoint 合法性、sub-tick time、normal、relative motion 與原球路皆不改。
