@@ -22,7 +22,7 @@ Detached feet、large flat feet、rubber-like continuous arms、spherical hands�
 
 Detached foot transforms、hidden bend joints、skin weights、grip node、authored contact intervals 與 release marker，都是目前 authoring sample 使用的方法。它們可更換，只要仍表達同一個 Motion Truth；不因此要求腳永久 parent 到 torso，或把目前 Blender／GLB hierarchy 升為永久角色架構。
 
-實際資產與工具契約由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。S0 authoring motion 與 S1 static import 已接受；S2 runtime clip playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。S3 已實作 Rule 5 的 runtime 持有／釋放交接 candidate，待 Michael＋Julia human review；既有 support／body intent／lead-lag／momentum resolution 不改。六條 v0.1 原文（含當時的 implementation 狀態）保留，現行 delivery 契約見 Batting Feel。
+實際資產與工具契約由 [pitcher README](../../pawapuro/batting/pitcher/README.md) 維護。S0 authoring motion 與 S1 static import 已接受；S2 runtime clip playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。S3 已通過 Michael＋Julia human review，Rule 5 的 runtime 持有／釋放交接已接受；既有 support／body intent／lead-lag／momentum resolution 不改。六條 v0.1 原文（含當時的 implementation 狀態）保留，現行 delivery 契約見 Batting Feel。
 
 ## 六條 v0.1 rules
 
@@ -119,4 +119,4 @@ Michael＋Julia 的 S2 runtime human review 已確認：S0 已接受的 motion �
 - **Articulation／sole／cleat detail**：彈性形變與鞋底細節延後，目前沒有真實 caller 要求 implementation。
 - **Rubber arm**：v1A geometry／weights candidate 正常速度改善不明顯，暫緩 promotion、保留 artifact。Human review 指出 post-release timing 過慢是主要瓶頸；Throwing Arm Whip Timing v1A 依既有 Rule 3／6 的 post-release timing compression 已 human accepted／promoted。Rubber Arm 舊 geometry candidate 保留，之後須在新正式 timing 下重新 human review 才決定是否 polish。
 
-操作與證據見 [pitcher README](../../pawapuro/batting/pitcher/README.md#style-polish-v1a125-planar-feet-candidate)，技術結果由 [environment](../development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16) 擁有。S3 delivery candidate 待 Michael＋Julia review，尤其 dynamic occlusion／early-flight readability；M1 未完成，六條 rules 原文不變。
+操作與證據見 [pitcher README](../../pawapuro/batting/pitcher/README.md#style-polish-v1a125-planar-feet-candidate)，技術結果由 [environment](../development/environment.md#style-polish-v1a-larger-grounded-feet2026-09-16) 擁有。S3 delivery 已獲 Michael＋Julia human acceptance；dynamic occlusion／presentation polish 仍可保留為非 blocker debt。Batter Motion S0 只做 reference study／brief，authoring 未開始；M1 未完成，六條 rules 原文不變。

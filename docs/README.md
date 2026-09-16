@@ -1,6 +1,6 @@
 # Pawapuro 設計文件
 
-更新：2026-09-16。M1 尚未完成。Michael＋Julia 已接受 Right-handed Pitcher S0（A／B／C）的 authoring motion baseline、S1 static GLB runtime import，以及 Character Motion Rules v0.1 design。S2 runtime 240 Hz animation playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。Style Feet v1A 的 1.25× planar footprint 已通過 Michael＋Julia human review 並原樣 promotion 為正式資產；接受限於支撐 footprint 尺寸，Foot Shape v1B geometry 已通過 human review 並原樣升為正式資產；front-foot orientation 已診斷正確，v1C shoe silhouette 已 human rejected，正式鞋保持 v1B；Rubber Arm v1A 暫緩 promotion；Throwing Arm Whip Timing v1A 已 human accepted 並原樣 promotion，主要改善為 post-release timing compression 與速度對比，其他 style debts 保留。S3 PitchDelivery 已實作為待 Michael＋Julia review 的 candidate：同一 240 Hz clock 驅動 held ball → release → Native flight，球路結果先完成、投手繼續 recovery。Dynamic occlusion／early-flight readability 與正式遊戲品質尚未通過。
+更新：2026-09-16。M1 尚未完成。Michael＋Julia 已接受 Right-handed Pitcher S0（A／B／C）的 authoring motion baseline、S1 static GLB runtime import，以及 Character Motion Rules v0.1 design。S2 runtime 240 Hz animation playback／CPU skinning 已通過 Michael＋Julia 技術與 human review。Style Feet v1A 的 1.25× planar footprint 已通過 Michael＋Julia human review 並原樣 promotion 為正式資產；接受限於支撐 footprint 尺寸，Foot Shape v1B geometry 已通過 human review 並原樣升為正式資產；front-foot orientation 已診斷正確，v1C shoe silhouette 已 human rejected，正式鞋保持 v1B；Rubber Arm v1A 暫緩 promotion；Throwing Arm Whip Timing v1A 已 human accepted 並原樣 promotion，主要改善為 post-release timing compression 與速度對比，其他 style debts 保留。S3 PitchDelivery 已通過 Michael＋Julia human review：held grip、release ownership、deterministic flight／arrival 與 gameplay／presentation completion 分離成立；目前右投手整體演出接受為 power-pitcher baseline。Cyan diagnostic、dynamic occlusion 與 style／material 仍可列後續 presentation debt，不阻擋 batter 工作。目前 Batter Motion S0 只交 reference study／Motion Brief，待 review；batter authoring 尚未開始。
 
 第一個 milestone 的成功是：**玩家打完一球後想立刻再打一球。** 引擎能力由這個投打循環需要的工作逐步產生。
 
@@ -10,6 +10,7 @@
 |---|---|
 | [Batting Feel 設計與邊界](design/batting-feel.md) | 六階段體驗、Native／Data／Lua 責任、concept locality、時間與資料契約。 |
 | [Pawapuro Character Motion Rules](design/character-motion.md) | 超現實角色仍須可信可讀的動作關係，以及完整 animation authoring 前的因果推理。 |
+| [Batter Motion S0](design/batter-motion.md) | 單一打擊 reference 的觀察、左打 Motion Brief 與下一輪 authoring review criteria。 |
 | [M1：Batting Feel](milestones/01-batting-feel.md) | 本次 scope、驗收方式、小步 implementation plan、第一個 coding task。 |
 | [Jai Design Adoption Review](research/jai-design-adoption-review.md) | 2026-09-13 研究快照，保存來源、取捨與 migration 分析。 |
 | [開發環境核對](development/environment.md) | 工具與依賴紀錄、建置／啟動命令、Step 1 各次交付的實測結果與限制。 |

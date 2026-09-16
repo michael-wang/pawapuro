@@ -313,7 +313,7 @@ S2 已通過 Michael＋Julia 技術與 human review：正式 S0.2C motion 能正
 
 ## S3：Pitch Delivery Single Clock（2026-09-16）
 
-**已實作 candidate，待 Michael＋Julia human review。** 新增 concrete Pawapuro Native `PitchDelivery`，解決 app 需要同 tick 的動畫／持球／球路 ownership 問題。它組合 `PitcherMotion`、`ReferencePitch`，擁有唯一 240 Hz wall-time credit／backlog 與 pause／step／replay；app 不呼叫兩個 child 的 `advance(elapsed_ns)`。Child 保留 standalone API 給原測試，integrated path 只用明確 `step_tick()`。沒有 Engine baseball semantics、event bus 或 sequencer。
+**Michael＋Julia 已接受 S3 human review。** Held ball／release ownership／deterministic flight 與 gameplay／presentation completion 分離成立，目前右投手演出接受為 power-pitcher baseline。新增 concrete Pawapuro Native `PitchDelivery`，解決 app 需要同 tick 的動畫／持球／球路 ownership 問題。它組合 `PitcherMotion`、`ReferencePitch`，擁有唯一 240 Hz wall-time credit／backlog 與 pause／step／replay；app 不呼叫兩個 child 的 `advance(elapsed_ns)`。Child 保留 standalone API 給原測試，integrated path 只用明確 `step_tick()`。沒有 Engine baseball semantics、event bus 或 sequencer。
 
 - 每 tick 先 evaluate 新 animation pose，再從同 tick grip 取得持球中心。第一次抵達 metadata release tick 384 時核對原 0.1 mm tolerance，恰好一次 `ReferencePitch::release()`，owner Hand → Simulation；該 tick 保持 pitch tick 0／既有 initial position 與 velocity。下一 delivery tick 385 才積分 pitch tick 1。
 - Release 前唯一球 mesh 以 `grip - initial release` translation 跟隨手，之後以 `pitch.current.position - initial release` translation 顯示。沿用既有 translated ball draw range，沒有第二顆球、visibility switch、renderer／HLSL 修改或手速推導球速。
@@ -321,4 +321,4 @@ S2 已通過 Michael＋Julia 技術與 human review：正式 S0.2C motion 能正
 - 若其他 fixture 球路較慢，動畫 816 後 clamp final pose，owner clock 繼續積分球到 arrival；不 retime asset。單步／暫停控制整個 delivery；一次 advance 最多 16 ticks、保留 debt，replay 清除兩個 child 與 owner 的 credit／狀態。Render 不插值，角色、grip、球與判定都讀最後完成的 authoritative tick。
 - `PitchDelivery` 與 owned CPU asset／pose／triangles／球路 state 活到 app 結束。Renderer 只在 draw 同步 upload 期間借用 triangles；GPU buffer／fence lifetime 沿用 S2。Native initial state 與 prediction 仍由既有 staging Data 決定，不改 gravity／plane／camera／strike-zone truth。
 
-正式 Whip Timing v1A、v1B 鞋、support／contact timing 與所有資產不改。Rule 5 的 semantic attachment 在此實作，六條 Character Motion Rules 原文不改。操作與證據見 pitcher README；驗證由 environment 維護。Dynamic occlusion、early-flight readability、正式遊戲品質與 M1 尚未通過，不隱含授權任何下一階段。
+正式 Whip Timing v1A、v1B 鞋、support／contact timing 與所有資產不改。Rule 5 的 semantic attachment 在此實作，六條 Character Motion Rules 原文不改。操作與證據見 pitcher README；驗證由 environment 維護。Cyan diagnostic、dynamic occlusion、material／style 可保留為後續 presentation debt，不阻擋 batter 工作；正式遊戲品質與 M1 未完成。下一個已授權範圍為 [Batter Motion S0：Reference Study／Motion Brief](batter-motion.md)，只做打者研究與因果 brief，尚未開始 batter authoring／rig／runtime／碰撞。

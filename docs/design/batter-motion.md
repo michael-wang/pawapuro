@@ -1,0 +1,113 @@
+# Batter Motion S0 — Reference Study & Motion Brief
+
+2026-09-16｜design／motion-analysis candidate，待 Michael＋Julia review。Batter Authoring S0 尚未開始。
+
+## Reference scope／provenance
+
+唯一主要 reference 是 Michael 提供的 [ref-batting-perfect.mp4](<C:/Users/USER/Videos/螢幕錄製內容/ref-batting-perfect.mp4>)。不替換成其他投打影片，不取用遊戲的模型或 animation data；只分析打者、以接觸閃光與鏡頭離開作時間標記。
+
+| 項目 | 本次確認 |
+|---|---|
+| Container／codec | MP4（`mp42`）／AVC（`avc1`） |
+| Capture | 2874×1612，30 fps，350 frames；MP4 sample time table 為 350×1000／30000 s |
+| Duration | Video track header 11.666633 s；350 格以 30 fps 顯示約 11.666667 s，差異只是 header 時間單位，不是額外動作 |
+| Index／timestamp | 本文件全部採 **0-based capture frame**；f0=0.000 s，時間為附件播放時間 `frame / 30`，不是 Pawapuro authoring frame |
+| SHA256 | `a010199e0f67b806b8dd03340c1c7578cc14e674bbca5dab8566ea2a48356b88` |
+| 已實際檢視 | 全片每秒總覽；f105–195 的 swing 區域解碼，重點連續檢視 f137–178；f180–245 的收勢抽樣，f244／245／246 核對鏡頭離開邊界 |
+| 可分析區段 | Ready 可見於片頭；主要準備／短步／swing 約 f135–171（4.500–5.700 s）；follow-through／finish 至 f245（8.167 s）；f246（8.200 s）離開打者 |
+| 視角限制 | f0–171 為捕手後方偏置視角，f172 起切入打者 hero 視角；不能跨 cut 比 screen-space 速度或直接把畫面位移當 world translation |
+| 工具／觀看界線 | 既有 Blender 4.5.13 VSE **僅解碼影片**，Pillow 排 contact sheets；沒有載入／保存 character .blend 或做 authoring。實際完成逐格影像檢視，未進行連續 1× 播放觀看或音訊聆聽 |
+
+30 fps 只證明附件 capture cadence。原遊戲 simulation／animation FPS、原素材是否曾慢放／重複取樣、capture 前播放倍率皆未知；下列秒數只描述附件以 1× 播放的可見 spacing。畫面有多格近似姿勢，不能從中反推原作 key spacing、hit-stop 或物理速度。
+
+**造型核對：實際 reference 已是大頭、球形手與 detached shoes 的 Q 版角色，並非真人式角色。** 本文不依授權文字的該項描述補入不存在的 anatomy。
+
+### Handedness 與 body-relative 詞彙
+
+影像判讀為 **左打**：綜合完整 Ready 畫面的本壘／投手位置、打者站區、背面球衣與轉身後揮棒方向，站在左打區，右側為面向投手的 lead side。這是影像判讀，未讀取原遊戲角色設定；沒有把 HUD 的「右」或單純 screen right 當成打擊慣用手證據。
+
+與 Pawapuro 的 left-handed batter 目標一致，**不需把這支 reference 反向鏡射**：lead/front foot=右腳、rear foot=左腳。後文先以 lead／rear 描述，不照抄像素座標；未來若另獲 right-handed 素材，需 mirror 支撐／開身／器材 trailing 關係，不能只 mirror 截圖。
+
+## Timeline：Source Observation 與 Motion Interpretation
+
+Load 與 Stride 在這支素材中重疊，沒有可靠分離的長蓄力段；仍分列事件以便下一輪 authoring 說清楚因果。下表的 plant／lead 是由畫面判讀，並非讀到原作骨架或接地狀態。
+
+| Event | Capture frame／timestamp | Source Observation：實際可見 | Motion Interpretation：本輪判讀 |
+|---|---|---|---|
+| Ready | f120／4.000 s（片頭已有） | 棒接近直立，雙球形手聚於頭／肩旁，鞋接近並部分重疊；軀幹只有小幅變化 | Compact ready；長等待不是整段 load |
+| Load 開始候選 | 約 f135–149／4.500–4.967 s | 小幅軀幹／鞋間關係變化；直到 f149 前後前鞋才清楚與後鞋分離 | 可能先卸前腳、保留後腳支撐；**不能可靠指定一個獨立 load 起始格**，也沒有大抬腿證據 |
+| Stride／lift 明確 | f149–158／4.967–5.267 s | 前鞋從重疊輪廓移出，向投手側短移；f156–158 可見鞋底與地面之間的間隙；手仍靠近頭側 | 小幅 lift／短 stride，rear support 為主，身體與腳共同蓄力而非大跨步 |
+| Front-foot plant 候選 | f158→159／5.267→5.300 s | 前鞋降低到地面附近，前移大致停止；後鞋開始換朝向，手／棒降至側後方 | 把 f159 視為可讀 plant 的第一個候選 sample；精確接地 tick 無法由單視角確認 |
+| Turn／bat lag | f159–163／5.300–5.433 s | 手在頭下／身旁，棒頭仍留在手的後上方；後鞋鞋底逐漸露出，球衣／肩線開始改向 | 支撐承接開身，hands／bat 先保留 trailing；pelvis 被球衣遮住，**不能證明骨盆比胸口早幾格** |
+| Torso 明顯轉動／主要 bat acceleration | f163→166／5.433→5.533 s | 球衣背面／肩線轉向，棒從斜後方跨到身前，遠端 spacing 突增；後鞋 heel 抬起／pivot 輪廓更明顯 | 主要爆發集中於此，身體帶手，棒頭快速追上；不是全段等速搬手 |
+| Contact-area 候選 | f164–170／5.467–5.667 s | 棒掃向本壘附近；f166–170 棒呈較接近水平、近似延伸姿勢 | 可作「高速穿越未來可擊球區」的路徑線索，不能從投影推出正式 3D collision truth；近似停留原因未知 |
+| Visible contact marker | f171／5.700 s | 首見明亮 contact flash；打者仍在延伸姿勢 | 只作 presentation 時間標記，**不把 flash 的格數等同球棒實際接觸時刻** |
+| Early follow-through | f172–180／5.733–6.000 s | 鏡頭變更後，手／棒繼續上繞，軀幹持續轉；可見後鞋 pivot／鞋底，沒有 contact 後全身立刻停住 | 動勢由穿越延伸轉入繞身上收，不能以 cut 隱藏缺少的承接 |
+| 大幅／hero follow-through | 約 f180–195／6.000–6.500 s | 棒沿頭／肩上方繼續繞行，f186 接近橫過頭側，f195 再轉斜；頭／軀幹與鞋朝向仍變 | 寬的 follow-through arc 消化動勢；單視角不能指定唯一「3D 最大旋轉」格 |
+| Recovery／last visible finish | f204–245／6.800–8.167 s | 棒逐步降到肩側，鞋前後分開；一鞋仍露出斜鞋底，最後數格身體變化小；沒有回到 Ready | 是可讀 finish／hero settle，不是已證明恢復雙腳平底的 ready。需保留動勢收束，不能用靜止尾段補長度 |
+| 鏡頭離開打者 | f246／8.200 s | 畫面改為外野；上一格 f245 仍有打者 | 後續 recovery 不可見，不補寫額外落腳／回 Ready |
+
+### Bat speed／timing：可用的關係與不可用的數字
+
+- Ready 的長等待（片頭至約 f147）不能算作 load；load 太微小，無法可靠獨立量出時長。可確認的短步約 f149→159，**10 個 capture intervals／0.333 s**，與 load 重疊。
+- f159→163 約 **4 intervals／0.133 s**：棒已放低但遠端仍留後，提供緊湊的 lag 輪廓。
+- 最大可見 forward sweep 約 f163→166，**3 intervals／0.100 s（包含 4 個端點影格）**：斜後方 → 跨身 → 身前延伸。這是畫面上方向／spacing 的集中改變，沒有估算 m/s，亦不指定 Pawapuro 必須用 3／6 格。
+- f166–170 近似延伸姿勢不能略掉；其後 f171 才見 flash。不能把整個 f159→171 的 0.400 s 都說成均勻高速，也不能把 near-hold 自動診斷為 hit-stop。是否由原素材變速／錄影重複或原作演出造成，仍未知。
+- f172–195 延續大 arc；約 f204 以後可見 spacing 縮小、棒逐步 settle。從 flash f171 到最後打者 f245 相隔 **74 intervals／2.467 s**，包含收勢與 hero presentation，不全是快速動作。f172 已 cut，故不跨視角量 bat pixel displacement。
+
+建議保留的 presentation 關係是 **compact preparation → short step／plant → 器材留後 → 短促 forward sweep → 較長的繞身／settle**。Capture 中的疑似 hold 不列為 authoring 必須照搬的 motion；下一輪以無特效 1× review 判斷，不預定總長。
+
+### Head／hands／feet 的觀察限制
+
+- **Head／gaze**：Ready 到 stride 的 helmet 朝向相對穩定；f163–171 球衣轉向更明顯時，帽沿仍大致朝來球／本壘側，頭沒有與 torso 一起完整甩轉。眼睛多被視角遮住，「看著 contact-area」是意圖推論，不是 eye tracking。f178 以後頭傾斜／朝向與 finish 共同改變，但 camera cut 使「何時開始追結果」無法精確定格。
+- **Shoulder → hand → bat**：手先 compact 留在肩／身旁，f159–163 bat barrel 落後，f164–166 快速穿過。可判讀分段 lead／lag，不能由這些輪廓證明整套 anatomical kinetic chain。球衣腰線只作 body turn cue，沒有把它當 pelvis transform。
+- **Attachment**：Ready／加速可見兩球形手聚在握把，不需 fingers。收勢有遮擋，無法確證後段有沒有單手離棒；不新增 bat release 語意。下一輪以連續持棒為首版候選，避免因看不到另一手就讓 bat 自行漂移。
+- **Feet**：前腳短步、plant 後後腳 heel-up／pivot 可讀；鞋重疊與 hero camera 使 world-space 接地／零滑動無法量化。沒有證據要求後腳另跨一步，也沒有證明最後 rear sole 必須完全壓平。這不是 foot articulation／IK 的需求。
+
+## Motion Brief：Left-handed Full Swing 候選
+
+以下是 **Pawapuro authoring intent／可刻意加強的可讀性**，不是宣稱 reference 逐項證明的內部 mechanics。沿用既有六條 [Character Motion Rules](character-motion.md)；不增加 anatomy、stretch ratio 或新 solver。
+
+| Phase | Support / Contact | Body Intent | Lead | Lag / Trailing | Attachment | Momentum Next |
+|---|---|---|---|---|---|---|
+| Ready | 雙腳有穩定地面關係，rear 左腳可承接 load | 緊湊、注意投手 | 視線／準備意圖 | Bat 保留在後肩附近 | 球形雙手讀成握住同一把手 | 轉入小幅 load，非全身僵直 |
+| Load | Rear 支撐，lead 右腳逐漸卸重 | 身體收住準備，不另做大抬腿 | Body load 帶前鞋 | Hands／bat 保留 compact | 握把隨手群，不漂移 | 接短 stride，不停在蓄力 pose |
+| Stride | Rear 支撐，lead lift→短移→下降 | 朝來球方向少量前移 | Body intent／lead foot 同步協調 | 胸口與 hands 保留短暫落後 | Bat head 留後，手不先外拋 | 前腳 plant 接住前移 |
+| Plant / Turn | Lead 建立支撐；rear 可卸 heel／pivot | 前移轉為開身旋轉 | Pelvis／torso 的較大轉動（需下輪證明） | Hands 留身旁、bat barrel 更後 | 握把 path 連續 | 以 turn 帶出 arm／bat acceleration |
+| Bat Acceleration | Lead 穩、rear 隨 turn 轉，不任意滑走 | 爆發集中 | Shoulder／hands 被 body 帶過 | Bat 遠端短暫 lag 再快速追上 | 手與把手同一路徑 | 快速穿進 contact-area，不在前方煞停 |
+| Contact-area | 支撐繼續承接轉動 | 穿越可擊球區，不把 contact 當目標停格 | Hands／bat sweep | 身體較慢節奏仍有重量 | Bat endpoint 清楚，無碰撞假定 | 無論有無球都接完整 follow-through |
+| Follow-through | Lead 承接，rear pivot／unload 需可讀 | 軀幹與手棒繼續繞身上收 | 既有動勢續行 | Arm／bat 可比 torso 晚 settle | Rubber arm 保持連續 curve，bat 仍被手帶動 | Arc 漸收、頭開始跟 finish |
+| Recovery / Finish | 雙腳位置能解釋平衡，rear 可保留 toe support | 收束成穩定 finish，不要求返回 Ready | 身體先減速 | Bat／hands 最後小幅 settle | 不新增放棒／換手事件 | 動勢確實消散，再 hold 最終 pose |
+
+為 Q 版可加強的是 **plant 與手棒 lag 的輪廓差、短促加速與慢 settle 的對比**。不可用任意伸長手臂、穿頭／穿帽、把 bat 瞬移或讓 detached shoes 各自漂移達成；手與棒 endpoint 必須清楚。大頭只保留注意力與適量後續轉動，不新增 huge-head balance law。
+
+## 下一輪 Batter Authoring S0 的 human-review criteria
+
+1. 先看無球、無 flash／sound／camera cut 的完整 1× swing：動作本身是否有力量？固定視角下也應成立。
+2. Ready／Load compact 且可區分；不把參考的長等待當慢蓄力，也不自動加入大抬腿。
+3. Rear support → lead lift／short stride → plant 可讀；planted shoe 不滑，身體前移與 detached feet 屬於同一意圖。
+4. 大 body turn 有帶動手棒的因果；pelvis／chest／hands 不只是同一曲線乘不同振幅。Reference 不足以證明的 pelvis timing 由本輪新 authoring 的畫面驗收。
+5. Hands 靠身、bat head 留後再追上，有清楚 lead／lag；不靠診斷箭頭才看懂。
+6. 爆發集中在短段，1× 能讀出加速對比，逐格仍是連續 arc、沒有 teleport；不照抄未知 capture 倍率的秒數。
+7. Bat 持續穿越 contact-area，沒有球也不中途煞停；不把視覺接觸標記冒充碰撞 truth。
+8. Torso、head、hands／bat 與 rear foot 各有後續節奏；完整收勢後才 settle，不能靠加尾端 hold 假裝有 recovery。
+9. 超大頭不隨 torso 剛性甩成陀螺；rubber arm 輪廓保持 continuous elastic action line，手／把手關係可信。
+10. 以左打 body-relative 關係檢查 lead=右／rear=左；先驗單一 full swing，尚不授權 rig／runtime／bat-ball collision。
+
+## Future Contact Presentation Notes
+
+- 直接可見：f171 contact flash，f172 換成 batter hero 視角；一直保留打者至 f245，f246 才離開，並非 perfect contact 後立刻追球。
+- Michael 提醒 flash／文字／camera／sound 共同放大 contact。影格確認前三項存在；本次未聆聽音訊，sound 的具體效果不列為已查證。
+- 「球的 gameplay truth 可能已在前進，presentation 仍留在打者」是未來可用的分離意圖，不是影片證明的原作 physics 實作。沿用 S3 已接受的 gameplay completion／presentation completion 分離思路。
+- 不在此定 camera API、hit-stop duration、VFX／audio architecture、碰撞或球路。
+
+## Open questions／review gate
+
+- 原素材是否曾變速、f166–170 near-hold 的來源未知。這限制 timing 精度，不阻止先採用支撐／lag／continuation 關係；若取得 Michael 的錄影倍率資訊再補 provenance，不必換 reference。
+- Pelvis 相對 chest 的精確發動差、精確 plant tick、收勢另一手是否放開與最終 rear-foot 接觸狀態，單視角／遮擋不足以查證；首版候選不為這些未知新增系統。
+- 請 Michael＋Julia review 本 brief 的 compact short-stride、明顯 hands／bat lag、短促 sweep 與完整 finish 方向。接受 brief 仍須另行授權 Batter Authoring S0，現在沒有 animation candidate。
+- **不需新增 Character Motion Rule**：support／detached coordination 是 Rule 1／2，器材 lag 是 Rule 3，elastic arm 是 Rule 4，持棒是 Rule 5，follow-through／finish 是 Rule 6。此 caller 沒有暴露無法涵蓋的新 Motion Truth。
+
+Evidence：ignored `build/batter-motion-s0-study/` 的 `reference-timeline.jpg`、`pre-contact-sequence.jpg`、`contact-area-sequence.jpg`、`follow-through-hero-sequence.jpg`，全部標 source timestamp／0-based frame；crop 僅為看清打者，cut 前後仍是不同 source camera。原片不複製進 repo，影格／解碼腳本／metadata 留在 build、不 commit。
+
+本輪只修改文件，沒有 production code／asset 變更；**未執行 C++ build、CTest 或 GPU validation**，未做 Blender authoring、rig、keys、GLB、runtime 或碰撞。

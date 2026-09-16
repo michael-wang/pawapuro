@@ -1,8 +1,10 @@
 # 右投手 Authoring Sample（正式 Style Feet v1B；motion S0.2C＋Whip Timing v1A）
 
-2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式鞋為 v1B、motion 已升為 Whip Timing v1A；projected shoe readability／material／articulation／rubber-arm debts 仍保留。S3 delivery candidate 已接入持球／release／Native flight，待 Michael＋Julia review，M1 未完成。
+2026-09-16：Michael＋Julia 已接受 S0.2C（A／B／C）authoring motion、S1 static import，以及 Character Motion Rules v0.1 design。S2 runtime animation／CPU skinning 已通過 Michael＋Julia 技術與 human review。v1A 的 1.25× footprint 與 v1B shoe-like geometry 均已通過 human review，正式鞋為 v1B、motion 已升為 Whip Timing v1A；projected shoe readability／material／articulation／rubber-arm debts 仍保留。S3 持球／release／Native flight 已通過 Michael＋Julia human review，gameplay／presentation completion 分離成立，右投手整體演出接受為 power-pitcher baseline；presentation debts 保留，M1 未完成。
 
 ## S3 Pitch Delivery Runtime Candidate
+
+**後續 human review 已接受 S3。** 下列保留 candidate 交付時的操作、觀察與證據；dynamic occlusion／cyan diagnostic／material／style 仍可保留為非 blocker debt。本次只更新接受狀態，未修改實作或 presentation。
 
 啟動 `build/release/pawapuro.exe`（或 Debug）：**Space** 從 Ready 投完整一球，只有整個 delivery Complete 才可 Space replay；**P** 暫停／繼續、**`.`** 暫停時前進一個 240 Hz delivery tick、**Esc** 離開。Minimize 自動暫停，restore 後以 P 繼續，不補背景時間。
 

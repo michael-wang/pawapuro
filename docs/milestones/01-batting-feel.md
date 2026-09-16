@@ -202,10 +202,12 @@ Michael＋Julia 已確認 authoring motion 正確在 runtime 播放，同時確�
 
 完成本輪後停止；後續 style polish 與 S3 都須另行授權，M1 未完成。
 
-## S3：Pitch Delivery Candidate（2026-09-16）
+## S3：Pitch Delivery Accepted（2026-09-16）
 
 已完成唯一 240 Hz `PitchDelivery`、held grip → release-once → 原 Native flight；Space／P／`.` 改為控制整個 delivery。Gameplay arrival 在 tick 479 立即成立，presentation recovery 到 816 才結束；不截斷 accepted follow-through。上節 S2 的獨立 reference ball／未開始 S3 是歷史交付狀態，現行契約見 Batting Feel。
 
 Debug／Release build 與 CTest 各 5/5，含 delivery 邊界、20 replay、30／60／120 chunking、原 asset／motion／physics regression；實際 app 操作及 Debug GPU validation 通過。證據與數值由 environment 維護。正式 asset、camera、renderer、staging 不改，沒有 style polish。
 
-**停在 Michael＋Julia human-review gate**：請用完整 delivery／release 連續影格確認 ownership handoff、頭／帽／手套遮擋及 early-flight tracking。數值連續不等於視覺通過，cyan release diagnostic 仍是 presentation debt。M1 未完成，不自行開始下一階段。
+**Michael＋Julia 已接受 S3 human review**：held ball 跟隨 grip、release tick／ownership、既有 ball flight／prediction／arrival、完整 follow-through 與 gameplay／presentation completion 分離均接受；右投手整體演出作為 power-pitcher baseline。Cyan diagnostic、dynamic occlusion、material／style 仍可保留為非 blocker debt，M1 未完成。
+
+下一個已授權小步是 [Batter Motion S0：Reference Study＋Motion Brief](../design/batter-motion.md)。本輪只交左打 full-swing 的 reference timeline、Motion Brief 與 authoring acceptance criteria，停在 Michael＋Julia review；Batter Authoring S0、rig、runtime 與碰撞尚未開始。
