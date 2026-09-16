@@ -1,6 +1,6 @@
-# Left-handed Batter — S0 accepted / Runtime S1 candidate
+# Left-handed Batter — S0 / S1 accepted, Runtime S2 candidate
 
-2026-09-16。Michael＋Julia 已接受 Left-handed Full Swing S0 authoring baseline：compact Ready、late gather、抬腳／短步、plant 先於主加速、body turn→手棒 lag、短促 acceleration、contact-area pass 與完整 finish。本目錄原有三檔就是 canonical accepted source，沒有再 promotion／save／export。**Batter Runtime S1 static import 已實作，待 human review**；不代表 runtime animation、碰撞、hit quality、contact presentation 或 M1 通過。設計與來源觀察由 [batter-motion.md](../../../docs/design/batter-motion.md) 擁有。
+2026-09-16。Michael＋Julia 已接受 Left-handed Full Swing S0 authoring baseline：compact Ready、late gather、抬腳／短步、plant 先於主加速、body turn→手棒 lag、短促 acceleration、contact-area pass 與完整 finish。本目錄原有三檔就是 canonical accepted source，沒有再 promotion／save／export。**Batter Runtime S1 static import 已獲 Michael＋Julia human acceptance；S2 synchronized swing playback 已實作，待 human review**；不代表 runtime animation、碰撞、hit quality、contact presentation 或 M1 通過。設計與來源觀察由 [batter-motion.md](../../../docs/design/batter-motion.md) 擁有。
 
 ## S0 authoring review evidence（歷史交付）
 
@@ -91,7 +91,7 @@ S0 交付沒有執行 C++ build／CTest／GPU validation；該輪 production cod
 
 Ignored `build/batter-runtime-s1/`：先看 `debug-ready.png`（完整 1920×1080 startup）、`debug-batter-crop.png`、`debug-composition.png` 與 `debug-tick-392-early8.png`（release 後 8 ticks）。Release 對應 `release-s1-ready.png`／`release-s1-batter-crop.png`／`release-s1-tick-392-early8.png`。這些是實際 app screenshots，非 Blender renders。
 
-目前 app 打者是 **GLB bind/rest geometry，不是 frame-1 Ready，也沒有播放 swing_L**。測試腳本完成真實 app 播放後逐 tick 擷取，畫面已實際檢視：一名左打者在既有 batting box，棒在 rear／plate 側、detached feet 可見，原投手／好球帶與 early-flight sightline 保留。Bind pose 的手臂較靠臉與 bat 輪廓是 source rest 外觀，沒有為取景修 source。Runtime S1 的 transport／構圖仍待 Michael＋Julia human review，不能推定 animated occlusion 安全。
+目前 app 打者是 **GLB bind/rest geometry，不是 frame-1 Ready，也沒有播放 swing_L**。測試腳本完成真實 app 播放後逐 tick 擷取，畫面已實際檢視：一名左打者在既有 batting box，棒在 rear／plate 側、detached feet 可見，原投手／好球帶與 early-flight sightline 保留。Bind pose 的手臂較靠臉與 bat 輪廓是 source rest 外觀，沒有為取景修 source。Runtime S1 的 static GLB transport、BatterMesh＋Bat shared hierarchy、placement／scale／handedness、bat attachment、grounding、composition／sightline 現已獲 Michael＋Julia 接受；不能推定 animated occlusion 安全。
 
 ### 最小 runtime contract／ownership
 
@@ -132,4 +132,84 @@ Ignored `build/batter-runtime-s1/`：先看 `debug-ready.png`（完整 1920×108
 - Debug D3D12 debug layer＋GPU-based validation：**0 errors／corruption**；owned resources 釋放後只剩 report 用 device，沒有 live child resources。Release 無 debug layer，不冒稱執行 GPU validation。
 - Computer Use helper 初始化兩次因 sandbox setup 錯誤失敗；改用既有 S3 app smoke 腳本與 Win32 截圖進行實際 app 驗證。不是只憑 unit tests 推定畫面。Debug／Release startup client pixels 比對完全一致。
 
-完成 S1 candidate 後停止。Batter Runtime S2／swing playback／BatterMotion／collision／contact presentation 均未開始；M1 未完成。
+以上為 S1 實作與驗證紀錄；S1 已 human accepted。S2 現況見下節，collision／contact presentation 與 M1 未完成。
+
+
+## Batter Runtime S2 — synchronized swing playback candidate
+
+**S2 已實作，待 Michael＋Julia human review。** 這是 accepted authoring choreography 的同步 development preview；不是「玩家按鍵就從 delivery tick 0 起播 swing_L」的正式 input／commit 規則。`contact_area` 仍不是 collision truth。不修改 source、球路、camera、staging 或六條 Character Motion Rules。
+
+### 操作與 review evidence
+
+啟動 `build/release/pawapuro.exe`（或 Debug）；Space 開始／雙方 Complete 後 replay，P 同步 pause／resume，`.` 在 paused 時只前進一個 240 Hz tick，Esc 離開。Minimize 自動 pause，restore 不補背景時間。Startup 為兩角色各自 clip tick 0；S1 static bind batter 已自 immutable scene 移除，沒有雙重打者或 fallback。
+
+Ignored `build/batter-runtime-s2/`：
+
+- **`synchronized-runtime-1x.mp4`**：完整 batting view、雙方 Ready 到 finish。
+- `batter-runtime-crop-1x.mp4`：同一 runtime 畫面固定像素裁切，沒有改 camera；可對照既有 `build/batter-authoring-s0/swing-batting-1x.mp4`。
+- `synchronized-contact-sheet.png`：Ready、Gather、lead lift、pitch release、Plant、arrival、contact_area、follow-through、pitcher finish、batter finish，標 tick／time／authoring frame。
+- `contact-every-tick.png`：ticks 476–484；`contact-every-four-ticks.png`：ticks 464–496。原始 PNG 位於 `release-contact/`。
+- `debug-smoke.json`／`release-smoke.json`、app logs、build／CTest logs、`capture-provenance.json`／`video-validation.json`。
+
+影片來自實際 Release app 的 authoritative tick 截圖（0–896，每 4 ticks 一格），編碼／decode 核對 60 fps、225 frames、1×，不是 wall-clock 螢幕錄影。Clip time 為 3.733333 s，最後一格顯示 1/60 s，影片長 3.75 s。另獨立執行正常 wall-time playback 驗證。已實際檢視全段主要 runtime poses 與 contact 連續影格；未宣稱用播放器完成正常速度視覺自看。正常速度 readability／接觸時序是否可玩仍由 Michael＋Julia review。
+
+### Concrete owners／資料流與 lifetime
+
+- `BattingPreview` 在 Pawapuro 層擁有唯一 preview wall-time accumulator、`PitchDelivery`、`BatterMotion`、Ready／Playing／Complete、pause／step／replay；每個 240 Hz tick 直接驅動兩者。子物件不 consume wall time，也沒有獨立 preview controls。超額 debt 依既有每 frame 最多 16 ticks 規則保留，Complete／replay 清除。
+- `PitchDelivery::step_tick()` 公開為 guarded deterministic operation；原 `advance(elapsed_ns)` 保留給 standalone caller／tests。既有 release-once、prediction／arrival、raw Complete、tick 816 completion 不改；外層 preview 不延長它的 clip 或狀態。
+- `BatterMotion` owns accepted GLB、共享 pose、兩個預配置 skin arrays、14304 個展開 triangle vertices 與 bat semantic world transforms。每 tick pose evaluate 一次，`BatterMesh`／`Bat` 都用既有 Engine CPU skinning；只做一次 X reflection／winding reversal，加 staging-only placement，scale=1。Semantic matrices 同 basis。沒有 equipment renderer。
+- TOML 只讀 hash／clip／time base／non-loop／contact_area／既有 bat semantic 名稱。Gather／Plant 從現有 `review.key_poses` 的兩個命名 pose 讀作 diagnostics，不建 event DSL，也不控制播放。CMake 同步複製既有 TOML 至 executable 旁；未重匯出 metadata。
+- App 的 `dynamic_characters` 一次 reserve 26112 vertices（pitcher 11808＋batter 14304），每 render clear／append 兩者，再一次送入原 dynamic stream。**Engine loader／pose／skinning、renderer／HLSL 均未改**；無第二 buffer、interpolation 或 runtime speed multiplier。
+- CPU assets、pose、skin／flatten buffers 由 preview 持有到 app 結束；合併 vector 由 app 持有。Renderer 只在 draw 的同步 upload 期間借用，GPU retirement 沿用既有 fence。檔案／TOML parse 暫存不流入 draw。
+
+### 實測共同 timeline
+
+| Event | Preview tick | 秒 |
+|---|---:|---:|
+| Batter Gather（TOML f72） | 284 | 1.183333 |
+| Lead lift（source f88） | 348 | 1.450000 |
+| Pitch release | 384 | 1.600000 |
+| Batter Plant（TOML f107） | 424 | 1.766667 |
+| Pitch gameplay Complete／arrival 可取得 | 479 | 1.995833 |
+| Batter contact_area（TOML f121） | 480 | 2.000000 |
+| PitchDelivery／pitcher Complete | 816 | 3.400000 |
+| Batter／BattingPreview Complete（clip f225） | 896 | 3.733333 |
+
+`contact_area − arrival = +1 tick = +0.004166667 s`。這只是兩份既有資料在同 timeline 的關係；不改 authoring timing，不生成 hit／miss。479 後球不再 integration，816 後 pitcher 保持 final，batter 繼續 finish；兩者完成前 Space 不 replay。
+
+以下是 actual authoritative game-world positions，單位 m。球的 479／480 值是 raw Complete，不是吸附到 plane 的 interpolated arrival sample：
+
+| Tick | Ball | bat_grip | bat_barrel | bat_tip |
+|---:|---|---|---|---|
+| 478 | (-0.001931, 0.781045, 0.480416) | (0.825284, 0.831275, 0.429135) | (0.000912, 0.805920, 0.185479) | (-0.325002, 0.795895, 0.089150) |
+| 479 | (0.004963, 0.759459, 0.306804) | (0.837307, 0.829623, 0.444869) | (-0.011376, 0.799802, 0.309040) | (-0.346901, 0.788012, 0.255340) |
+| 480 | (0.004963, 0.759459, 0.306804) | (0.850000, 0.828001, 0.460000) | (-0.008927, 0.793644, 0.434232) | (-0.348503, 0.780060, 0.424045) |
+
+原 plane arrival 約 `(-0.00000045, 0.77500063, 0.43180001)`；pitch-relative interpolated time 0.392833450 s。與第 95 個 physics tick 的 raw state 不混用。Logs 記錄 marker ±4 ticks 完整精度。
+
+### 驗證與成本
+
+- Debug／Release build 成功、各 **8/8 CTest**。原 static multi-mesh／pitcher motion／S3 delivery／reference physics／prediction／staging tests 全保留；不放寬原容差。
+- 新 `batter_motion_test`：兩 meshes／17 joints、225 samples、metadata hash／fps／marker／loop failure cases；全部 897 ticks finite skinning、fixed vertex counts／colors、rigid bat attachment、steady storage、20 次 identical initial／final。
+- `write_motion_fixture.py` 只讀正式 saved `.blend` evaluated animation，不 save／export。`motion_expected.txt` 記錄 source／GLB hashes，17 poses、816 surface points、每 mesh bounds、grip／barrel／tip；runtime 最大 error **1.2157e-6 m**，容差 **1e-4 m**。這是有限幾何抽樣，加上全 ticks 的 attachment／finite checks，不是完整 surface collision 檢查。
+- 新 `batting_preview_test`：30／60／120 Hz elapsed chunking 得到相同 tick、兩份 pose 與球 state；20 replays，fractional／catch-up debt、pause／step、release 一次、479 result 即時可得、816／896 完成邊界、原 raw Complete 與 prediction bit-exact。Release grip alignment 仍為 **4.9151248e-7 m**。
+- 實際 Debug／Release app：逐 tick 0–896，同步 start／pause／step、479／816 replay guard、Complete hold、正常 wall-time playback（約 3.778／3.764 s）、replay、minimize／restore 不加背景時間、exit0。Debug GPU-based validation **0 errors／corruption**，shutdown 後無 live child resources；Release 無 debug layer，不冒稱 GPU validation。
+- 使用既有 Win32 app smoke harness／PrintWindow；前輪 Computer Use helper 的 sandbox 初始化失敗不當成成功。影片與逐格不是 Blender render。
+
+同一次 app smoke 的 CPU mean（µs）；skin／pose 為 evaluation sample，assembly／upload 為 rendered frame，包含 pause 期間 frames，並非效能目標或 GPU time：
+
+| Stage | Debug | Release |
+|---|---:|---:|
+| Batter pose | 25.894 | 3.521 |
+| BatterMesh skin | 344.644 | 17.802 |
+| Bat skin | 16.509 | 1.030 |
+| Combined dynamic assembly | 21.147 | 23.858 |
+| Existing dynamic upload memcpy | 50.413 | 36.026 |
+
+兩 build 均 2691 batter evaluations；assembly／upload samples 為 1587／2789，合併 capacity／size 始終 26112。Release assembly mean 不比 Debug 小，這是該次 app capture／render sample 結果，不據此做 optimization 或效能外推。
+
+### 限制／review gate
+
+Runtime contact 連續影格可見短促 bat sweep；follow-through 中手棒會被大頭遮住，torso 的簡化輪廓仍淡。球於 arrival 停住、棒繼續經過它是保留既有 raw Complete 的 preview 語意，不是碰撞回應。數值對齊不能宣告 late gather、hands／bat lag、雙角色 readability 或 contact timing 已通過 human review。
+
+Accepted batter `.blend`／GLB／TOML、pitcher assets、staging／camera 完全未改；S1 acceptance 保留。S2 停在 Michael＋Julia review gate，不開始 bat-ball collision、正式 swing input／commit、hit quality、VFX、contact presentation 或新的 Motion Rule；M1 未完成。

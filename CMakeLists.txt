@@ -25,6 +25,7 @@ target_include_directories(mesh_glb PRIVATE "${CGLTF_DIR}")
 target_link_libraries(mesh_glb PRIVATE bcrypt)
 
 # This is a generated launch copy; the authored Data stays beside its Native caller.
+configure_file(pawapuro/batting/batter/batter.toml batting/batter/batter.toml COPYONLY)
 configure_file(pawapuro/batting/batter/batter.glb batting/batter/batter.glb COPYONLY)
 configure_file(pawapuro/batting/staging.toml staging.toml COPYONLY)
 configure_file(pawapuro/batting/pitcher/pitcher.glb batting/pitcher/pitcher.glb COPYONLY)
@@ -50,7 +51,7 @@ foreach(stage IN ITEMS vs ps)
     list(APPEND shader_headers "${header}")
 endforeach()
 
-add_executable(pawapuro WIN32 pawapuro/batting/batter/static_batter.cpp pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
+add_executable(pawapuro WIN32 pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/batting_preview.cpp pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
     engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp
     pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp ${shader_headers})
 target_compile_features(pawapuro PRIVATE cxx_std_20)
@@ -71,6 +72,28 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(batter_motion_test pawapuro/batting/batter/batter_motion_test.cpp
+        pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(batter_motion_test PRIVATE cxx_std_20)
+    target_compile_options(batter_motion_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(batter_motion_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(batter_motion_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME batter_motion COMMAND batter_motion_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/batter/batter.glb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/batter/batter.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/batter/motion_expected.txt")
+    add_executable(batting_preview_test pawapuro/batting/batting_preview_test.cpp
+        pawapuro/batting/batting_preview.cpp pawapuro/batting/batter/batter_motion.cpp
+        pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
+        pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(batting_preview_test PRIVATE cxx_std_20)
+    target_compile_options(batting_preview_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(batting_preview_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(batting_preview_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME batting_preview COMMAND batting_preview_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml")
     add_executable(static_batter_test pawapuro/batting/batter/static_batter_test.cpp
         pawapuro/batting/batter/static_batter.cpp pawapuro/batting/staging.cpp pawapuro/batting/reference_scene.cpp)
     target_compile_features(static_batter_test PRIVATE cxx_std_20)

@@ -22,12 +22,12 @@ struct PitchDelivery {
     void toggle_pause();
     bool single_step();
     bool advance(std::uint64_t elapsed_ns);
+    bool step_tick(); // External fixed clock; no wall-time credit, ignores standalone pause.
     DirectX::XMFLOAT3 ball_center() const;
     DirectX::XMFLOAT3 ball_translation() const;
     const char* state_name() const;
     const char* owner_name() const;
 private:
     std::uint64_t fractional_credit=0;
-    bool step_tick();
 };
 }

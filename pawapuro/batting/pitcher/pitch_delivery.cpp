@@ -28,6 +28,7 @@ void PitchDelivery::toggle_pause() { if (phase==DeliveryPhase::Delivering) pause
 bool PitchDelivery::single_step() { return phase==DeliveryPhase::Delivering && paused ? step_tick() : false; }
 bool PitchDelivery::step_tick()
 {
+    if (phase!=DeliveryPhase::Delivering) return false;
     const bool already_flying=ball_owner==BallOwner::Simulation;
     ++tick;
     motion.step_tick(); // Evaluate the new tick before sampling its grip.
