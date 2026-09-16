@@ -210,4 +210,4 @@ Debug／Release build 與 CTest 各 5/5，含 delivery 邊界、20 replay、30�
 
 **Michael＋Julia 已接受 S3 human review**：held ball 跟隨 grip、release tick／ownership、既有 ball flight／prediction／arrival、完整 follow-through 與 gameplay／presentation completion 分離均接受；右投手整體演出作為 power-pitcher baseline。Cyan diagnostic、dynamic occlusion、material／style 仍可保留為非 blocker debt，M1 未完成。
 
-下一個已授權小步是 [Batter Motion S0：Reference Study＋Motion Brief](../design/batter-motion.md)。本輪只交左打 full-swing 的 reference timeline、Motion Brief 與 authoring acceptance criteria，停在 Michael＋Julia review；Batter Authoring S0、rig、runtime 與碰撞尚未開始。
+[Batter Motion Brief](../design/batter-motion.md) 已獲 Michael＋Julia 接受。本次 Batter Authoring S0 交付可編輯左打者、單一 full-swing GLB／metadata 與乾淨 1× review evidence；下一 gate 仍是 Michael＋Julia authoring motion review。驗證見 [batter README](../../pawapuro/batting/batter/README.md)；batter runtime、碰撞與 contact presentation 尚未開始，M1 未完成。

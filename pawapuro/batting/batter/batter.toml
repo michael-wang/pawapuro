@@ -1,0 +1,52 @@
+# Derived from saved Blender source. Export never saves or regenerates the source.
+schema_version = 1
+source = "batter.blend"
+source_sha256 = "74e31d2558970ec1bdf012b7a0071ba71ead516673e65782e31320b81daa2245"
+glb = "batter.glb"
+glb_sha256 = "6977f690c0aad047518882db310246893f6bab4537f71261b0c423d6a343bcf2"
+blender_version = "4.5.13 LTS"
+status = "authoring candidate; runtime and collision unimplemented"
+[space]
+units = "metres"
+placement_game_m = [1.25, 0.00800000037997961, 0.0]
+runtime_scale = 1.0
+glb_to_game = "(-x,y,z) + staging batter placement; metadata placement is provenance only"
+[clip]
+name = "swing_L"
+fps = 60
+fps_base = 1.0
+start_frame = 1
+end_frame = 225
+time_origin_s = 0.0
+duration_s = 3.7333333333333334
+loop = false
+[contact_area]
+marker = "contact_area"
+authoring_frame = 121
+time_s = 2.0
+meaning = "representative barrel pass through authoring zone, not collision truth"
+[bat]
+mesh = "Bat"
+grip = "bat_grip"
+parent = "hand_R"
+barrel = "bat_barrel"
+tip = "bat_tip"
+ownership = "hands throughout; rigid weights to bat_grip; no release"
+[review]
+key_poses = "{\"1\": \"Ready\", \"72\": \"Gather\", \"88\": \"Lead lift\", \"99\": \"Stride\", \"107\": \"Plant\", \"113\": \"Bat lag\", \"118\": \"Acceleration\", \"121\": \"Contact-area\", \"134\": \"Follow-through\", \"165\": \"Late follow-through\", \"225\": \"Finish\"}"
+rear_toe_support_frames = [115, 225]
+
+[[contacts]]
+bone = "foot_R"
+start_frame = 1
+end_frame = 71
+
+[[contacts]]
+bone = "foot_R"
+start_frame = 107
+end_frame = 225
+
+[[contacts]]
+bone = "foot_L"
+start_frame = 1
+end_frame = 114
