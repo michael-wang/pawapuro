@@ -219,4 +219,7 @@ Bat Contact S0 bounded continuous closest-approach probe 已獲 Michael＋Julia 
 Bat Contact S1 first continuous contact event 已獲 Michael＋Julia acceptance。第一 envelope／one-shot event 不改球；Debug／Release 各10/10 CTest、20 replay／30/60/120、actual app／GPU regression 通過。數值與 evidence 見 batter README；本輪不進入 response、sweet spot 或 player input，M1 未完成。
 
 
-Bat Contact S2 timing-to-contact geometry map 已完成，待Michael＋Julia review：offline phase sweep、五例diagnostic與一次local refinement；Debug／Release各11/11 CTest、20 replay／30/60/120 map一致、正式runtime state不變。較超前側Contact到+60 ms仍未結束，未超出授權範圍繼續搜尋。Response／sweet spot／player input未開始，M1未完成。
+Bat Contact S2 timing-to-contact geometry map 已獲 Michael＋Julia acceptance：offline phase sweep、五例diagnostic與一次local refinement；Debug／Release各11/11 CTest、20 replay／30/60/120 map一致、正式runtime state不變。較超前側Contact到+60 ms仍未結束，未超出授權範圍繼續搜尋。Response／sweet spot／player input未開始，M1未完成。
+
+
+[Hit Authorization S0](../design/batting-contact.md) 已完成 design／bounded reference analysis candidate，待 Michael＋Julia review。五層責任與未決 gameplay 值由該文件唯一擁有；physical S0／S1／S2 不變，沒有 production authorization、player input 或 response，M1 未完成。

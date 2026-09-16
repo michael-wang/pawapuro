@@ -400,3 +400,6 @@ Ignored `build/bat-contact-s2/`：
 Debug／Release build、各 **11/11 CTest** 通過。新study test涵蓋：offset0 exact S1／runtime、正負sign、repeat map deterministic、全部61點的32／64／128 Contact／NoContact分類與entry收斂、30／60／120 chunking、20次replay之後完整map相同；study前後preview／delivery ticks、pause／debt、raw ball state、兩份pose、batter triangles／sample count與stored event均未改。既有S0／S1、S2／S3、assets／arrival／prediction tests保留。NoContact邊界穩定指已取樣分類穩定，不宣稱找到sub-ms threshold。
 
 本輪沒有重跑app GPU smoke：main／renderer／HLSL／BattingPreview controls／正式asset／staging未改；上輪S1 GPU驗證紀錄保留，不能冒稱是S2新驗證。新的pure query參數只由offline caller提供，正式runtime offset0由direct tests與20 replay確認。完成後停止，待Michael＋Julia review；不做response、sweet spot、hit quality或正式player input。
+
+
+2026-09-17 review 更新：Michael＋Julia 已接受 Bat Contact S2 timing-to-contact geometry study；上述交付時的待 review 狀態已解除。新的 [Hit Authorization S0](../../../docs/design/batting-contact.md) 僅為 design candidate，不改本節 physical truth 或 runtime。
