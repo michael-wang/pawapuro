@@ -40,8 +40,9 @@ MeshGlb read_mesh_glb(const std::filesystem::path& path)
         "extensions/compression unsupported");
     require(data->materials_count == 0 && data->textures_count == 0 && data->images_count == 0,
         "materials/textures unsupported");
-    require(data->meshes_count == 1 && data->meshes[0].primitives_count == 1,
-        "requires one mesh with one primitive");
+    require(data->meshes_count > 0 && data->meshes_count <= 16, "requires 1..16 named meshes");
+    for (std::size_t i=0;i<data->meshes_count;++i)
+        require(data->meshes[i].primitives_count==1, "requires one primitive per mesh");
     require(data->scenes_count == 1 && data->scene == &data->scenes[0], "requires one default scene");
     for (std::size_t i = 0; i < data->accessors_count; ++i)
         require(!data->accessors[i].is_sparse, "sparse accessors unsupported");
@@ -56,7 +57,7 @@ MeshGlb read_mesh_glb(const std::filesystem::path& path)
         static_cast<ULONG>(bytes.size()),digest.data(),static_cast<ULONG>(digest.size()))>=0,"SHA256 failed");
     for (const auto b:digest) { result.sha256 += "0123456789abcdef"[b>>4]; result.sha256 += "0123456789abcdef"[b&15]; }
     std::vector<std::size_t> depths;
-    const cgltf_node* mesh_node = nullptr;
+    std::vector<const cgltf_node*> mesh_nodes;
     for (std::size_t i = 0; i < data->nodes_count; ++i) {
         const auto& node = data->nodes[i];
         require(!node.has_mesh_gpu_instancing && node.weights_count == 0, "instancing/morph weights unsupported");
@@ -91,15 +92,18 @@ MeshGlb read_mesh_glb(const std::filesystem::path& path)
         require(std::isfinite(determinant) && determinant > 0, "singular/reflected node transforms unsupported");
         result.nodes.push_back(std::move(out));
         if (node.mesh) {
-            require(mesh_node == nullptr && node.mesh == &data->meshes[0], "requires one mesh instance");
-            mesh_node = &node;
+            for (const auto* other:mesh_nodes)
+                require(other->mesh!=node.mesh,"repeated mesh instances unsupported");
+            mesh_nodes.push_back(&node);
         }
     }
-    require(mesh_node != nullptr, "mesh has no scene node");
+    require(mesh_nodes.size()==data->meshes_count, "mesh has no unique scene node");
     result.hierarchy_order.resize(result.nodes.size());
     std::iota(result.hierarchy_order.begin(),result.hierarchy_order.end(),std::size_t{0});
     std::stable_sort(result.hierarchy_order.begin(),result.hierarchy_order.end(),[&](auto a,auto b){return depths[a]<depths[b];});
-    require(data->skins_count==1 && mesh_node->skin==&data->skins[0],"requires one skin on the mesh node");
+    require(data->skins_count==1,"requires one shared skin");
+    for (const auto* node:mesh_nodes)
+        require(node->skin==&data->skins[0],"mesh nodes must use the shared skin");
     const auto& skin=data->skins[0];
     const auto* ibm=skin.inverse_bind_matrices;
     require(ibm && ibm->type==cgltf_type_mat4 && ibm->component_type==cgltf_component_type_r_32f
@@ -115,86 +119,94 @@ MeshGlb read_mesh_glb(const std::filesystem::path& path)
             && matrix[3]==0 && matrix[7]==0 && matrix[11]==0 && matrix[15]==1,"invalid inverse bind matrix");
         result.inverse_binds.push_back(matrix);
     }
-    auto& mesh = data->meshes[0];
-    auto& primitive = mesh.primitives[0];
-    require(mesh.weights_count == 0 && primitive.targets_count == 0 && !primitive.has_draco_mesh_compression,
-        "morph targets/Draco unsupported");
-    require(primitive.type == cgltf_primitive_type_triangles && primitive.material == nullptr,
-        "requires unmaterialed triangles");
-    const cgltf_accessor* positions = nullptr;
-    const cgltf_accessor* colors = nullptr;
-    const cgltf_accessor* joints = nullptr;
-    const cgltf_accessor* weights = nullptr;
-    for (std::size_t i = 0; i < primitive.attributes_count; ++i) {
-        const auto& attr = primitive.attributes[i];
-        require(attr.index == 0, "only attribute set 0 supported");
-        if (attr.type == cgltf_attribute_type_position) {
-            require(!positions, "duplicate POSITION"); positions = attr.data;
-        } else if (attr.type == cgltf_attribute_type_color) {
-            require(!colors, "duplicate COLOR_0"); colors = attr.data;
-        } else {
-            if (attr.type==cgltf_attribute_type_joints) { require(!joints,"duplicate JOINTS_0"); joints=attr.data; }
-            else if (attr.type==cgltf_attribute_type_weights) { require(!weights,"duplicate WEIGHTS_0"); weights=attr.data; }
-            else require(false,"unsupported vertex attribute");
-        }
-    }
-    require(positions && colors && primitive.indices, "POSITION, COLOR_0 and indices required");
-    require(positions->type == cgltf_type_vec3 && positions->component_type == cgltf_component_type_r_32f
-        && !positions->normalized, "POSITION must be float VEC3");
-    require(colors->type == cgltf_type_vec4 && colors->component_type == cgltf_component_type_r_16u
-        && colors->normalized && colors->count == positions->count, "COLOR_0 must be normalized ushort VEC4 matching POSITION");
-    const auto* indices = primitive.indices;
-    require(indices->type == cgltf_type_scalar && indices->component_type == cgltf_component_type_r_16u
-        && !indices->normalized && indices->count > 0 && indices->count % 3 == 0, "indices must be ushort triangle triples");
-    require(positions->count > 0 && positions->buffer_view && colors->buffer_view && indices->buffer_view,
-        "vertex/index data missing");
-    require(joints && weights && joints->type==cgltf_type_vec4 && joints->component_type==cgltf_component_type_r_8u
-        && !joints->normalized && joints->count==positions->count,"JOINTS_0 must be ubyte VEC4 matching POSITION");
-    require(weights->type==cgltf_type_vec4 && weights->component_type==cgltf_component_type_r_32f
-        && !weights->normalized && weights->count==positions->count,"WEIGHTS_0 must be float VEC4 matching POSITION");
-    float m[16];
-    cgltf_node_transform_world(mesh_node, m);
-    std::vector<Vertex> vertices(positions->count);
-    for (std::size_t i = 0; i < vertices.size(); ++i) {
-        float p[3], c[4];
-        require(cgltf_accessor_read_float(positions, i, p, 3) && cgltf_accessor_read_float(colors, i, c, 4),
-            "cannot read position/color accessor");
-        require(std::all_of(p, p+3, [](float x) { return std::isfinite(x); })
-            && std::all_of(c, c+4, [](float x) { return std::isfinite(x) && x >= 0 && x <= 1; }) && c[3] == 1,
-            "non-finite position or invalid/non-opaque color");
-        // Column-vector glTF math; do not mix with DirectX row-vector matrix storage.
-        const DirectX::XMFLOAT3 transformed{m[0]*p[0]+m[4]*p[1]+m[8]*p[2]+m[12],
-            m[1]*p[0]+m[5]*p[1]+m[9]*p[2]+m[13], m[2]*p[0]+m[6]*p[1]+m[10]*p[2]+m[14]};
-        require(std::isfinite(transformed.x) && std::isfinite(transformed.y) && std::isfinite(transformed.z),
-            "non-finite transformed position");
-        vertices[i] = {transformed, {c[0], c[1], c[2]}};
-        result.bind_vertices.push_back({{p[0],p[1],p[2]},{c[0],c[1],c[2]}});
-        GlbInfluence influence{};
-        require(cgltf_accessor_read_uint(joints,i,influence.joints.data(),4)
-            && cgltf_accessor_read_float(weights,i,influence.weights.data(),4),"cannot read influences");
-        float sum=0; unsigned nonzero=0;
-        for (unsigned j=0;j<4;++j) {
-            const float w=influence.weights[j];
-            require(influence.joints[j]<skin.joints_count && std::isfinite(w) && w>=0 && w<=1,"invalid joint index/weight");
-            if (w>0) {
-                ++nonzero;
-                for (unsigned k=0;k<j;++k) require(influence.weights[k]==0 || influence.joints[k]!=influence.joints[j],"duplicate weighted joint");
+    for (const auto* mesh_node:mesh_nodes) {
+        GlbPrimitive output;
+        auto& mesh = *mesh_node->mesh;
+        auto& primitive = mesh.primitives[0];
+        require(mesh.weights_count == 0 && primitive.targets_count == 0 && !primitive.has_draco_mesh_compression,
+            "morph targets/Draco unsupported");
+        require(primitive.type == cgltf_primitive_type_triangles && primitive.material == nullptr,
+            "requires unmaterialed triangles");
+        const cgltf_accessor* positions = nullptr;
+        const cgltf_accessor* colors = nullptr;
+        const cgltf_accessor* joints = nullptr;
+        const cgltf_accessor* weights = nullptr;
+        for (std::size_t i = 0; i < primitive.attributes_count; ++i) {
+            const auto& attr = primitive.attributes[i];
+            require(attr.index == 0, "only attribute set 0 supported");
+            if (attr.type == cgltf_attribute_type_position) {
+                require(!positions, "duplicate POSITION"); positions = attr.data;
+            } else if (attr.type == cgltf_attribute_type_color) {
+                require(!colors, "duplicate COLOR_0"); colors = attr.data;
+            } else {
+                if (attr.type==cgltf_attribute_type_joints) { require(!joints,"duplicate JOINTS_0"); joints=attr.data; }
+                else if (attr.type==cgltf_attribute_type_weights) { require(!weights,"duplicate WEIGHTS_0"); weights=attr.data; }
+                else require(false,"unsupported vertex attribute");
             }
-            sum+=w;
         }
-        require(std::abs(sum-1)<2e-5f && nonzero<=2,"weight sum/nonzero influence count outside sample contract");
-        result.influences.push_back(influence);
+        require(positions && colors && primitive.indices, "POSITION, COLOR_0 and indices required");
+        require(positions->type == cgltf_type_vec3 && positions->component_type == cgltf_component_type_r_32f
+            && !positions->normalized, "POSITION must be float VEC3");
+        require(colors->type == cgltf_type_vec4 && colors->component_type == cgltf_component_type_r_16u
+            && colors->normalized && colors->count == positions->count, "COLOR_0 must be normalized ushort VEC4 matching POSITION");
+        const auto* indices = primitive.indices;
+        require(indices->type == cgltf_type_scalar && indices->component_type == cgltf_component_type_r_16u
+            && !indices->normalized && indices->count > 0 && indices->count % 3 == 0, "indices must be ushort triangle triples");
+        require(positions->count > 0 && positions->buffer_view && colors->buffer_view && indices->buffer_view,
+            "vertex/index data missing");
+        require(joints && weights && joints->type==cgltf_type_vec4 && joints->component_type==cgltf_component_type_r_8u
+            && !joints->normalized && joints->count==positions->count,"JOINTS_0 must be ubyte VEC4 matching POSITION");
+        require(weights->type==cgltf_type_vec4 && weights->component_type==cgltf_component_type_r_32f
+            && !weights->normalized && weights->count==positions->count,"WEIGHTS_0 must be float VEC4 matching POSITION");
+        float m[16];
+        cgltf_node_transform_world(mesh_node, m);
+        std::vector<Vertex> vertices(positions->count);
+        for (std::size_t i = 0; i < vertices.size(); ++i) {
+            float p[3], c[4];
+            require(cgltf_accessor_read_float(positions, i, p, 3) && cgltf_accessor_read_float(colors, i, c, 4),
+                "cannot read position/color accessor");
+            require(std::all_of(p, p+3, [](float x) { return std::isfinite(x); })
+                && std::all_of(c, c+4, [](float x) { return std::isfinite(x) && x >= 0 && x <= 1; }) && c[3] == 1,
+                "non-finite position or invalid/non-opaque color");
+            // Column-vector glTF math; do not mix with DirectX row-vector matrix storage.
+            const DirectX::XMFLOAT3 transformed{m[0]*p[0]+m[4]*p[1]+m[8]*p[2]+m[12],
+                m[1]*p[0]+m[5]*p[1]+m[9]*p[2]+m[13], m[2]*p[0]+m[6]*p[1]+m[10]*p[2]+m[14]};
+            require(std::isfinite(transformed.x) && std::isfinite(transformed.y) && std::isfinite(transformed.z),
+                "non-finite transformed position");
+            vertices[i] = {transformed, {c[0], c[1], c[2]}};
+            output.bind_vertices.push_back({{p[0],p[1],p[2]},{c[0],c[1],c[2]}});
+            GlbInfluence influence{};
+            require(cgltf_accessor_read_uint(joints,i,influence.joints.data(),4)
+                && cgltf_accessor_read_float(weights,i,influence.weights.data(),4),"cannot read influences");
+            float sum=0; unsigned nonzero=0;
+            for (unsigned j=0;j<4;++j) {
+                const float w=influence.weights[j];
+                require(influence.joints[j]<skin.joints_count && std::isfinite(w) && w>=0 && w<=1,"invalid joint index/weight");
+                if (w>0) {
+                    ++nonzero;
+                    for (unsigned k=0;k<j;++k) require(influence.weights[k]==0 || influence.joints[k]!=influence.joints[j],"duplicate weighted joint");
+                }
+                sum+=w;
+            }
+            require(std::abs(sum-1)<2e-5f && nonzero<=2,"weight sum/nonzero influence count outside sample contract");
+            output.influences.push_back(influence);
+        }
+        output.triangles.reserve(indices->count);
+        for (std::size_t i = 0; i < indices->count; ++i) {
+            const auto index = cgltf_accessor_read_index(indices, i);
+            require(index < vertices.size(), "triangle index out of bounds");
+            output.triangles.push_back(vertices[index]);
+            output.indices.push_back(static_cast<std::uint16_t>(index));
+        }
+        output.mesh_name = mesh.name ? mesh.name : "";
+        output.mesh_node_name = mesh_node->name ? mesh_node->name : "";
+        output.source_vertex_count = vertices.size();
+        output.mesh_node=static_cast<std::size_t>(mesh_node-data->nodes);
+        require(!output.mesh_name.empty() && !output.mesh_node_name.empty(),"mesh and node must be named");
+        for (const auto& other:result.primitives)
+            require(other.mesh_name!=output.mesh_name && other.mesh_node_name!=output.mesh_node_name,"duplicate mesh/node name");
+        result.primitives.push_back(std::move(output));
     }
-    result.triangles.reserve(indices->count);
-    for (std::size_t i = 0; i < indices->count; ++i) {
-        const auto index = cgltf_accessor_read_index(indices, i);
-        require(index < vertices.size(), "triangle index out of bounds");
-        result.triangles.push_back(vertices[index]);
-        result.indices.push_back(static_cast<std::uint16_t>(index));
-    }
-    result.mesh_name = mesh.name ? mesh.name : "";
-    result.mesh_node_name = mesh_node->name ? mesh_node->name : "";
-    result.source_vertex_count = vertices.size();
     require(data->animations_count==1,"requires one animation clip");
     const auto& animation=data->animations[0];
     require(animation.channels_count>0 && animation.samplers_count==animation.channels_count,"requires one sampler per channel");

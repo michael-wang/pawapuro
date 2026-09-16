@@ -9,7 +9,7 @@ StaticPitcher load_static_pitcher(const std::filesystem::path& path, const Batti
 {
     try {
         auto mesh = engine::read_mesh_glb(path);
-        if (mesh.mesh_name != "PitcherMesh" || mesh.mesh_node_name != "PitcherMesh")
+        if (mesh.primitives.size()!=1 || mesh.primitives.front().mesh_name != "PitcherMesh" || mesh.primitives.front().mesh_node_name != "PitcherMesh")
             throw std::runtime_error("expected PitcherMesh mesh/node");
         const engine::MeshGlbNode* grip = nullptr;
         for (const auto& node : mesh.nodes) if (node.name == "grip") {
@@ -18,7 +18,7 @@ StaticPitcher load_static_pitcher(const std::filesystem::path& path, const Batti
         }
         if (!grip || grip->parent_name != "hand_R") throw std::runtime_error("expected grip under hand_R");
         StaticPitcher out;
-        out.source_vertex_count = mesh.source_vertex_count;
+        out.source_vertex_count = mesh.primitives.front().source_vertex_count;
         out.local_min = {1e9f, 1e9f, 1e9f}; out.local_max = {-1e9f, -1e9f, -1e9f};
         const auto placement = staging.pitcher_blockout_position_m;
         if (!std::isfinite(placement.x) || !std::isfinite(placement.y) || !std::isfinite(placement.z))
@@ -26,7 +26,7 @@ StaticPitcher load_static_pitcher(const std::filesystem::path& path, const Batti
         const auto to_world = [&](DirectX::XMFLOAT3 p) -> DirectX::XMFLOAT3 {
             return {p.x + placement.x, p.y + placement.y, p.z + placement.z};
         };
-        for (auto& vertex : mesh.triangles) {
+        for (auto& vertex : mesh.primitives.front().triangles) {
             auto& p = vertex.position;
             p.x = -p.x; // GLB metres already include authoring proportion scale; never multiply height_m.
             out.local_min = {std::min(out.local_min.x,p.x), std::min(out.local_min.y,p.y), std::min(out.local_min.z,p.z)};
@@ -34,10 +34,10 @@ StaticPitcher load_static_pitcher(const std::filesystem::path& path, const Batti
             p = to_world(p);
         }
         // One reflection reverses handedness. Correct each triangle once, even with culling currently off.
-        for (std::size_t i = 0; i < mesh.triangles.size(); i += 3) std::swap(mesh.triangles[i+1], mesh.triangles[i+2]);
+        for (std::size_t i = 0; i < mesh.primitives.front().triangles.size(); i += 3) std::swap(mesh.primitives.front().triangles[i+1], mesh.primitives.front().triangles[i+2]);
         out.world_min = to_world(out.local_min); out.world_max = to_world(out.local_max);
         out.bind_grip_world = to_world({-grip->world[12], grip->world[13], grip->world[14]});
-        out.vertices = std::move(mesh.triangles);
+        out.vertices = std::move(mesh.primitives.front().triangles);
         std::fprintf(stderr, "Static pitcher: owner=pawapuro/batting/pitcher/static_pitcher.cpp source=%s "
             "pose=bind scale=1 triangles=%zu expanded_vertices=%zu source_vertices=%zu\n"
             "Pitcher local bounds=[%.6f %.6f %.6f]..[%.6f %.6f %.6f] world bounds=[%.6f %.6f %.6f]..[%.6f %.6f %.6f]\n"

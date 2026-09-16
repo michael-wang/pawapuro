@@ -210,4 +210,4 @@ Debug／Release build 與 CTest 各 5/5，含 delivery 邊界、20 replay、30�
 
 **Michael＋Julia 已接受 S3 human review**：held ball 跟隨 grip、release tick／ownership、既有 ball flight／prediction／arrival、完整 follow-through 與 gameplay／presentation completion 分離均接受；右投手整體演出作為 power-pitcher baseline。Cyan diagnostic、dynamic occlusion、material／style 仍可保留為非 blocker debt，M1 未完成。
 
-[Batter Motion Brief](../design/batter-motion.md) 已獲 Michael＋Julia 接受。本次 Batter Authoring S0 交付可編輯左打者、單一 full-swing GLB／metadata 與乾淨 1× review evidence；下一 gate 仍是 Michael＋Julia authoring motion review。驗證見 [batter README](../../pawapuro/batting/batter/README.md)；batter runtime、碰撞與 contact presentation 尚未開始，M1 未完成。
+[Batter Motion Brief](../design/batter-motion.md) 已獲 Michael＋Julia 接受。Batter Authoring S0 左打 full-swing baseline 已獲 Michael＋Julia 接受。本次 Batter Runtime S1 static bind import 已交付、待 human review；Debug／Release、各 6/6 CTest、實際 app 與 Debug GPU validation 通過，證據由 [batter README](../../pawapuro/batting/batter/README.md) 維護。S3 pitcher delivery acceptance 保留；Batter Runtime S2 animation、碰撞與 contact presentation 尚未開始，M1 未完成。

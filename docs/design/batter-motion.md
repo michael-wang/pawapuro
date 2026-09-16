@@ -1,6 +1,6 @@
 # Batter Motion S0 — Reference Study & Motion Brief
 
-2026-09-16｜Motion Brief 已獲 Michael＋Julia review accepted。Batter Authoring S0 candidate 已實作，動作待 human review；runtime／collision／contact presentation 尚未開始。
+2026-09-16｜Motion Brief 已獲 Michael＋Julia review accepted。Batter Authoring S0 已獲 Michael＋Julia human review accepted；Batter Runtime S1 static bind import candidate 待 human review。Runtime animation／collision／contact presentation 尚未開始。
 
 ## Reference scope／provenance
 
@@ -129,7 +129,7 @@ Evidence 留在 ignored `build/batter-motion-s0-study/supplement/`：`pitcher-re
 - **已補足（supplemental observations）**：原 brief 缺少投打同步準備的直接證據；本片支持 early leg lift 時 mostly ready、投手前移／arm loads 時 late gather、plant 先於主加速。出手附近的 stride／下降只支持一個跨 release 的窗口，不支持 exact phase locking。
 - **仍未知**：原遊戲 authoritative timing／FPS 與 f166–170 near-hold 原因；supplemental 的原始拍攝／播放倍率；精確 foot-contact tick、world-space 零滑動、Pawapuro 應採的 lift 幅度／phase 時長。沒有直接將 capture 秒數換算成 authoring keys。
 - Pelvis 相對 chest 的精確發動差、精確 plant tick、收勢另一手是否放開與最終 rear-foot 接觸狀態，單視角／遮擋不足以查證；首版候選不為這些未知新增系統。
-- **Brief 已接受；下一 gate 是 authoring motion review**：本次已交付單一 full-swing candidate，請依以下實際 timing 與乾淨 1× evidence review。
+- **Brief 與 S0 authoring baseline 已接受**：compact Ready、late gather、lift／short stride、plant before acceleration、body turn→hands／bat lag、短促加速、contact-area pass 與完整 finish 均獲 Michael＋Julia 接受。下一 gate 是 Runtime S1 static import review，不是 swing playback。
 - **不需新增 Character Motion Rule**：support／detached coordination 是 Rule 1／2，器材 lag 是 Rule 3，elastic arm 是 Rule 4，持棒是 Rule 5，follow-through／finish 是 Rule 6。此 caller 沒有暴露無法涵蓋的新 Motion Truth。
 
 Evidence：ignored `build/batter-motion-s0-study/` 的 `reference-timeline.jpg`、`pre-contact-sequence.jpg`、`contact-area-sequence.jpg`、`follow-through-hero-sequence.jpg`，全部標 source timestamp／0-based frame；crop 僅為看清打者，cut 前後仍是不同 source camera。原片不複製進 repo，影格／解碼腳本／metadata 留在 build、不 commit。
@@ -137,7 +137,7 @@ Evidence：ignored `build/batter-motion-s0-study/` 的 `reference-timeline.jpg`�
 上述 reference study／amendment 只修改文件，沒有 production code／asset 變更；**未執行 C++ build、CTest 或 GPU validation**，未做 Blender authoring、rig、keys、GLB、runtime 或碰撞。
 
 
-## Batter Authoring S0：first candidate／待 human review
+## Batter Authoring S0：已接受的 first baseline
 
 可編輯 source、GLB／TOML、操作與完整驗證由 [batter README](../../pawapuro/batting/batter/README.md) 擁有；不重做 reference study。本次 `ref-batting-front.mp4` SHA256 與上列 supplemental 相同，使用該持久路徑；遊戲 reference 仍是 YouTube 0.5× capture，沒有將其秒數搬成 keys。
 
@@ -145,8 +145,8 @@ Evidence：ignored `build/batter-motion-s0-study/` 的 `reference-timeline.jpg`�
 
 Pelvis 先打開，chest 另有落後的曲線；手棒 f107–116 保留靠身／barrel 留後，約 f116–124 集中 sweep。`contact_area` f121／2.000 s 是 authoring-only 代表 pass，barrel 自然穿越目前 zone，非 gameplay contact truth。f134／2.217 s 接繞身、f165／2.733 s 後持續 settle 至 f225；head 不剛性跟胸，後腳 f115 起 toe pivot／heel lift。Grip 全程持棒，沒有兩手 solver／bat release。
 
-這些是 **本角色第一候選的 authoring interpretation**；不是 reference 證明的精確 pelvis/chest tick 或通用打擊規則。Source 的 lift 幅度／phase 時長現在有實際候選，原影片 timing、精確足底接觸與其 near-hold 原因仍未知；是否採用 0.32 m lift、lag 清晰度及 settle 節奏留 human review。
+這些是 **本角色第一候選的 authoring interpretation**；不是 reference 證明的精確 pelvis/chest tick 或通用打擊規則。Source 的 lift 幅度／phase 時長現在有實際候選，原影片 timing、精確足底接觸與其 near-hold 原因仍未知；Michael＋Julia 現已接受本版 lift、lag 與 settle；原 reference 的未知仍保留。
 
 Evidence：ignored `build/batter-authoring-s0/` 的 `swing-batting-1x.mp4`、`swing-side-1x.mp4`（完整 60 fps／1×）、兩視角 contact sheets、plant→acceleration f103–126 連續影格、hands／feet close-ups、`motion-diagnostic.jpg`。首格與 source 預設均為 f1 Ready。已解碼核對 FPS／225 格，已檢視影格及全 source 數值；未宣稱完成正常速度連續自看。
 
-已知問題：簡化 torso 轉向輪廓偏淡；下巴附近 rubber arms 疊影、早期 follow-through 的手棒被大頭遮住。支撐、匯出與 attachment 檢查通過不代表動作力量感已過關。Khronos 0 errors、全 225 格 source／GLB／round-trip 通過；細節及容差見 README。未執行 C++ build／CTest／GPU，沒有修改 production、pitcher 或 staging；六條 Motion Rules 不變，停止於 Michael＋Julia review。
+已知問題：簡化 torso 轉向輪廓偏淡；下巴附近 rubber arms 疊影、早期 follow-through 的手棒被大頭遮住。支撐、匯出與 attachment 檢查通過不代表動作力量感已過關。Khronos 0 errors、全 225 格 source／GLB／round-trip 通過；細節及容差見 README。未執行 C++ build／CTest／GPU，沒有修改 production、pitcher 或 staging；六條 Motion Rules 不變。其後 S0 baseline 已通過 Michael＋Julia human review；此 acceptance 不包含 runtime animation、collision、hit quality、contact presentation 或 M1。S1 static import 的實測與 gate 見 [batter README](../../pawapuro/batting/batter/README.md#batter-runtime-s1--static-bind-import-candidate)，source 三檔未重新保存／匯出。

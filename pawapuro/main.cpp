@@ -3,6 +3,7 @@
 #include "batting/reference_scene.hpp"
 #include "batting/reference_pitch.hpp"
 #include "batting/pitcher/pitch_delivery.hpp"
+#include "batting/batter/static_batter.hpp"
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -41,7 +42,8 @@ int main(int argc, char** argv)
         auto& motion=delivery.motion;
         const auto prediction=pawapuro::predict_arrival(delivery.pitch);
         const float aspect = static_cast<float>(width) / static_cast<float>(height);
-        const auto scene=pawapuro::make_batting_reference(staging,prediction.state.position_m,aspect,{});
+        const auto batter=pawapuro::load_static_batter(utf8_path(base_path)/"batting/batter/batter.glb",staging);
+        const auto scene=pawapuro::make_batting_reference(staging,prediction.state.position_m,aspect,{},batter.vertices);
         std::fprintf(stderr,"S3 delivery: one 240 Hz clock; ball Hand -> Simulation at animation marker.\n");
         bool arrival_reported=false;
         const auto report_arrival=[&] {

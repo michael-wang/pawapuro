@@ -15,7 +15,7 @@ PitcherMotion::PitcherMotion(const std::filesystem::path& glb, const std::filesy
             +glb.string()+"' metadata='"+metadata.string()+"': "+reason);
     };
     const auto meta=toml::parse_file(metadata.string());
-    require(asset.mesh_name=="PitcherMesh" && asset.mesh_node_name=="PitcherMesh" && asset.skin_name=="PitcherRig"
+    require(asset.primitives.size()==1 && asset.primitives.front().mesh_name=="PitcherMesh" && asset.primitives.front().mesh_node_name=="PitcherMesh" && asset.skin_name=="PitcherRig"
         && asset.clip_name=="pitch_R" && asset.joints.size()==13 && asset.nodes.size()==15 && asset.channels.size()==39,
         "unexpected pitcher mesh/skin/clip contract");
     require(meta["schema_version"].value<int>()==1 && meta["glb_sha256"].value<std::string>()==asset.sha256,
@@ -61,11 +61,11 @@ void PitcherMotion::evaluate()
     const auto before=std::chrono::steady_clock::now();
     engine::evaluate_glb_pose(asset,static_cast<float>(time_s()),pose);
     const auto posed=std::chrono::steady_clock::now();
-    engine::skin_glb_vertices(asset,pose,skinned);
-    triangles.resize(asset.indices.size());
+    engine::skin_glb_vertices(asset.primitives.front(),pose,skinned);
+    triangles.resize(asset.primitives.front().indices.size());
     for (std::size_t i=0;i<triangles.size();++i) {
         const auto reversed=i/3*3+(i%3==0 ? 0 : 3-i%3);
-        auto v=skinned[asset.indices[reversed]];
+        auto v=skinned[asset.primitives.front().indices[reversed]];
         v.position={-v.position.x+placement.x,v.position.y+placement.y,v.position.z+placement.z};
         triangles[i]=v;
     }

@@ -25,6 +25,7 @@ target_include_directories(mesh_glb PRIVATE "${CGLTF_DIR}")
 target_link_libraries(mesh_glb PRIVATE bcrypt)
 
 # This is a generated launch copy; the authored Data stays beside its Native caller.
+configure_file(pawapuro/batting/batter/batter.glb batting/batter/batter.glb COPYONLY)
 configure_file(pawapuro/batting/staging.toml staging.toml COPYONLY)
 configure_file(pawapuro/batting/pitcher/pitcher.glb batting/pitcher/pitcher.glb COPYONLY)
 configure_file(pawapuro/batting/pitcher/pitcher.toml batting/pitcher/pitcher.toml COPYONLY)
@@ -49,7 +50,7 @@ foreach(stage IN ITEMS vs ps)
     list(APPEND shader_headers "${header}")
 endforeach()
 
-add_executable(pawapuro WIN32 pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
+add_executable(pawapuro WIN32 pawapuro/batting/batter/static_batter.cpp pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
     engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp
     pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp ${shader_headers})
 target_compile_features(pawapuro PRIVATE cxx_std_20)
@@ -70,6 +71,16 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(static_batter_test pawapuro/batting/batter/static_batter_test.cpp
+        pawapuro/batting/batter/static_batter.cpp pawapuro/batting/staging.cpp pawapuro/batting/reference_scene.cpp)
+    target_compile_features(static_batter_test PRIVATE cxx_std_20)
+    target_compile_options(static_batter_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(static_batter_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(static_batter_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME static_batter COMMAND static_batter_test
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/batter/batter.glb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting/staging.toml"
+        "${CMAKE_CURRENT_BINARY_DIR}/static-batter-test-data")
     add_executable(pitch_delivery_test pawapuro/batting/pitcher/pitch_delivery_test.cpp
         pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
         pawapuro/batting/reference_pitch.cpp pawapuro/batting/reference_scene.cpp pawapuro/batting/staging.cpp)

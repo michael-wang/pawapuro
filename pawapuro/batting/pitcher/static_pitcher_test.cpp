@@ -30,8 +30,8 @@ int main(int argc, char** argv)
         const std::filesystem::path source = argv[1], temporary = argv[3];
         const auto staging = pawapuro::load_batting_staging(argv[2]);
         const auto glb = engine::read_mesh_glb(source);
-        require(glb.mesh_name == "PitcherMesh" && glb.mesh_node_name == "PitcherMesh", "mesh identity");
-        require(glb.nodes.size() == 15 && glb.source_vertex_count == 2362 && glb.triangles.size() == 11808,
+        require(glb.primitives.front().mesh_name == "PitcherMesh" && glb.primitives.front().mesh_node_name == "PitcherMesh", "mesh identity");
+        require(glb.nodes.size() == 15 && glb.primitives.front().source_vertex_count == 2362 && glb.primitives.front().triangles.size() == 11808,
             "official sample node/vertex/triangle counts");
         const auto pitcher = pawapuro::load_static_pitcher(source,staging);
         require(pitcher.vertices.size()/3 == 3936 && pitcher.source_vertex_count == 2362, "expanded triangles");
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
         for (std::size_t i = 0; i < pitcher.vertices.size(); ++i) {
             // Reflection must reverse winding exactly once, without changing color association.
             const auto j = i/3*3 + (i%3 == 0 ? 0 : 3-i%3);
-            auto expected = glb.triangles[j];
+            auto expected = glb.primitives.front().triangles[j];
             expected.position = {-expected.position.x+p.x,expected.position.y+p.y,expected.position.z+p.z};
             same_vertex(pitcher.vertices[i],expected);
         }

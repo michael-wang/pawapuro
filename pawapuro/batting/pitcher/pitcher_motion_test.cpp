@@ -22,7 +22,7 @@ int main(int argc,char** argv)
         PitcherMotion motion(argv[1],argv[2],staging);
         require(motion.end_tick==816 && motion.release_tick==384 && motion.asset.times.size()==205,"timeline contract");
         const auto& asset=motion.asset;
-        require(asset.bind_vertices.size()==2362 && asset.indices.size()==11808,"geometry contract");
+        require(asset.primitives.front().bind_vertices.size()==2362 && asset.primitives.front().indices.size()==11808,"geometry contract");
         const std::pair<const char*,const char*> hierarchy[]{
             {"root","PitcherRig"},{"pelvis","root"},{"chest","pelvis"},{"head","chest"},
             {"arm_R","chest"},{"forearm_R","arm_R"},{"hand_R","forearm_R"},{"grip","hand_R"},
@@ -39,14 +39,14 @@ int main(int argc,char** argv)
         engine::GlbPose bind;
         engine::evaluate_glb_pose(asset,std::nullopt,bind);
         std::vector<engine::Vertex> vertices;
-        engine::skin_glb_vertices(asset,bind,vertices);
+        engine::skin_glb_vertices(asset.primitives.front(),bind,vertices);
         for (std::size_t i=0;i<vertices.size();++i)
-            require(distance(vertices[i].position,asset.bind_vertices[i].position)<0.0001f,"bind skin differs from rest geometry");
+            require(distance(vertices[i].position,asset.primitives.front().bind_vertices[i].position)<0.0001f,"bind skin differs from rest geometry");
         // Mesh-node transforms must not be applied twice to world-space skinning.
         auto moved=asset;
         for (auto& node:moved.nodes) if (node.name=="PitcherMesh") node.local.translation={7,8,9};
         engine::GlbPose moved_pose; engine::evaluate_glb_pose(moved,0.0f,moved_pose);
-        engine::skin_glb_vertices(moved,moved_pose,vertices);
+        engine::skin_glb_vertices(moved.primitives.front(),moved_pose,vertices);
         for (std::size_t i=0;i<vertices.size();++i)
             require(distance(vertices[i].position,motion.skinned[i].position)<1e-6f,"mesh node applied to skin");
         // Antipodal quaternion keys describe the same orientation and must use the shortest path.
@@ -102,7 +102,7 @@ int main(int argc,char** argv)
             motion.evaluate();
             require(motion.triangles.size()==11808,"dynamic count changed");
             for (std::size_t i=0;i<motion.skinned.size();++i)
-                require(std::memcmp(&motion.skinned[i].color,&asset.bind_vertices[i].color,sizeof(XMFLOAT3))==0,"color changed");
+                require(std::memcmp(&motion.skinned[i].color,&asset.primitives.front().bind_vertices[i].color,sizeof(XMFLOAT3))==0,"color changed");
             for (const auto i:limbs) {
                 const auto parent=static_cast<std::size_t>(asset.nodes[i].parent);
                 const float expected=distance(world_position(bind.world[i]),world_position(bind.world[parent]));

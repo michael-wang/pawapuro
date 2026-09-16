@@ -55,7 +55,7 @@ void evaluate_glb_pose(const MeshGlb& mesh, std::optional<float> time_s, GlbPose
     for (std::size_t i=0;i<mesh.joints.size();++i)
         save(pose.skin[i],load(mesh.inverse_binds[i])*load(pose.world[mesh.joints[i]]));
 }
-void skin_glb_vertices(const MeshGlb& mesh, const GlbPose& pose, std::vector<Vertex>& vertices)
+void skin_glb_vertices(const GlbPrimitive& mesh, const GlbPose& pose, std::vector<Vertex>& vertices)
 {
     vertices.resize(mesh.bind_vertices.size());
     for (std::size_t i=0;i<vertices.size();++i) {

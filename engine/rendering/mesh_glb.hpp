@@ -26,14 +26,18 @@ struct GlbChannel {
     std::vector<DirectX::XMFLOAT4> values;
 };
 struct GlbInfluence { std::array<unsigned,4> joints; std::array<float,4> weights; };
-struct MeshGlb {
+struct GlbPrimitive {
     std::vector<Vertex> triangles; // Expanded and mesh-node transformed, still glTF space.
-    std::vector<MeshGlbNode> nodes;
     std::string mesh_name, mesh_node_name;
+    std::size_t mesh_node = 0; // Index into the asset shared hierarchy.
     std::size_t source_vertex_count = 0;
     std::vector<Vertex> bind_vertices; // Raw accessor geometry, before mesh-node transforms.
     std::vector<std::uint16_t> indices;
     std::vector<GlbInfluence> influences;
+};
+struct MeshGlb {
+    std::vector<GlbPrimitive> primitives;
+    std::vector<MeshGlbNode> nodes;
     std::vector<std::size_t> joints, hierarchy_order;
     std::vector<GlbMatrix> inverse_binds;
     std::vector<float> times; // One shared timeline in this concrete LINEAR subset.
@@ -42,7 +46,8 @@ struct MeshGlb {
 };
 
 // Synchronous owned result; parser and file storage die before returning.
-// One embedded GLB mesh/primitive, POSITION float3, opaque COLOR_0 unorm16x4,
+// Named mesh nodes, one primitive each, sharing one hierarchy/skin/clip.
+// Embedded GLB, POSITION float3, opaque COLOR_0 unorm16x4,
 // ushort triangle indices, local TRS, one skin and one LINEAR TRS clip.
 MeshGlb read_mesh_glb(const std::filesystem::path& path);
 struct GlbPose {
@@ -51,5 +56,5 @@ struct GlbPose {
 };
 // Reusable CPU workspaces own their storage. nullopt evaluates static/bind nodes.
 void evaluate_glb_pose(const MeshGlb& mesh, std::optional<float> time_s, GlbPose& pose);
-void skin_glb_vertices(const MeshGlb& mesh, const GlbPose& pose, std::vector<Vertex>& vertices);
+void skin_glb_vertices(const GlbPrimitive& mesh, const GlbPose& pose, std::vector<Vertex>& vertices);
 }

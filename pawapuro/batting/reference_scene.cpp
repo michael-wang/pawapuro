@@ -6,7 +6,7 @@
 using namespace DirectX;
 namespace pawapuro {
 BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 predicted_position, float aspect,
-    std::span<const engine::Vertex> pitcher_vertices)
+    std::span<const engine::Vertex> pitcher_vertices, std::span<const engine::Vertex> batter_vertices)
 {
     // Metres, +Y up, +Z from home plate toward the pitcher. These are Native fixtures.
     BattingReference scene;
@@ -137,106 +137,9 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         };
         quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
     }
-    // The imported pitcher is ordinary world geometry; the static batter keeps its local helpers.
+    // Imported characters are ordinary immutable world geometry in this fixture.
     vertices.insert(vertices.end(), pitcher_vertices.begin(), pitcher_vertices.end());
-    const auto ellipsoid = [&](XMFLOAT3 centre, XMFLOAT3 radius, XMFLOAT3 color) {
-        const auto point_at = [&](int lat, int lon) -> XMFLOAT3 {
-            const float a = XM_PI * static_cast<float>(lat) / 8;
-            const float b = XM_2PI * static_cast<float>(lon) / 16;
-            return {centre.x + radius.x * std::sin(a) * std::cos(b),
-                centre.y + radius.y * std::cos(a), centre.z + radius.z * std::sin(a) * std::sin(b)};
-        };
-        for (int lat = 0; lat < 8; ++lat) {
-            const float shade = 0.72f + 0.28f * (1 - static_cast<float>(lat) / 8);
-            for (int lon = 0; lon < 16; ++lon)
-                quad(point_at(lat, lon), point_at(lat + 1, lon), point_at(lat + 1, lon + 1),
-                    point_at(lat, lon + 1), {color.x * shade, color.y * shade, color.z * shade});
-        }
-    };
-    const auto segment = [&](XMFLOAT3 a, XMFLOAT3 b, float start_radius, float end_radius, XMFLOAT3 color) {
-        const auto direction = XMVectorSubtract(XMLoadFloat3(&b), XMLoadFloat3(&a));
-        // Reject coincident batter landmarks before normalization.
-        if (XMVectorGetX(XMVector3LengthSq(direction)) < 1e-8f)
-            throw std::runtime_error("Static batter endpoints overlap; check batter staging.");
-        const auto axis = XMVector3Normalize(direction);
-        const auto helper = std::abs(XMVectorGetY(axis)) < 0.9f ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
-        const auto side = XMVector3Normalize(XMVector3Cross(axis, helper));
-        const auto up = XMVector3Cross(axis, side);
-        const auto rim = [&](XMFLOAT3 centre, float radius, int i) {
-            const float angle = XM_2PI * static_cast<float>(i) / 12;
-            XMFLOAT3 result;
-            XMStoreFloat3(&result, XMVectorAdd(XMLoadFloat3(&centre),
-                XMVectorScale(XMVectorAdd(XMVectorScale(side, std::cos(angle)), XMVectorScale(up, std::sin(angle))), radius)));
-            return result;
-        };
-        for (int i = 0; i < 12; ++i) {
-            quad(rim(a, start_radius, i), rim(b, end_radius, i), rim(b, end_radius, i + 1), rim(a, start_radius, i + 1), color);
-            triangle(a, rim(a, start_radius, i + 1), rim(a, start_radius, i), color);
-            triangle(b, rim(b, end_radius, i), rim(b, end_radius, i + 1), color);
-        }
-    };
-    {
-        const auto origin = staging.batter_blockout_position_m;
-        const float h = staging.batter_blockout_height_m;
-        const XMFLOAT3 shirt = {0.65f, 0.36f, 0.73f};
-        const XMFLOAT3 skin{0.97f, 0.74f, 0.51f}, shoes{0.16f, 0.19f, 0.24f}, pants{0.76f, 0.80f, 0.86f};
-        // Batter torso faces the plate (-X), feet spread along Z.
-        const auto at = [&](float x, float y, float z) -> XMFLOAT3 {
-            return {origin.x + z * h, origin.y + y * h, origin.z + (-x) * h};
-        };
-        const auto part = [&](XMFLOAT3 centre, XMFLOAT3 radii, XMFLOAT3 color) {
-            ellipsoid(centre, {radii.x * h, radii.y * h, radii.z * h}, color);
-        };
-        const float head = staging.blockout_head_scale, foot = staging.blockout_foot_planar_scale;
-        const float foot_height = staging.blockout_foot_height_scale;
-        const float hand_radius = 0.045f * staging.blockout_hand_scale;
-        const XMFLOAT3 head_radii{0.23f * head, 0.22f * head, 0.21f * head};
-        const XMFLOAT3 cap_radii{0.255f * head, 0.155f * head, 0.235f * head};
-        const XMFLOAT3 hand_radii{hand_radius, hand_radius, hand_radius};
-        // Preserve the upper ellipsoid; its lower half now tapers to a broad hem,
-        // rather than a point sitting on a second ellipsoid. No extra pelvis piece.
-        const auto shirt_ring = [&](int ring, int lon) -> XMFLOAT3 {
-            const float angle = XM_2PI * static_cast<float>(lon) / 16;
-            const float latitude = XM_PI * static_cast<float>(ring) / 8;
-            const float y = ring <= 4 ? 0.47f + 0.16f * std::cos(latitude) : 0.31f;
-            const float rx = ring <= 4 ? 0.17f * std::sin(latitude) : 0.16f;
-            const float rz = ring <= 4 ? 0.14f * std::sin(latitude) : 0.135f;
-            return {origin.x + rx * h * std::cos(angle), origin.y + y * h,
-                origin.z + rz * h * std::sin(angle)};
-        };
-        for (int ring = 0; ring < 5; ++ring) {
-            const float shade = 0.72f + 0.28f * (1 - static_cast<float>(ring) / 8);
-            for (int lon = 0; lon < 16; ++lon)
-                quad(shirt_ring(ring, lon), shirt_ring(ring + 1, lon),
-                    shirt_ring(ring + 1, lon + 1), shirt_ring(ring, lon + 1),
-                    {shirt.x * shade, shirt.y * shade, shirt.z * shade});
-        }
-        for (int lon = 0; lon < 16; ++lon)
-            triangle(at(0, 0.31f, 0), shirt_ring(5, lon), shirt_ring(5, lon + 1),
-                {shirt.x * 0.86f, shirt.y * 0.86f, shirt.z * 0.86f});
-        part(at(0, 0.30f, 0), {0.17f, 0.09f, 0.15f}, pants);
-        part(at(0, 0.77f, 0), head_radii, skin);
-        part(at(0, 0.77f + 0.12f * head, 0), cap_radii, shirt);
-        // Brim and simple nose indicate attention toward the pitcher (+Z).
-        part({origin.x - 0.06f * h, origin.y + (0.77f + 0.075f * head) * h, origin.z + 0.22f * head * h},
-            {0.23f * head, 0.022f * head, 0.16f * head}, shirt);
-        for (float side : {-1.0f, 1.0f}) {
-            part(at(side * 0.15f, 0.045f * foot_height, -0.045f), {0.085f * foot, 0.045f * foot_height, 0.12f * foot}, shoes);
-        }
-        const XMFLOAT3 grip{origin.x - 0.18f * h, origin.y + 0.62f * h, origin.z - 0.12f * h};
-        const XMFLOAT3 tip{origin.x + 0.12f * h, origin.y + 1.18f * h, origin.z - 0.34f * h};
-        // Ready bat stays on the catcher side; no swing path or contact model.
-        segment(grip, tip, h * 0.018f * staging.blockout_bat_thickness_scale, h * 0.035f * staging.blockout_bat_thickness_scale, {0.94f, 0.68f, 0.27f});
-        for (float side : {-1.0f, 1.0f}) {
-            const XMFLOAT3 hand{grip.x + (side + 1) * 0.027f * h,
-                grip.y + (side + 1) * 0.050f * h, grip.z - (side + 1) * 0.020f * h};
-            segment(at(side * 0.16f, 0.56f, 0), hand, h * 0.055f, h * 0.04f, skin);
-            part(hand, hand_radii, skin);
-        }
-        // Head looks toward the pitcher (+Z) while the torso remains side-on.
-        part({origin.x - 0.08f * h, origin.y + (0.77f + 0.01f * head) * h, origin.z + 0.21f * head * h},
-            {0.05f, 0.05f, 0.045f}, skin);
-    }
+    vertices.insert(vertices.end(), batter_vertices.begin(), batter_vertices.end());
     scene.ball_vertex_start = static_cast<unsigned>(vertices.size());
     // A small faceted sphere, generated only for this one fixture, not a primitive API.
     const auto ball_point = [&](int latitude, int longitude) -> XMFLOAT3 {

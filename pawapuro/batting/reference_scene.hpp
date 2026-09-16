@@ -11,7 +11,7 @@ struct BattingReference {
     DirectX::XMFLOAT2 zone_min_ndc{}, zone_max_ndc{}, prediction_ndc{};
 };
 BattingReference make_batting_reference(const BattingStaging& staging,
-    DirectX::XMFLOAT3 predicted_position, float aspect, std::span<const engine::Vertex> pitcher_vertices);
+    DirectX::XMFLOAT3 predicted_position, float aspect, std::span<const engine::Vertex> pitcher_vertices, std::span<const engine::Vertex> batter_vertices = {});
 DirectX::XMFLOAT2 project_batting_point(const BattingStaging& staging, DirectX::XMFLOAT3 point, float aspect);
 DirectX::XMFLOAT4X4 batting_view_projection(const BattingStaging& staging, float aspect);
 }
