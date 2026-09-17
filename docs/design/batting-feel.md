@@ -74,13 +74,13 @@ Camera 的 physical lateral offset 與 screen composition 是不同概念：位�
 
 `BattingStaging::home_plate_depth_m()` 與 `strike_zone_plane_z()` 是具體推導：plane Z=depth/2，穿過本壘前後中央，並由 reference pitch、overlay 共用。目前 plane 恰好仍為 0.4318 m，是本輪倍寬尺寸推導的結果，不是保留舊前緣常數；改 width 時 plane 必須跟著移動。投手丘、其他場地與積分公式不變。
 
-Authoritative 指單一規則來源，不代表數值永久定案；尺寸之後可依 Q 版打者模型、站姿與實玩結果調整。藍框直接呈現這一份規則，不畫第二個真實好球帶內框。未來 ball／strike judgement、pitcher targeting、batting aiming、pitch-location feedback 預設都使用同一份 Data；本輪尚未實作這些 consumers。只有實玩證明 called strike zone 與 bat reachable area 必須分開時，才引入第二個概念，不預建 physical／visual／guide／interaction 四套區域。
+Authoritative 指單一規則來源，不代表數值永久定案；尺寸之後可依 Q 版打者模型、站姿與實玩結果調整。紅框直接呈現這一份規則，不畫第二個真實好球帶內框。未來 ball／strike judgement、pitcher targeting、batting aiming、pitch-location feedback 預設都使用同一份 Data；本輪尚未實作這些 consumers。只有實玩證明 called strike zone 與 bat reachable area 必須分開時，才引入第二個概念，不預建 physical／visual／guide／interaction 四套區域。
 
 三值皆為公尺：width 允許 **0.25～1.5**，保留較窄與較寬玩法候選的試驗空間（含 0.75／0.86／0.95）；bottom 0.2～1、top 0.8～2，且 top 至少高於 bottom 0.2。這是有限、非退化的啟動檢查界限，不是正式棒球規則。沿用 finite／型別／來源診斷與 defaults，只在 startup load，沒有 hot reload。舊 `[strike_zone_reference]` 視為 unknown key，沒有外部相容需求或 compatibility layer。
 
 ### Screen-space overlay 與預測落點
 
-Gameplay zone 中心 X=0、Z=`strike_zone_plane_z()`。Pawapuro 將四角投影到 camera，以投影結果的 min/max 組成 axis-aligned NDC rectangle；藍框水平／垂直，最後以 depth test／write 關閉的 draw 顯示，不受 3D 遮蔽。這是投影範圍的平面化表達，不是第二個判定區；原 3D 四角的透視 skew 不保留。位置、大小不存 pixel Data。厚度隨投影寬度縮放。
+Gameplay zone 中心 X=0、Z=`strike_zone_plane_z()`。Pawapuro 將四角投影到 camera，以投影結果的 min/max 組成 axis-aligned NDC rectangle；紅框水平／垂直，最後以 depth test／write 關閉的 draw 顯示，不受 3D 遮蔽。這是投影範圍的平面化表達，不是第二個判定區；原 3D 四角的透視 skew 不保留。位置、大小不存 pixel Data。厚度隨投影寬度縮放。
 
 橘色空心預測環由初始 state 建立一次獨立的 `ReferencePitch`，呼叫相同 single-step／積分及 crossing evaluation；有 2 秒上限以明確報告未抵達異常。環中心直接投影 prediction 的 world evaluation position；半徑由 evaluation plane 上的預測位置，沿 camera-right 偏移一個 ball visual radius 後投影取得；維持 screen-space 圓形，stroke 向內畫，不另存 marker radius。球的視覺尺寸改變時，環自然跟著改變，空心中央避免遮住球。Prediction 不修改正在玩的 pitch。
 
@@ -347,3 +347,8 @@ Bat Contact S2 是read-only phase-offset geometry study：只在non-mutating sam
 ## Ball Readability S0：開／關試玩原型（2026-09-17）
 
 為比較 release 後球與投手輪廓重疊時的辨識性，app 預設開啟 `BallAid:ON`，按 **B** 切換 ON／OFF，關閉即保留原畫面。僅在 `PitchPhase::InFlight` 於 authoritative `ball_center()` 的相同投影畫黑底亮黃空心外框；沿用視覺球半徑的投影，最小半徑 5 pixels，外框向外延伸 2 pixels。重用既有不受深度遮擋的 pipeline，只有新標記作為 dynamic NDC suffix，沿用 upload／fence lifetime。Release 前與 flight Complete 後隱藏，不讀 predicted arrival、不預告軌跡；球路、物理半徑、相機、角色、準星、J commit 與 Contact:NotEvaluated 不變。這是 presentation prototype；辨識改善、大小／對比是否干擾出棒仍待 Michael 開／關試玩，未做自動試玩或證據影片，也未量測端到端視覺反應。
+
+
+### Batting Presentation Cleanup S0（2026-09-18）
+
+目前試玩畫面移除 release 參考藍圈／直線及投手後方黃色量尺；上方相關度量說明保留為歷史。好球帶僅外框改紅色，位置、大小、厚度與繪製行為不變。Arrival Cue、BallAid、操作與 gameplay 語意維持原樣；待 Michael＋Julia 視覺 review。

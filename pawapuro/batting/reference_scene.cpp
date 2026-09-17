@@ -150,35 +150,7 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     quad({-0.3048f, rubber_y, rubber_distance_m}, {-0.3048f, rubber_y, rubber_distance_m + 0.1524f},
         {0.3048f, rubber_y, rubber_distance_m + 0.1524f}, {0.3048f, rubber_y, rubber_distance_m}, white);
 
-    // The ruler is tied to the rubber centre, not a free staging offset.
-    constexpr float ruler_z = rubber_distance_m + 0.1524f / 2;
-    const XMFLOAT3 gold{0.90f, 0.69f, 0.25f};
-    quad({-0.01f, rubber_y, ruler_z}, {-0.01f, rubber_y + 2, ruler_z},
-        {0.01f, rubber_y + 2, ruler_z}, {0.01f, rubber_y, ruler_z}, gold);
-    for (int step = 0; step <= 4; ++step) {
-        const float y = rubber_y + static_cast<float>(step) * 0.5f;
-        quad({-0.09f, y, ruler_z}, {-0.09f, y + 0.02f, ruler_z},
-            {0.09f, y + 0.02f, ruler_z}, {0.09f, y, ruler_z}, gold);
-    }
-
     const XMFLOAT3 release = staging.release_position_m;
-    const float ring_inner = staging.ball_marker_radius_m + 0.15f;
-    const float ring_outer = ring_inner + 0.03f;
-    const float distance = std::hypot(release.x, release.z - mound_center_z_m);
-    const float base_y = 0.008f + (staging.mound_height_m - 0.008f) * std::clamp(
-        (staging.mound_radius_m - distance) / (staging.mound_radius_m - staging.mound_top_radius_m), 0.0f, 1.0f);
-    const XMFLOAT3 cyan{0.16f, 0.80f, 0.86f};
-    // The post meets the mound surface and stops at the ring, not inside the ball.
-    quad({release.x - 0.025f, base_y, release.z}, {release.x - 0.025f, release.y - ring_outer, release.z},
-        {release.x + 0.025f, release.y - ring_outer, release.z}, {release.x + 0.025f, base_y, release.z}, cyan);
-    for (int i = 0; i < 32; ++i) {
-        const float a = XM_2PI * static_cast<float>(i) / 32;
-        const float b = XM_2PI * static_cast<float>(i + 1) / 32;
-        const auto ring_point = [&](float angle, float radius) -> XMFLOAT3 {
-            return {release.x + radius * std::cos(angle), release.y + radius * std::sin(angle), release.z};
-        };
-        quad(ring_point(a, ring_inner), ring_point(b, ring_inner), ring_point(b, ring_outer), ring_point(a, ring_outer), cyan);
-    }
     // Imported characters are ordinary immutable world geometry in this fixture.
     vertices.insert(vertices.end(), pitcher_vertices.begin(), pitcher_vertices.end());
     vertices.insert(vertices.end(), batter_vertices.begin(), batter_vertices.end());
@@ -214,13 +186,13 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     const float bottom = scene.zone_min_ndc.y, top = scene.zone_max_ndc.y;
     // Thickness scales with the projected zone, not an authored pixel rectangle.
     const float stroke_x = (overlay_right - overlay_left) * 0.008f, stroke_y = stroke_x * aspect;
-    const XMFLOAT3 blue{0.55f, 0.72f, 1};
+    const XMFLOAT3 zone_red{1, 0.12f, 0.12f};
     for (float x : {overlay_left, overlay_right})
         quad({x - stroke_x / 2, bottom, 0}, {x - stroke_x / 2, top, 0},
-            {x + stroke_x / 2, top, 0}, {x + stroke_x / 2, bottom, 0}, blue);
+            {x + stroke_x / 2, top, 0}, {x + stroke_x / 2, bottom, 0}, zone_red);
     for (float y : {bottom, top})
         quad({overlay_left, y - stroke_y / 2, 0}, {overlay_left, y + stroke_y / 2, 0},
-            {overlay_right, y + stroke_y / 2, 0}, {overlay_right, y - stroke_y / 2, 0}, blue);
+            {overlay_right, y + stroke_y / 2, 0}, {overlay_right, y - stroke_y / 2, 0}, zone_red);
     scene.prediction_ndc = project_batting_point(staging, predicted_position, aspect);
     const auto p = scene.prediction_ndc;
     // Match the ball's projected radius at the evaluation plane; keep the stroke inside it.
