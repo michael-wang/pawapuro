@@ -20,7 +20,8 @@ void append_ball_readability(std::vector<engine::Vertex>& vertices, const Battin
     XMFLOAT3 edge;
     XMStoreFloat3(&edge, XMVectorAdd(XMLoadFloat3(&center), XMVectorScale(right, staging.ball_marker_radius_m)));
     // Follow the existing visual radius, with a small screen-space readability floor.
-    const float radius = std::max(5.0f, std::abs(project_batting_point(staging, edge, aspect).x-p.x)*w/2);
+    const float pixel_scale=h/1080.0f;
+    const float radius = std::max(5.0f*pixel_scale, std::abs(project_batting_point(staging, edge, aspect).x-p.x)*w/2);
     const auto band = [&](float inner, float outer, XMFLOAT3 color) {
         const auto point = [&](float angle, float r) -> XMFLOAT3 {
             return {p.x+2*r*std::cos(angle)/w, p.y+2*r*std::sin(angle)/h, 0};
@@ -31,8 +32,8 @@ void append_ball_readability(std::vector<engine::Vertex>& vertices, const Battin
             vertices.insert(vertices.end(), {{v0,color},{v1,color},{v2,color},{v0,color},{v2,color},{v3,color}});
         }
     };
-    band(radius-2, radius+2, {0.015f,0.015f,0.015f});
-    band(radius-1, radius+1, {1,1,0.2f});
+    band(radius-2*pixel_scale, radius+2*pixel_scale, {0.015f,0.015f,0.015f});
+    band(radius-pixel_scale, radius+pixel_scale, {1,1,0.2f});
 }
 
 void append_arrival_cue(std::vector<engine::Vertex>& vertices, const BattingReference& scene,

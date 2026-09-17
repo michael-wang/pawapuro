@@ -48,7 +48,7 @@ Gameplay-first 不等於越誇張越好；誇張必須改善 readability／feel�
 
 ## 靜態 staging 基準／啟動 Data 契約
 
-以下維護當前 staging 基準；球路物理不因 framing 改動，場地 presentation geometry 只依明確授權調整。開發顯示固定為 windowed 1920×1080、16:9（原 1280×720 對使用者太小），不提供任意 resize、fullscreen 或解析度選單；保留既有 D3D12 resize 函式。尚不實作 DPI mode switching、letterbox／pillarbox。
+以下維護當前 staging 基準；球路物理不因 framing 改動，場地 presentation geometry 只依明確授權調整。開發顯示於啟動時依主螢幕工作區選擇 75% 寬度並等比 fit 的 16:9 windowed 視窗；設定與限制見 [啟動說明](../../pawapuro/batting/batter/ingame_s0/README.md)。不提供任意 resize、fullscreen 或解析度選單；保留既有 D3D12 resize 函式。尚不實作 DPI mode switching、letterbox／pillarbox。
 
 基準情境為 **右投手 vs 左打者**，唯一 preset 為 `right_handed_pitcher_vs_left_handed_batter`。+Z 朝投手、+Y 向上；捕手視角的畫面右側（+X、一壘側）是左打者打擊區，畫面左側（−X、三壘側）是右打者打擊區。Camera 改放在左打者對側（−X、三壘側），為畫面右側的未來左打者 foreground silhouette 預留空間，維持投手／來球視線。右投手的 release reference 仍位於中央軸的 −X 側；打者所在側與 camera framing 是兩件事，不改變真實棒球空間參考。
 

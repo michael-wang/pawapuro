@@ -4,6 +4,7 @@
 #include "batting/reference_pitch.hpp"
 #include "batting/manual_swing.hpp"
 #include "batting/player_aim.hpp"
+#include "startup_window.hpp"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -29,15 +30,52 @@ int main(int argc, char** argv)
         if (argc == 3 && std::string_view(argv[1]) == "--staging") staging_path = utf8_path(argv[2]);
         else if (argc != 1) throw std::runtime_error("Usage: pawapuro [--staging path/to/staging.toml]");
         const auto staging = pawapuro::load_batting_staging(staging_path);
+        const SDL_DisplayID primary=SDL_GetPrimaryDisplay();
+        SDL_Rect usable{};
+        bool have_bounds=false;
+        int margin=8;
+        if (!primary) std::fprintf(stderr,"SDL_GetPrimaryDisplay failed: %s; fallback: 800x450, SDL default placement.\n",SDL_GetError());
+        else if (SDL_GetDisplayUsableBounds(primary,&usable) && usable.w>0 && usable.h>0) have_bounds=true;
+        else {
+            std::fprintf(stderr,"SDL_GetDisplayUsableBounds failed/invalid: %s; fallback: display bounds with 64-unit safety margin.\n",SDL_GetError());
+            have_bounds=SDL_GetDisplayBounds(primary,&usable) && usable.w>0 && usable.h>0;
+            margin=64;
+            if (!have_bounds) std::fprintf(stderr,"SDL_GetDisplayBounds failed/invalid: %s; fallback: 800x450, SDL default placement.\n",SDL_GetError());
+        }
+        pawapuro::WindowBorders borders{80,16,16,16};
+        pawapuro::StartupWindow requested{0,0,800,450,false};
+        if (have_bounds) requested=pawapuro::fit_startup_window({usable.x,usable.y,usable.w,usable.h},borders,staging.window_width_fraction,margin);
         std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> window(
-            SDL_CreateWindow("Pawapuro | Right-handed pitcher vs left-handed batter", 1920, 1080, 0), SDL_DestroyWindow);
+            SDL_CreateWindow("Pawapuro | Right-handed pitcher vs left-handed batter", requested.w, requested.h, SDL_WINDOW_HIDDEN), SDL_DestroyWindow);
         if (!window) throw std::runtime_error(SDL_GetError());
+        if (have_bounds && !SDL_SetWindowPosition(window.get(),requested.x,requested.y))
+            std::fprintf(stderr,"Initial SDL_SetWindowPosition failed: %s; retaining OS placement.\n",SDL_GetError());
+        if (!SDL_ShowWindow(window.get())) throw std::runtime_error(SDL_GetError());
+        // Query after placement on the primary display; one startup correction, no DPI multiplication.
+        pawapuro::WindowBorders measured{};
+        if (SDL_GetWindowBordersSize(window.get(),&measured.top,&measured.left,&measured.bottom,&measured.right)
+            && measured.top>0 && measured.left>=0 && measured.bottom>=0 && measured.right>=0) borders=measured;
+        else std::fprintf(stderr,"SDL_GetWindowBordersSize failed/unreliable: %s; fallback borders top=80 left=16 bottom=16 right=16.\n",SDL_GetError());
+        if (have_bounds) {
+            requested=pawapuro::fit_startup_window({usable.x,usable.y,usable.w,usable.h},borders,staging.window_width_fraction,margin);
+            if (!SDL_SetWindowSize(window.get(),requested.w,requested.h)) throw std::runtime_error(SDL_GetError());
+            if (!SDL_SetWindowPosition(window.get(),requested.x,requested.y))
+                std::fprintf(stderr,"SDL_SetWindowPosition failed: %s; retaining OS placement.\n",SDL_GetError());
+        }
+        if (!SDL_SyncWindow(window.get())) std::fprintf(stderr,"SDL_SyncWindow failed: %s; using reported actual size.\n",SDL_GetError());
+        int actual_w=0,actual_h=0,actual_x=0,actual_y=0;
+        if (!SDL_GetWindowSize(window.get(),&actual_w,&actual_h)) throw std::runtime_error(SDL_GetError());
+        if (!SDL_GetWindowPosition(window.get(),&actual_x,&actual_y)) throw std::runtime_error(SDL_GetError());
         const auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(window.get()),
             SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
         if (!hwnd) throw std::runtime_error("SDL window has no HWND.");
         int width = 0, height = 0;
         if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
-        std::fprintf(stderr, "Window: %d x %d pixels, fixed windowed 16:9\n", width, height);
+        std::fprintf(stderr,"Startup window: primary=%u bounds_known=%d usable=(%d,%d,%d,%d) fraction=%g borders=(%d,%d,%d,%d) margin=%d fit=%d requested_client=%dx%d at=(%d,%d) actual_window=%dx%d at=(%d,%d) actual_pixels=%dx%d OS_adjusted=%d\n",
+            primary,have_bounds,usable.x,usable.y,usable.w,usable.h,staging.window_width_fraction,
+            borders.top,borders.left,borders.bottom,borders.right,margin,requested.fitted,requested.w,requested.h,requested.x,requested.y,
+            actual_w,actual_h,actual_x,actual_y,width,height,actual_w!=requested.w || actual_h!=requested.h);
+
         pawapuro::ManualSwingPreview preview(utf8_path(base_path)/"batting",staging);
         pawapuro::PlayerAim aim(staging);
         auto& delivery=preview.delivery;

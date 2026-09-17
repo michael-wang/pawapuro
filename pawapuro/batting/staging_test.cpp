@@ -1,4 +1,5 @@
 #include "staging.hpp"
+#include "../startup_window.hpp"
 #include <array>
 #include <fstream>
 #include <iostream>
@@ -28,7 +29,27 @@ int main(int argc, char** argv)
         const pawapuro::BattingStaging defaults;
         // Tuning the authored preset must not require changing Native fallback values.
         (void)pawapuro::load_batting_staging(authored);
+        const pawapuro::WindowBorders border{48,8,8,8};
+        for (const auto area : {pawapuro::WorkArea{0,0,3840,2080}, {0,0,1366,728},
+            {0,0,3440,900}, {-1920,40,1920,1000}}) {
+            const auto w=pawapuro::fit_startup_window(area,border,0.75);
+            const int left=w.x-border.left,top=w.y-border.top;
+            if (left<area.x+8 || top<area.y+8 || left+w.w+border.left+border.right>area.x+area.w-8
+                || top+w.h+border.top+border.bottom>area.y+area.h-8 || w.w*9!=w.h*16)
+                throw std::runtime_error("Startup window fit/aspect failed.");
+            if (std::abs(2*(left-area.x)+w.w+border.left+border.right-area.w)>1
+                || std::abs(2*(top-area.y)+w.h+border.top+border.bottom-area.h)>1)
+                throw std::runtime_error("Outer window not centred in work area.");
+        }
+        const auto large=pawapuro::fit_startup_window({0,0,3840,2080},border,0.75);
+        if (large.w!=2880 || large.h!=1620 || large.fitted)
+            throw std::runtime_error("75 percent 4K window differs.");
+        write("[window]\nwidth_fraction=1\n");
+        if (pawapuro::load_batting_staging(fixture).window_width_fraction!=1)
+            throw std::runtime_error("Window override not loaded.");
         write("");
+        if (pawapuro::load_batting_staging(fixture).window_width_fraction!=0.75)
+            throw std::runtime_error("Window default differs.");
         if (values(pawapuro::load_batting_staging(fixture)) != values(defaults))
             throw std::runtime_error("Missing fields did not use defaults.");
         write("[camera]\nvertical_fov_degrees = 42\n");
@@ -85,6 +106,12 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[window]\nwidth_fraction=0\n", "window.width_fraction"},
+            {"[window]\nwidth_fraction=-0.1\n", "window.width_fraction"},
+            {"[window]\nwidth_fraction=1.01\n", "window.width_fraction"},
+            {"[window]\nwidth_fraction=nan\n", "window.width_fraction"},
+            {"[window]\nwidth_fraction=inf\n", "window.width_fraction"},
+            {"[window]\nwidth_fraction='large'\n", "window.width_fraction"},
             {"[player_aim]\nnormal_radius_x_m=0\n", "player_aim.normal_radius_x_m"},
             {"[player_aim]\nnormal_radius_y_m=-0.1\n", "player_aim.normal_radius_y_m"},
             {"[player_aim]\ncursor_speed_mps=0\n", "player_aim.cursor_speed_mps"},
@@ -146,7 +173,7 @@ int main(int argc, char** argv)
         };
         for (const auto& test : invalid) { write(test.toml); reject(fixture, test.diagnostic); }
         std::filesystem::remove(fixture);
-        std::cout << "Defaults, authored preset, valid override, missing file and 49 invalid cases passed.\n";
+        std::cout << "Defaults, authored preset, valid override, missing file and invalid cases passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

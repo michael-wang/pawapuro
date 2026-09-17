@@ -34,8 +34,18 @@ int main(int argc, char** argv)
     try {
         require(argc == 2, "Expected authored staging path");
         fixture_staging = load_batting_staging(argv[1]);
+        // Pixel constants scale with height; projected radius must not be scaled twice.
+        for (auto position:{fixture_staging.release_position_m,predict_arrival(fixture()).state.position_m}) {
+            std::vector<engine::Vertex> a,b;
+            append_ball_readability(a,fixture_staging,position,PitchPhase::InFlight,true,1920,1080);
+            append_ball_readability(b,fixture_staging,position,PitchPhase::InFlight,true,2880,1620);
+            require(a.size()==b.size(),"BallAid scaling changes capacity");
+            for (size_t i=0;i<a.size();++i)
+                require(std::abs(a[i].position.x-b[i].position.x)<1e-6f
+                    && std::abs(a[i].position.y-b[i].position.y)<1e-6f,"BallAid double-scaled projection or unscaled pixel stroke");
+        }
         // Current-ball marker follows every authoritative flight sample, never the arrival prediction.
-        for (const auto size : {DirectX::XMUINT2{1920,1080}, DirectX::XMUINT2{1280,720}}) {
+        for (const auto size : {DirectX::XMUINT2{1920,1080}, DirectX::XMUINT2{1280,720}, DirectX::XMUINT2{2880,1620}}) {
             auto flight=fixture();
             std::vector<engine::Vertex> marker;
             marker.reserve(ball_readability_vertex_count);

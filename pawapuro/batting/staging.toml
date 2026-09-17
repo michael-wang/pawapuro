@@ -1,5 +1,8 @@
 # Startup development staging and reference pitch fixture. Metres; +Y up, +Z toward the pitcher.
 # Defaults for omitted keys are defined in staging.hpp; invalid values reject startup.
+[window]
+width_fraction = 0.75
+
 [camera]
 preset = "right_handed_pitcher_vs_left_handed_batter"
 # Frame from third-base (-X), opposite the future left-handed batter at +X.

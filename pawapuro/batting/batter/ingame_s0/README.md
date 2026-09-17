@@ -35,7 +35,9 @@
 
 ## Gate C runtime candidate
 
-啟動 repo 的 `build/release/pawapuro.exe`（或 Debug）。Space 開始／完成後下一球；Arrows 移動 live aim、R recenter；J 新按下在 preview tick **432–496（含端點）** 可 commit；P pause、`.` 單步、Esc 離開。Title 的 `OPEN/CLOSED` 與拒絕／queued／commit 狀態可供操作確認。正式 input／snapshot／contact 邊界由 [batting-contact Gate C](../../../../docs/design/batting-contact.md#player-swing-s0-gate-c) 擁有。
+啟動 repo 的 `build/release/pawapuro.exe`（或 Debug）。啟動時自動以主螢幕可用工作區寬度的 75% 選擇 16:9 client size，必要時連同邊框／標題列及留白等比例縮小，整個視窗置中；不需額外參數，也不再要求至少 1920×1080。可在 [staging.toml](../../staging.toml) 的 `[window] width_fraction = 0.75` 調整比例（finite，0 < value ≤ 1，缺省 0.75）；`--staging` 仍可指定本次資料來源，預設讀 exe 旁的 build copy。取整為 16×9 單位；只於啟動校正一次，不追蹤顯示器變更，不提供 resize／maximize／fullscreen。工作區查詢失敗會 log 並退回 display bounds 加保守留白；連 display bounds 都不可用時明示退回 800×450／SDL 預設位置，無法保證符合未知工作區。邊框查詢失敗使用保守估計，不更動 Windows DPI；投影使用實際 client pixels，BallAid 固定 pixel 值依高度／1080 縮放。其他螢幕與 DPI 組合尚未實測，尺寸、閱讀與順暢度待 Michael 試玩。
+
+Space 開始／完成後下一球；Arrows 移動 live aim、R recenter；J 新按下在 preview tick **432–496（含端點）** 可 commit；P pause、`.` 單步、Esc 離開。Title 的 `OPEN/CLOSED` 與拒絕／queued／commit 狀態可供操作確認。正式 input／snapshot／contact 邊界由 [batting-contact Gate C](../../../../docs/design/batting-contact.md#player-swing-s0-gate-c) 擁有。
 
 ### Export 與資產責任
 
