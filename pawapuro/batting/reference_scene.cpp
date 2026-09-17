@@ -35,6 +35,17 @@ void append_ball_readability(std::vector<engine::Vertex>& vertices, const Battin
     band(radius-1, radius+1, {1,1,0.2f});
 }
 
+void append_arrival_cue(std::vector<engine::Vertex>& vertices, const BattingReference& scene,
+    PitchPhase phase, ArrivalCueStyle style)
+{
+    if (!arrival_cue_visible(phase)) {
+        vertices.resize(vertices.size()+arrival_cue_vertex_count);
+        return;
+    }
+    const auto& cue=style==ArrivalCueStyle::Baseball ? scene.arrival_baseball : scene.arrival_ring;
+    vertices.insert(vertices.end(),cue.begin(),cue.end());
+}
+
 BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 predicted_position, float aspect,
     std::span<const engine::Vertex> pitcher_vertices, std::span<const engine::Vertex> batter_vertices)
 {
@@ -220,15 +231,40 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     const auto edge = project_batting_point(staging, edge_position, aspect);
     const float radius = std::abs(edge.x - p.x);
     const float inner_radius = std::max(0.0f, radius - stroke_x);
-    const XMFLOAT3 prediction_color{1, 0.55f, 0.25f};
+    // Prediction geometry is stored separately: calculation does not reveal it.
+    const auto cue_quad = [](std::vector<engine::Vertex>& target, XMFLOAT3 a, XMFLOAT3 b,
+        XMFLOAT3 c, XMFLOAT3 d, XMFLOAT3 color) {
+        target.insert(target.end(), {{a,color},{b,color},{c,color},{a,color},{c,color},{d,color}});
+    };
     for (int i = 0; i < 48; ++i) {
         const float a = XM_2PI * static_cast<float>(i) / 48;
         const float b = XM_2PI * static_cast<float>(i + 1) / 48;
         const auto ring = [&](float angle, float r) -> XMFLOAT3 {
             return {p.x + r * std::cos(angle), p.y + r * aspect * std::sin(angle), 0};
         };
-        quad(ring(a, inner_radius), ring(b, inner_radius), ring(b, radius), ring(a, radius), prediction_color);
+        cue_quad(scene.arrival_ring,ring(a,inner_radius),ring(b,inner_radius),ring(b,radius),ring(a,radius),{1,0.55f,0.25f});
+        cue_quad(scene.arrival_baseball,ring(a,inner_radius),ring(b,inner_radius),ring(b,radius),ring(a,radius),{0.96f,0.95f,0.87f});
     }
+    // Thin, static seams leave the centre open for the actual ball and aim core.
+    const auto seam_line = [&](float ax, float ay, float bx, float by) {
+        const float length=std::hypot(bx-ax,by-ay), half=stroke_x/radius*0.5f;
+        const float dx=-(by-ay)*half/length, dy=(bx-ax)*half/length;
+        const auto pt=[&](float x,float y) -> XMFLOAT3 { return {p.x+x*radius,p.y+y*radius*aspect,0}; };
+        cue_quad(scene.arrival_baseball,pt(ax+dx,ay+dy),pt(bx+dx,by+dy),
+            pt(bx-dx,by-dy),pt(ax-dx,ay-dy),{0.95f,0.12f,0.16f});
+    };
+    for (float side : {-1.0f,1.0f}) {
+        const auto x=[&](float y) { return side*(0.4f+0.32f*y*y); };
+        for (int i=0;i<12;++i) {
+            const float a=-0.78f+1.56f*static_cast<float>(i)/12, b=-0.78f+1.56f*static_cast<float>(i+1)/12;
+            seam_line(x(a),a,x(b),b);
+        }
+        for (int i=0;i<5;++i) {
+            const float y=-0.6f+0.3f*static_cast<float>(i);
+            seam_line(x(y)-0.09f,y-0.04f,x(y)+0.09f,y+0.04f);
+        }
+    }
+    scene.arrival_ring.resize(arrival_cue_vertex_count);
     return scene;
 }
 

@@ -36,6 +36,34 @@ int main(int argc,char** argv) {
     ReferencePitch standalone(staging.release_position_m,staging.reference_velocity_mps,staging.strike_zone_plane_z());
     const auto prediction=predict_arrival(standalone);std::vector<BallState> path{standalone.initial};standalone.release();
     while (standalone.phase!=PitchPhase::Complete) {standalone.step_tick();path.push_back(standalone.current);}
+    const auto scene=make_batting_reference(staging,prediction.state.position_m,16.0f/9,{});
+    require(scene.vertices.size()-scene.overlay_vertex_start==24,"Static overlay retained prediction geometry");
+    const auto check_cue=[&] {
+        const auto before=sample(d);
+        const bool visible=d.ball_owner==BallOwner::Simulation && d.pitch.phase==PitchPhase::InFlight;
+        require(arrival_cue_visible(d.pitch.phase)==visible,"Cue does not follow release ownership");
+        for (auto style:{ArrivalCueStyle::Baseball,ArrivalCueStyle::Ring}) {
+            std::vector<engine::Vertex> cue;
+            append_arrival_cue(cue,scene,d.pitch.phase,style);
+            require(cue.size()==arrival_cue_vertex_count,"Cue capacity differs by style/state");
+            if (!visible) {
+                for (const auto& v:cue) require(equal(v.position,{0,0,0}),"Cue visible before release/after Complete/reset");
+            } else {
+                float left=1e9f,right=-1e9f,bottom=1e9f,top=-1e9f;
+                // The shared outer contour determines the centre, independent of seam/padding geometry.
+                for (unsigned i=0;i<48*6;++i) {
+                    const auto p=cue[i].position;
+                    require(equal(p,scene.arrival_ring[i].position),"Styles use different projection size/centre");
+                    left=std::min(left,p.x);right=std::max(right,p.x);
+                    bottom=std::min(bottom,p.y);top=std::max(top,p.y);
+                }
+                require(std::abs((left+right)/2-scene.prediction_ndc.x)<1e-6f
+                    && std::abs((bottom+top)/2-scene.prediction_ndc.y)<1e-6f,"Cue moved away from fixed prediction");
+            }
+        }
+        same(d,before); // Cue consumes no clock and mutates neither pitch nor pose; no aim input exists.
+    };
+    check_cue();
     require(path.size()==96 && prediction.tick==95,"Existing fixture arrival changed");
     const auto arrival=standalone.arrival_at_plane();require(equal(arrival,prediction),"Standalone prediction mismatch");
     require(d.motion.release_tick==384 && d.motion.end_tick==816,"Accepted clip metadata changed");
@@ -46,8 +74,8 @@ int main(int argc,char** argv) {
     std::vector<Sample> history{sample(d)};d.start();d.toggle_pause();
     DirectX::XMFLOAT3 last_held{};
     for (unsigned tick=1;tick<=816;++tick) {
-        if (tick==192 || tick==384 || tick==385 || tick==500) frozen(d);
-        const bool complete=d.single_step();require(d.tick==tick && complete==(tick==816),"Single-step/completion ordering");
+        if (tick==192 || tick==384 || tick==385 || tick==500) { check_cue(); frozen(d); check_cue(); }
+        const bool complete=d.single_step();check_cue();require(d.tick==tick && complete==(tick==816),"Single-step/completion ordering");
         require(!d.motion.pending_ticks && !d.pitch.pending_ticks && !d.motion.paused && !d.pitch.paused,"Child clock consumed elapsed time");
         if (tick<384) {
             require(d.ball_owner==BallOwner::Hand && d.pitch.phase==PitchPhase::Ready && d.pitch.tick==0 && !d.release_count,"Pre-release owner/physics changed");
@@ -93,6 +121,7 @@ int main(int argc,char** argv) {
     for (unsigned run=0;run<20;++run) {
         require(d.start() && !d.start(),"Replay/start phase guard");
         require(d.tick==0 && !d.pending_ticks && !d.release_count && d.ball_owner==BallOwner::Hand && d.pitch.phase==PitchPhase::Ready && equal(d.ball_center(),grip(d)),"Replay did not reset ownership/state/debt");
+        check_cue();
         d.advance(4'166'666);require(d.tick==0,"Replay retained fractional credit");d.advance(1);require(d.tick==1,"Fresh fraction wrong");
         d.advance(10'000'000'000);require(d.tick==17 && d.pending_ticks>0,"Catch-up cap lost debt");
         d.toggle_pause();frozen(d);

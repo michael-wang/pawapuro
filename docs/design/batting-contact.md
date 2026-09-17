@@ -156,3 +156,7 @@ S0／S0.1 的責任分層保持不變；這次只將 Player Aim 做成實際 app
 - Pitcher／release／固定 trajectory／prediction／arrival 語意不變。球在 arrival 後仍 frozen，title 明示限制；不以凍結球與晚揮製造接觸、不做 hit sound／flash／foul／Quality／Ball Response。
 
 資產與 render／bat semantic pose 使用同一 `IngameMotion` evaluation；fractional time 不截為整數 authoring frame。重建 local-pose hierarchy 的普通函式留在 Engine，preparation、residual、foot support 留在 Pawapuro。具體匯出、65-tick／saved-source／input／GPU 檢查與 capture 限制見 [ingame_s0 README](../../pawapuro/batting/batter/ingame_s0/README.md#gate-c-runtime-candidate)。新動作的 continuous-contact coverage 刻意留待下一個另行授權的 slice；既有 S0–S2 regression 不刪除、不放寬容差。
+
+## Arrival Cue S0：release reveal 試玩原型（2026-09-18）
+
+操作模型為「看投手準備 → release 取得預期進壘位置 → 注意力移到打擊區 → 用實球接近判斷出棒」。Arrival Cue 表示固定 predicted evaluation-plane point，Actual ball／BallAid 表示當前球心，reticle 表示玩家意圖。提示僅由既有 `PitchPhase::InFlight` 揭露：Hand→Simulation 的 release 同次狀態轉換後，下次正常 render 即可見，不另加 timer／tick；Complete／reset 隱藏，pause 保留當下可見性，single-step 跟隨同一 simulation 狀態，與 J／commit 無關。移除常駐橘圈；**V** 比較預設 **Baseball**（淺色空心輪廓／靜態紅縫線）與 **Ring**（原橘圈），共用 prediction、投影尺寸及揭露規則。縫線只有外觀，沒有球種／spin 語意；不填滿中心，BallAid 維持原樣並最後繪製。Title 顯示外觀與 Hidden／Visible，隱藏時以 Hidden 取代 prediction-derived error／ex／ey／q，內部 signed diagnostic／snapshot 不變；**B** 仍切換預設 ON 的 BallAid。固定紅中只能驗證提示與會合感，尚未驗證未知落點難度；待 Michael＋Julia playtest review，Contact 仍 **NotEvaluated**，重疊不代表 Hit／Perfect。Flight Complete 隱藏是本 prototype 決定，不推論原作規則。
