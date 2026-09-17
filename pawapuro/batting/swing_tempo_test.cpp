@@ -7,9 +7,13 @@ using namespace pawapuro;
 void require(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
 void until(ManualSwingPreview& p,std::uint64_t t){while(p.tick<t)p.advance(4'166'667);}
 int main(int argc,char** argv){try {
-    require(argc==2,"expected batting directory");const std::filesystem::path d=argv[1];
+    require(argc==2||(argc==3&&std::string(argv[2])=="--core"),"expected batting directory [--core]");const std::filesystem::path d=argv[1];
     const auto s=load_batting_staging(d/"staging.toml");ManualSwingPreview p(d,s);
     const SwingTempoTiming b{SwingTempo::Compact,30},a{};
+    require(p.next_tempo==SwingTempo::Compact&&a.mode==SwingTempo::Original,"entry default / generic baseline");
+    p.start();require(p.attempt_tempo.mode==SwingTempo::Compact&&p.attempt_tempo.compact_area_ticks==30,"first attempt snapshot");
+    p.reset();require(p.toggle_tempo()&&p.next_tempo==SwingTempo::Original,"Ready switch to A");
+    p.start();require(p.attempt_tempo.mode==SwingTempo::Original,"selected A snapshot");p.reset();
     require(b.sample_tick(462,432)==472&&b.end_tick(432)==878&&a.end_tick(432)==888,"area/finish timing");
     for(double x=-1;x<500;x+=.03125) {
         require(b.sample_tick(432+x+.01,432)>b.sample_tick(432+x,432),"mapping not monotonic");
@@ -57,6 +61,10 @@ int main(int argc,char** argv){try {
     require(p.tick==878&&p.toggle_tempo()&&p.next_tempo==SwingTempo::Original,"Complete next switch");
     require(p.attempt_tempo.mode==SwingTempo::Compact&&p.batter.pose.world==old_pose&&p.geometry==old_result,"next selection relabelled last attempt");
     p.toggle_tempo();p.reset();require(!p.domain_rejected&&p.next_tempo==SwingTempo::Compact,"reset mode/hint");
+    if(argc==3) {
+        p.start();require(p.attempt_tempo.mode==SwingTempo::Compact,"next attempt lost selected B");
+        std::cout<<"Core timing/default/selection/snapshot checks passed; contact study skipped\n";return 0;
+    }
     const double release=double(p.delivery.motion.release_tick)/240;
     std::array<std::optional<BatContact>,65> results;
     unsigned contacts=0;

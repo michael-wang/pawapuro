@@ -24,7 +24,7 @@ struct ManualSwingPreview {
     IngameMotion batter;
     PreviewPhase phase=PreviewPhase::Ready;
     bool paused=false;
-    SwingTempo next_tempo=SwingTempo::Original;
+    SwingTempo next_tempo=SwingTempo::Compact;
     SwingTempoTiming attempt_tempo;
     bool domain_rejected=false;
     bool toggle_tempo();

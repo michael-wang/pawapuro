@@ -10,7 +10,8 @@ void require(bool x,const char* why){if(!x)throw std::runtime_error(why);}
 void until(ManualSwingPreview& p,std::uint64_t target){while(p.tick<target){p.advance(4'166'667);require(p.phase==PreviewPhase::Playing||p.tick==target,"unexpected completion");}}
 int main(int argc,char**argv){try{
     require(argc==2,"expected directory");const std::filesystem::path d=argv[1];const auto s=load_batting_staging(d/"staging.toml");
-    ManualSwingPreview p(d,s);const DirectX::XMFLOAT2 a{.1f,.8f},b{-.2f,.5f};
+    ManualSwingPreview p(d,s);p.next_tempo=SwingTempo::Original; // Explicit A regression baseline.
+    const DirectX::XMFLOAT2 a{.1f,.8f},b{-.2f,.5f};
     p.input_boundary(true,true,true,a);require(!p.pending,"Ready must reject");p.start();
     p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(!p.pending,"early input must reject without buffering");
     until(p,431);p.input_boundary(true,false,true,a);require(!p.pending,"held cannot trigger");
