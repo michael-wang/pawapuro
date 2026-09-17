@@ -138,3 +138,21 @@ S0／S0.1 的責任分層保持不變；這次只將 Player Aim 做成實際 app
 - `ref-batting-contact.mp4`：11381641 bytes，SHA256 `544808db37957d5525e44ae5c937b9bc4314ad451665bcd50ab288d93aa2ae7c`。
 - `pawapuro-batting-ref-contact.png`：3885175 bytes，SHA256 `05f94daf09987a325b3b61dc3f091de99613716a8fd3b0dcdb9807c2f5a90368`。
 - `pawapuro-batting-ref-power.png`：3963638 bytes，SHA256 `6f6d361eb317866d8002c535178bc95e17e7bd601949416dde1e9ee8b1d18a8f`。
+
+
+<a id="player-swing-s0-gate-c"></a>
+
+## Player Swing S0／Gate C — Manual Native runtime candidate
+
+2026-09-17；Player Aim S0 與 Gate B motion 的 human acceptance 依 Michael 最新決策沿用；上方 S0 舊記錄保留。Gate C **待 Michael＋Julia human review**，不是 production Hit Authorization。責任仍為 Player Intent → Hit Authorization → Physical Resolution → Contact Quality → Ball Response，本輪只實作 development swing intent／播放。
+
+- App 預設 [ManualSwingPreview](../../pawapuro/batting/manual_swing.hpp)，擁有 attempt、唯一 240 Hz clock、pending command 與 committed state。舊 `BattingPreview` 只供既有 choreography／contact regression，manual 路徑不呼叫舊 contact query、不保留舊 contact event。Contact 明示 **NotEvaluated**，不是 NoContact 或 Miss。
+- J 使用新的 press edge，每球最多一次；queued command 不可被後一次覆寫。Development target domain 為 preview ticks **432–496（含端點）**，亦即 delivery-relative 1.800000–2.066667 s。全部 65 ticks 可提交；不 clamp／round 到三個 fixtures，不將區間外按下留到開窗。這不是 Perfect／Good／Late、production timing window 或 Contact stat。
+- App frame 順序：先 account 舊 state 的 elapsed，最多消費 16 個 simulation ticks 並保留 backlog；再處理 SDL events／state transitions；更新 live aim／R；於該 frame input boundary 取 committed aim center snapshot；排程 `target = current tick + remaining backlog + 1`；後續 simulation 只在該 target 消費。新輸入不回填舊 elapsed debt。Diagnostics 記錄 boundary／target／consumed tick 與 backlog；例：tick420 加入100 ms，先走至436、剩8 ticks，J 排到445，非437。
+- Command 保存固定 Normal mode、target／consumed tick、boundary／backlog 與 immutable aim center；motion SHA／recipe 由 attempt owner 的 immutable asset 提供，owner 另保留 const startup `BattingStaging` Data snapshot；git version 固定 Native 配方。Replay authoritative input 是 recorded tick／snapshot／Data／assets，不保證不同 render cadence 的原始 OS events 自然相同。
+- Live cursor 仍可移動／R，跨下一球保留；不改 committed snapshot，不升為 production cursor lock。Title 的 signed dx／dy、ex／ey、q 是**目前 live center 對固定 predicted arrival point** 的 frame-boundary diagnostic，沒有將 q 當作完整 intent，也不拿它改 bat path、球路、physical contact 或 hit／miss。
+- Ready／Paused／Complete、失焦或 minimize 不接受新 swing；pause／focus loss 清除 pending，但 committed 保留。恢復資格後 held J 必須先鬆開；Windows app 在 boundary 讀 physical J state，避免 SDL focus-loss 清除 keyboard state 造成重新武裝。Held／repeat 不產生新 edge；新球清除舊 pending／commit／狀態。P／`.` 保留同一 timeline。
+- 不按可完成 Take＋pitcher finish（tick816）；commit 後的 finish 為 `commit+456 ticks`，最晚合法496完整播到952，Complete 後 Space 開下一球。主要 sweep phase 為 commit+24 ticks、contact-area pass cue 為+40 ticks；不是實際 collision 時刻或實測 input latency。
+- Pitcher／release／固定 trajectory／prediction／arrival 語意不變。球在 arrival 後仍 frozen，title 明示限制；不以凍結球與晚揮製造接觸、不做 hit sound／flash／foul／Quality／Ball Response。
+
+資產與 render／bat semantic pose 使用同一 `IngameMotion` evaluation；fractional time 不截為整數 authoring frame。重建 local-pose hierarchy 的普通函式留在 Engine，preparation、residual、foot support 留在 Pawapuro。具體匯出、65-tick／saved-source／input／GPU 檢查與 capture 限制見 [ingame_s0 README](../../pawapuro/batting/batter/ingame_s0/README.md#gate-c-runtime-candidate)。新動作的 continuous-contact coverage 刻意留待下一個另行授權的 slice；既有 S0–S2 regression 不刪除、不放寬容差。

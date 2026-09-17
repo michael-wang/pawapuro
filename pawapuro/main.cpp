@@ -2,7 +2,7 @@
 #include <SDL3/SDL_main.h>
 #include "batting/reference_scene.hpp"
 #include "batting/reference_pitch.hpp"
-#include "batting/batting_preview.hpp"
+#include "batting/manual_swing.hpp"
 #include "batting/player_aim.hpp"
 #include <chrono>
 #include <cstdio>
@@ -38,7 +38,7 @@ int main(int argc, char** argv)
         int width = 0, height = 0;
         if (!SDL_GetWindowSizeInPixels(window.get(), &width, &height)) throw std::runtime_error(SDL_GetError());
         std::fprintf(stderr, "Window: %d x %d pixels, fixed windowed 16:9\n", width, height);
-        pawapuro::BattingPreview preview(utf8_path(base_path)/"batting",staging);
+        pawapuro::ManualSwingPreview preview(utf8_path(base_path)/"batting",staging);
         pawapuro::PlayerAim aim(staging);
         auto& delivery=preview.delivery;
         auto& batter=preview.batter;
@@ -85,21 +85,25 @@ int main(int argc, char** argv)
             if (preview.advance(now - last_time)) std::fprintf(stderr,"Preview Complete: preview_tick=%llu pitcher_tick=%llu batter_tick=%llu pitch_tick=%llu\n",preview.tick,motion.tick,batter.tick,delivery.pitch.tick);
             report_arrival();
             last_time = now;
+            bool swing_edge=false;
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
                     running = false;
                 if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+                    if (event.key.scancode == SDL_SCANCODE_J) swing_edge=true;
                     if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
                     if (event.key.scancode == SDL_SCANCODE_SPACE && preview.start()) {
                         last_time=SDL_GetTicksNS(); arrival_reported=false;
                         std::fprintf(stderr,"Preview start/replay: preview_tick=0 pitcher_tick=0 batter_tick=0 owner=Hand pitch_tick=0; debt cleared.\n");
                     }
                     if (event.key.scancode == SDL_SCANCODE_R) { aim.recenter(); last_input_time=SDL_GetTicksNS(); }
-                    if (event.key.scancode == SDL_SCANCODE_P) preview.toggle_pause();
+                    if (event.key.scancode == SDL_SCANCODE_P) { preview.toggle_pause(); swing_edge=false; }
                     if (event.key.scancode == SDL_SCANCODE_PERIOD) preview.single_step();
                 }
+                if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) { preview.lose_input(); swing_edge=false; }
                 if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
+                    preview.lose_input(); swing_edge=false;
                     if (preview.phase == pawapuro::PreviewPhase::Playing && !preview.paused) preview.toggle_pause();
                     std::fprintf(stderr, "Window minimized; active preview paused (P to resume).\n");
                 }
@@ -123,11 +127,19 @@ int main(int argc, char** argv)
                 aim.move(float(keys[SDL_SCANCODE_RIGHT])-float(keys[SDL_SCANCODE_LEFT]),
                     float(keys[SDL_SCANCODE_UP])-float(keys[SDL_SCANCODE_DOWN]),input_dt);
             }
-            const auto ac=aim.center(); const auto ad=aim.diagnostic(prediction.state.position_m);
-            char title[768];
+            const auto ac=aim.center();
+            const auto flags=SDL_GetWindowFlags(window.get());
+            const bool eligible=(flags&SDL_WINDOW_INPUT_FOCUS)&&!(flags&SDL_WINDOW_MINIMIZED);
+            // SDL clears keyboard state on focus loss. The Windows physical key state
+            // prevents a held J from rearming merely because focus was regained.
+            const bool swing_held=(GetAsyncKeyState('J')&0x8000)!=0;
+            preview.input_boundary(swing_held,swing_edge,eligible,ac);
+            const auto ad=aim.diagnostic(prediction.state.position_m);
+            char title[1024];
             const auto ball=delivery.ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | aim=(%.4f,%.4f) error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
-                "ball=(%.6f,%.6f,%.6f) | backlog=%llu | Space:play/replay P:pause .:step Esc:quit Arrows:aim R:center",
+            std::snprintf(title,sizeof(title),"Pawapuro | Swing:%s %s commit=%llu Contact:NotEvaluated | live aim=(%.4f,%.4f) error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+                "ball=(%.6f,%.6f,%.6f) frozen-after-arrival | backlog=%llu | Space:play/replay J:swing[432..496] P:pause .:step Esc:quit Arrows:aim R:center",
+                preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,
                 ac.x,ac.y,ad.dx,ad.dy,ad.ex,ad.ey,ad.q,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
             if (last_title != title) {

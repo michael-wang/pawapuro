@@ -1,0 +1,16 @@
+schema_version = 1
+source_sha256 = "9e37b73e8419e721b885326e06ba3b185fbd11168da77184a13e2b07d6961ea6"
+glb_sha256 = "4290988292f4cf766f1ac1de28e032bbf56fa4cc2d01756dfc35c07f332d56af"
+# Exporter identity uses UTF-8 without BOM and normalized LF, independent of checkout EOL.
+exporter_sha256 = "12153147b467e6b05d82302dbde218471a2d5ba6726d5bb0b571a13f3954d43e"
+blender_version = "4.5.13 LTS"
+recipe = "gate-b-world-residual-v1"
+source_frames = 225
+source_fps = 60
+entry_frames = 6
+velocity_epsilon_frames = 0.01
+commit_first_tick = 432
+commit_last_tick = 496
+# Remaining descent interpolates Gate B's two unfinished-support entries.
+# At/after authoring frame 117 the existing planted foot is retained.
+plant_duration_knots = [[109.0, 6.0], [115.0, 3.0], [117.0, 0.0]]

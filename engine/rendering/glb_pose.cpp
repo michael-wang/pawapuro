@@ -43,6 +43,12 @@ void evaluate_glb_pose(const MeshGlb& mesh, std::optional<float> time_s, GlbPose
             }
         }
     }
+    rebuild_glb_pose(mesh,pose);
+}
+void rebuild_glb_pose(const MeshGlb& mesh, GlbPose& pose)
+{
+    if(pose.local.size()!=mesh.nodes.size()) throw std::runtime_error("GLB local pose size mismatch");
+    pose.world.resize(mesh.nodes.size());pose.skin.resize(mesh.joints.size());
     for (const auto i:mesh.hierarchy_order) {
         const auto& local=pose.local[i];
         auto world=XMMatrixScaling(local.scale.x,local.scale.y,local.scale.z)

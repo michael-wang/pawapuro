@@ -209,3 +209,14 @@ Committed entry 以 6 authoring frames 的具體 pose／velocity residual 接入
 - 這是 offline authoring preview，沒有真實輸入、runtime app capture 或 production contact query；新動作的幾何接觸驗證留待接線切片。未 build、CTest、GPU validation 或 S0–S2 study 重跑，舊 runtime／tests 未改。
 
 Evidence 位於 ignored `build/batter-ingame-s0/`；成品與 compact provenance 保留，本輪可重建的大量 render frames 在確認影片可讀後移除。Human review 重點是小幅 preparation／Take 落腳是否讀得出、Early 下降與初始轉體是否太擠、50–100 ms entry 節奏，以及大頭附近手棒遮擋。四例均保留，沒有縮小成單一合法入口。**停止於 Michael＋Julia review；不 promotion、不接 runtime、不再開 authoring iteration。**
+
+
+## Gate B acceptance 與 Gate C runtime candidate（2026-09-17）
+
+Michael＋Julia 已接受 Gate B 的共用 preparation、Take 準備／落腳／收回，以及 Early／Nominal／Late entry 與 committed follow-through 的視覺方向。上節保留當時的觀察與未接受狀態；本次 acceptance 不包含真實 input latency、任意 commit runtime 銜接、新動作 physical contact 或 Hit Authorization／Ball Response。下巴疊影與大頭附近遮擋仍列 debt，本輪未追加 authoring／polish。
+
+Gate C 將 saved source 的原配方接入 Pawapuro Native：共同 preparation → 實際 commit pose／速度 residual → shared swing → 完整 finish。四個 Blender scenes 只作獨立 fixtures，runtime 不挑選三支整段影片。六格 residual、toe anchor 與 quarter-frame keys 的插值語意保留；從未使用 f107 整球等待或 8-tick rate ramp。原三檔與 Gate B `.blend` bytes 不變。
+
+首輪連續 commit domain 的 support 延伸是明示 development policy：未 plant 時，剩餘下降長度在 Gate B 的 Early／Nominal 與已 plant 邊界間連續銜接；已 plant 不重抬腳。所有 65 ticks 的 common prefix、finite pose、支撐、attachment 與完整尾段已做 Native 檢查，三個 fixtures 加 Take 與 saved source 比對；不把有限 proxy 檢查稱為完整 mesh collision。
+
+實際 source／export／取樣方式、timing 數字與 evidence 由 [ingame_s0 README](../../pawapuro/batting/batter/ingame_s0/README.md#gate-c-runtime-candidate) 擁有；input／snapshot／NotEvaluated 邊界見 [batting-contact](batting-contact.md#player-swing-s0-gate-c)。**Gate C runtime candidate 仍待 Michael＋Julia human review**：重點是連續入口是否可信、J 到可辨認反應與 sweep 的節奏、晚揮的完整收勢及重複打下一球的體感。240 Hz 與 source timing 都不能代替端到端 latency 或手感驗收。

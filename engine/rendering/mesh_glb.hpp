@@ -56,5 +56,7 @@ struct GlbPose {
 };
 // Reusable CPU workspaces own their storage. nullopt evaluates static/bind nodes.
 void evaluate_glb_pose(const MeshGlb& mesh, std::optional<float> time_s, GlbPose& pose);
+// Rebuild hierarchy and skin matrices from a completed local pose; no animation evaluation.
+void rebuild_glb_pose(const MeshGlb& mesh, GlbPose& pose);
 void skin_glb_vertices(const GlbPrimitive& mesh, const GlbPose& pose, std::vector<Vertex>& vertices);
 }

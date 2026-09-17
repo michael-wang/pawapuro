@@ -30,6 +30,9 @@ configure_file(pawapuro/batting/batter/batter.glb batting/batter/batter.glb COPY
 configure_file(pawapuro/batting/staging.toml staging.toml COPYONLY)
 configure_file(pawapuro/batting/pitcher/pitcher.glb batting/pitcher/pitcher.glb COPYONLY)
 configure_file(pawapuro/batting/pitcher/pitcher.toml batting/pitcher/pitcher.toml COPYONLY)
+foreach(asset IN ITEMS motion.glb motion.toml)
+    configure_file(pawapuro/batting/batter/ingame_s0/${asset} batting/batter/ingame_s0/${asset} COPYONLY)
+endforeach()
 find_program(DXC dxc HINTS "$ENV{WindowsSdkVerBinPath}/x64" REQUIRED)
 
 set(shader_headers)
@@ -51,7 +54,7 @@ foreach(stage IN ITEMS vs ps)
     list(APPEND shader_headers "${header}")
 endforeach()
 
-add_executable(pawapuro WIN32 pawapuro/batting/player_aim.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/batting_preview.cpp pawapuro/batting/bat_contact.cpp pawapuro/batting/contact_probe.cpp pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
+add_executable(pawapuro WIN32 pawapuro/batting/manual_swing.cpp pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/player_aim.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/batting_preview.cpp pawapuro/batting/bat_contact.cpp pawapuro/batting/contact_probe.cpp pawapuro/main.cpp pawapuro/batting/reference_scene.cpp
     engine/rendering/d3d12_view.cpp pawapuro/batting/staging.cpp
     pawapuro/batting/reference_pitch.cpp pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp ${shader_headers})
 target_compile_features(pawapuro PRIVATE cxx_std_20)
@@ -72,6 +75,21 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(manual_swing_test pawapuro/batting/manual_swing_test.cpp pawapuro/batting/manual_swing.cpp
+        pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp
+        pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(manual_swing_test PRIVATE cxx_std_20)
+    target_compile_options(manual_swing_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(manual_swing_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(manual_swing_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME manual_swing COMMAND manual_swing_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting")
+    add_executable(ingame_motion_test pawapuro/batting/batter/ingame_s0/ingame_motion_test.cpp
+        pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(ingame_motion_test PRIVATE cxx_std_20)
+    target_compile_options(ingame_motion_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(ingame_motion_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(ingame_motion_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME ingame_motion COMMAND ingame_motion_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting")
     add_executable(player_aim_test pawapuro/batting/player_aim_test.cpp pawapuro/batting/player_aim.cpp
         pawapuro/batting/contact_probe.cpp pawapuro/batting/batting_preview.cpp pawapuro/batting/bat_contact.cpp
         pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp pawapuro/batting/pitcher/pitcher_motion.cpp
