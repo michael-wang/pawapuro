@@ -403,3 +403,7 @@ Debug／Release build、各 **11/11 CTest** 通過。新study test涵蓋：offse
 
 
 2026-09-17 review 更新：Michael＋Julia 已接受 Bat Contact S2 timing-to-contact geometry study；上述交付時的待 review 狀態已解除。新的 [Hit Authorization S0](../../../docs/design/batting-contact.md) 僅為 design candidate，不改本節 physical truth 或 runtime。
+
+## In-game preparation／Take／Swing S0 candidate
+
+2026-09-17；獨立 authoring candidate，待 Michael＋Julia human review。開啟、四例預覽與檔案責任見 [ingame_s0](ingame_s0/README.md)；設計由 Batter Motion Gate B 擁有。上層 accepted `.blend`／GLB／TOML bytes 不變，未 promotion 或接 runtime。

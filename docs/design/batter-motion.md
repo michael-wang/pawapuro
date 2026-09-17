@@ -150,3 +150,62 @@ Pelvis 先打開，chest 另有落後的曲線；手棒 f107–116 保留靠身�
 Evidence：ignored `build/batter-authoring-s0/` 的 `swing-batting-1x.mp4`、`swing-side-1x.mp4`（完整 60 fps／1×）、兩視角 contact sheets、plant→acceleration f103–126 連續影格、hands／feet close-ups、`motion-diagnostic.jpg`。首格與 source 預設均為 f1 Ready。已解碼核對 FPS／225 格，已檢視影格及全 source 數值；未宣稱完成正常速度連續自看。
 
 已知問題：簡化 torso 轉向輪廓偏淡；下巴附近 rubber arms 疊影、早期 follow-through 的手棒被大頭遮住。支撐、匯出與 attachment 檢查通過不代表動作力量感已過關。Khronos 0 errors、全 225 格 source／GLB／round-trip 通過；細節及容差見 README。未執行 C++ build／CTest／GPU，沒有修改 production、pitcher 或 staging；六條 Motion Rules 不變。其後 S0 baseline 已通過 Michael＋Julia human review；此 acceptance 不包含 runtime animation、collision、hit quality、contact presentation 或 M1。S1 static import 的實測與 gate 見 [batter README](../../pawapuro/batting/batter/README.md#batter-runtime-s1--static-bind-import-candidate)，source 三檔未重新保存／匯出。
+
+<a id="player-swing-s0-gate-b"></a>
+
+## Player Swing S0／Gate B — In-game preparation candidate（2026-09-17）
+
+**局部 authoring 已授權；候選待 Michael＋Julia human review，未 promotion／接 runtime。** Gate A 的 f107 整球等待與 8-tick rate ramp 未 accepted，本輪不使用。Accepted source／GLB／TOML 與既有 S0–S2 truth 保留。
+
+### 本輪 reference 與證據界線
+
+新 `ref-batting-take.mp4` 已由本機讀取：16209288 bytes，SHA256 `1c0253a75615d337e157a0676d3a4b339111cb074443b6972e5e289ec103de72`；Blender 解碼為 2876×1610、30 fps、215 capture frames。實際檢視 1-based f75／85／95／100／103／107／115／128／140／155：f85–100 前鞋傾斜／露底增加、手棒留在頭肩旁；f103–107 鞋降低且持棒姿勢改變；f128–140 已回到接近直立持棒，沒有主要 sweep。這支持不出棒也有準備、落腳與收回，不能量出 physical plant、input tick 或 crossing。低頭／收身不另定為必要情緒反應。
+
+沿用 Gate A 已核對／檢視的 `ref-batting-match_n_swing.mp4`（26285463 bytes；SHA256 `fdca560152d0cf5dab2e0b5fa197d3b7a4a688e44fd47d1d6f7a2f3504e1a8ee`）。兩片原遊戲 FPS／播放倍率未知，capture 有播放／暫停提示；不把 capture 秒數搬成 authoring timing，也不宣稱兩片具有已驗證的共用 timeline。本輪採既有固定 pitch release=1.6 s、plane arrival≈1.992833450 s 作比較 cue。
+
+### Motion Brief（本輪 authoring direction）
+
+以下是 Michael 指定方向與 Pawapuro 刻意安排，不是原作內部規格。左打前腳=右腳、後腳=左腳；各部位重疊承接，heel-up 不作 trigger，contact-area 不作 Hit／Perfect marker。
+
+| Phase | Support／Contact | Body intent／Lead | Lag／Attachment | Momentum next |
+|---|---|---|---|---|
+| Ready／讀球 | 雙腳完整支撐 | 小幅身體 load 接近 release；不整球等待已開身姿勢 | 手棒 compact，既有 grip hierarchy | 前腳卸重、小幅準備 |
+| 共用準備／下降 | 後左腳支撐；前右腳小幅 lift／heel 傾斜後下降 | 軀幹蓄力與前腳同一意圖，不提前自動大幅開身 | 手棒仍留後，雙手共同持棒 | 接 plant；是否 commit 不改已發生的準備 |
+| Take | 前腳落地、雙腳穩定 | 看球通過，load 自然收回 | 不進主 sweep、不接 full-swing finish | 回到 compact ready，前腳保留落腳位置 |
+| Commit entry | Early 接完下降；已 plant 者維持原支撐 | pelvis／body 先帶出轉體，後脚接 toe pivot／heel-up | 手棒保留 lag，再集中釋放；不瞬移／不重播 lift | 共用 committed sweep |
+| Sweep／follow-through | 前腳固定、後脚 toe support | 軀幹與手棒各有節奏，穿過接觸區而不停住 | 沿用既有 hand→grip→bat；無新 rig／IK | 優先沿用 accepted 後段，完整消散動勢 |
+
+四例共用同一 preparation；Early／Nominal／Late 只驗證三個具體入口，不代表任意 commit 已成立。候選檔案與開啟方式由 [ingame_s0 README](../../pawapuro/batting/batter/ingame_s0/README.md) 維護。實際存檔、重開與預覽結果見以下各節。
+
+### 實際候選：共用準備＋三個具體入口
+
+新候選從 accepted `.blend` 載入後編輯 animation，未呼叫角色 generator；mesh／rig topology／weights／placement／兩個 accepted cameras 保持原值。`Preview_Take` 是共用準備與不出棒收回；三個 swing 預覽先使用完全相同的 preparation，再從當下 pose／動勢接入 `Shared_Committed_Swing_source_derived`。四個 scene 是這條分支關係的可編輯 baked review cases，不是 runtime 多 clip 系統，也不是四套各自預先調整的準備。
+
+Preparation 約 f91 起前腳卸重；f101 heel 傾斜候選最大 8°，f103 的 toe clearance 候選為 0.035 m，較舊 0.32 m lift 小；短步總前移仍 0.15 m。Take f117 建立完整 front sole support，身體保持 loaded、沒有舊 f107 的自動大幅開身；f125 後開始自然收回，f169 已回到 compact 手棒，前腳保留落腳位置，不在地上滑回起點。f169–201 是明示的 settled review hold，不把 hold 當收勢。
+
+Committed entry 以 6 authoring frames 的具體 pose／velocity residual 接入同一 swing；不是 8-tick playback ramp。Early 在既有下降中接完前腳支撐，Nominal 承接剩餘下降，Late 不再 lift。Pelvis／chest 先帶動，手棒沿 source-derived lag→釋放；共同 motion 在 commit+4 frames 對應舊 f113、+6 對應舊 f116、+10 對應舊 f121；之後優先沿用 accepted sweep／完整 follow-through 至舊 f225。後腳維持固定 toe pivot，重取樣時以既有 toe anchor 修正微小弦線穿地；未改器材尺寸或任何碰撞半徑。
+
+### Authored timing（60 fps；1-based frame）
+
+下表時間皆自本案 delivery start 起算；不是 reference capture 時間或實測輸入延遲。固定比較基準 release=1.600000 s、arrival≈1.992833450 s。名稱只代表入口案例，Nominal 不是理想命中時刻或正式 timing judgment。
+
+| 案例 | Commit frame／秒 | 相對 release／arrival（ms） | Front plant frame／秒 | 主要 sweep 起點／contact-area pass | Finish／settle |
+|---|---|---|---|---|---|
+| Take | 無 | 不適用 | f117／1.933333 | 無主 sweep、無 pass marker | f169／2.800000 收回完成；review hold 至 f201／3.333333 |
+| Early | f109／1.800000 | +200／−192.833 | f115／1.900000 | f115／1.900000 → f119／1.966667 | f223／3.700000 |
+| Nominal | f115／1.900000 | +300／−92.833 | f118／1.950000 | f121／2.000000 → f125／2.066667 | f229／3.800000 |
+| Late | f125／2.066667 | +466.667／+73.833 | 共用 preparation 已於 f117／1.933333 plant | f131／2.166667 → f135／2.233333 | f239／3.966667 |
+
+三例 commit→主要 sweep 約 **100 ms**、→contact-area pass **166.667 ms**、→finish **1900 ms**；sweep 不在 marker 停止，繼續穿越並收勢。Entry +3／+4 frames（50／66.667 ms）的逐格影像已有明顯手棒傾斜／身體轉動；這是離線影格觀察，迅速／有力量／順暢仍待正常速度 human review，不能當成 input latency。前兩格已有較小變化，不靠「第一 tick 有數值差」宣告反應通過。沒有等待固定 arrival 再一起出棒；pass 時刻相差 100 ms 與 166.667 ms。Late 位於 arrival 後刻意保留，未替它修正球路或承諾 hit／miss。
+
+### 本輪實際檢查與限制
+
+- 候選已正式存檔、重開；用 Blender 原生壓縮儲存後再次重開核對所有 action key 座標摘要相同，再重跑 candidate 檢查。Source／GLB／TOML 原三檔 SHA256 保持不變；沒有 export／promotion。候選 scene 共用 geometry／rig data；相同 rest hierarchy、bone lengths、vertices／polygons／weights／colors 與 accepted camera 參數 exact。
+- 四例共 **3556 個 240 Hz 等效取樣點**（authoring 檢查，不是 runtime ticks）：三個 commit 前（包含 commit pose）與 Take 的所有 bone world matrices 差 **0**。候選使用 quarter-frame keys 保存入口與支撐，scene／成品播放仍 60 fps。
+- Front post-plant matrix 差 **0**；足底最低 source-local Z 約 −3.881e−8 m，通過原定 −1e−6 guard；後腳 toe anchor 在整數 authoring frames 的最大偏移約 **1.274e−7 m**。Local scales 全為 1；rig control 長度不變，不把相鄰 hidden controls 距離當真人骨長。
+- Hand→grip→barrel／tip hierarchy matrix 最大差約 **4.769e−7**；雙手相對既有握把軸 offset 最大誤差 **4.799e−5 m**，低於 1e−4 m guard。Bat 全段仍 rigid attached，沒有放棒或新兩手 solver。
+- 全部 892 個整數 authoring frames 的 bat surface 對既有 head／helmet ellipsoid proxy：**0 inside samples**（q<0.98）；這不是完整 mesh collision，未證明所有手臂／torso／帽簷自穿插都不存在。實際檢視三例 commit→sweep 的每格影像、Take preparation／plant／recovery 與完整 follow-through 抽樣；主視角的手臂近下巴疊影、早期收勢被頭遮住仍可見，另以少量原 three-quarter 圖補查，未發現新增明顯 arm collapse，但不宣告完整 silhouette acceptance。
+- 成品 `batter-ingame-s0-1x.mp4`：固定 accepted batting camera、960×540、**60 fps／892 frames／14.866667 s／1×**，依序 Take→Early→Nominal→Late，完整保留準備與各自 finish；只在案例之間換段，同一案例內無切鏡／hit flash／隱藏接合。解碼核對 FPS／格數／尺寸，已看解碼抽樣。未宣稱完成播放器正常速度連續自看。
+- 這是 offline authoring preview，沒有真實輸入、runtime app capture 或 production contact query；新動作的幾何接觸驗證留待接線切片。未 build、CTest、GPU validation 或 S0–S2 study 重跑，舊 runtime／tests 未改。
+
+Evidence 位於 ignored `build/batter-ingame-s0/`；成品與 compact provenance 保留，本輪可重建的大量 render frames 在確認影片可讀後移除。Human review 重點是小幅 preparation／Take 落腳是否讀得出、Early 下降與初始轉體是否太擠、50–100 ms entry 節奏，以及大頭附近手棒遮擋。四例均保留，沒有縮小成單一合法入口。**停止於 Michael＋Julia review；不 promotion、不接 runtime、不再開 authoring iteration。**
