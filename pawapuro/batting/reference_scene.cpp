@@ -245,7 +245,16 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         cue_quad(scene.arrival_ring,ring(a,inner_radius),ring(b,inner_radius),ring(b,radius),ring(a,radius),{1,0.55f,0.25f});
         cue_quad(scene.arrival_baseball,ring(a,inner_radius),ring(b,inner_radius),ring(b,radius),ring(a,radius),{0.96f,0.95f,0.87f});
     }
-    // Thin, static seams leave the centre open for the actual ball and aim core.
+    // Fill inside the unchanged contour; seams remain on top of this opaque disk.
+    for (int i=0;i<48;++i) {
+        const float a=XM_2PI*static_cast<float>(i)/48, b=XM_2PI*static_cast<float>(i+1)/48;
+        const XMFLOAT3 center{p.x,p.y,0};
+        const XMFLOAT3 v0{p.x+inner_radius*std::cos(a),p.y+inner_radius*aspect*std::sin(a),0};
+        const XMFLOAT3 v1{p.x+inner_radius*std::cos(b),p.y+inner_radius*aspect*std::sin(b),0};
+        const XMFLOAT3 color{0.96f,0.95f,0.87f};
+        scene.arrival_baseball.insert(scene.arrival_baseball.end(),{{center,color},{v0,color},{v1,color}});
+    }
+    // Static seams carry no spin semantics.
     const auto seam_line = [&](float ax, float ay, float bx, float by) {
         const float length=std::hypot(bx-ax,by-ay), half=stroke_x/radius*0.5f;
         const float dx=-(by-ay)*half/length, dy=(bx-ax)*half/length;

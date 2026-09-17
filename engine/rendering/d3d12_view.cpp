@@ -238,13 +238,19 @@ void D3D12View::resize(UINT new_width, UINT new_height)
     std::fprintf(stderr, "Resized: %u x %u\n", width, height);
 }
 
-void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices, UINT dynamic_overlay_count)
+void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices, UINT dynamic_overlay_count, UINT late_world_count, UINT early_overlay_count)
 {
     // One frame in flight keeps this first slice's ownership explicit. The previous
     // frame's fence has completed before reusing the allocator, depth or constants.
     if (dynamic_vertices.size()!=dynamic_capacity) throw std::runtime_error("Dynamic triangle count changed.");
     if (dynamic_overlay_count > dynamic_capacity || dynamic_overlay_count % 3 != 0)
         throw std::runtime_error("Invalid dynamic overlay triangle range.");
+    if (late_world_count > dynamic_capacity-dynamic_overlay_count || late_world_count % 3 != 0
+        || early_overlay_count > dynamic_overlay_count || early_overlay_count % 3 != 0)
+        throw std::runtime_error("Invalid dynamic draw ordering ranges.");
+    const UINT world_count=dynamic_capacity-dynamic_overlay_count;
+    DirectX::XMFLOAT4X4 identity;
+    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
     if (dynamic_capacity) {
         // Previous draw waits for its GPU fence; no GPU reader remains during this write.
         const auto begin=std::chrono::steady_clock::now();
@@ -278,22 +284,35 @@ void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOA
     commands->DrawInstanced(translated_vertex_start, 1, 0, 0);
     if (dynamic_capacity) {
         commands->IASetVertexBuffers(0,1,&dynamic_view);
-        commands->DrawInstanced(dynamic_capacity-dynamic_overlay_count,1,0,0);
+        commands->DrawInstanced(world_count-late_world_count,1,0,0);
+        commands->IASetVertexBuffers(0,1,&vertex_view);
+    }
+    if (early_overlay_count) {
+        commands->SetPipelineState(overlay_pipeline.Get());
+        commands->SetGraphicsRoot32BitConstants(0,16,&identity,0);
+        commands->IASetVertexBuffers(0,1,&dynamic_view);
+        commands->DrawInstanced(early_overlay_count,1,world_count,0);
+        commands->SetPipelineState(pipeline.Get());
+        commands->SetGraphicsRoot32BitConstants(0,16,&view_projection,0);
         commands->IASetVertexBuffers(0,1,&vertex_view);
     }
     // Root constants are captured per draw; the immutable GPU buffer is never rewritten.
     commands->SetGraphicsRoot32BitConstants(0, 4, offset, 16);
     commands->DrawInstanced(overlay_vertex_start - translated_vertex_start, 1, translated_vertex_start, 0);
+    if (late_world_count) {
+        commands->SetGraphicsRoot32BitConstants(0,4,zero_offset,16);
+        commands->IASetVertexBuffers(0,1,&dynamic_view);
+        commands->DrawInstanced(late_world_count,1,world_count-late_world_count,0);
+        commands->IASetVertexBuffers(0,1,&vertex_view);
+    }
     // NDC triangles use the same shader/buffer; only overlay depth policy differs.
-    DirectX::XMFLOAT4X4 identity;
-    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
     commands->SetPipelineState(overlay_pipeline.Get());
     commands->SetGraphicsRoot32BitConstants(0, 16, &identity, 0);
     commands->SetGraphicsRoot32BitConstants(0, 4, zero_offset, 16);
     commands->DrawInstanced(vertex_count - overlay_vertex_start, 1, overlay_vertex_start, 0);
     if (dynamic_overlay_count) {
         commands->IASetVertexBuffers(0,1,&dynamic_view);
-        commands->DrawInstanced(dynamic_overlay_count,1,dynamic_capacity-dynamic_overlay_count,0);
+        commands->DrawInstanced(dynamic_overlay_count-early_overlay_count,1,world_count+early_overlay_count,0);
     }
     barrier = transition(back_buffers[index].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     commands->ResourceBarrier(1, &barrier);

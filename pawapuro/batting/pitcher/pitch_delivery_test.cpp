@@ -38,6 +38,17 @@ int main(int argc,char** argv) {
     while (standalone.phase!=PitchPhase::Complete) {standalone.step_tick();path.push_back(standalone.current);}
     const auto scene=make_batting_reference(staging,prediction.state.position_m,16.0f/9,{});
     require(scene.vertices.size()-scene.overlay_vertex_start==24,"Static overlay retained prediction geometry");
+    require(scene.arrival_baseball.size()==arrival_cue_vertex_count && scene.arrival_ring.size()==arrival_cue_vertex_count,
+        "Filled cue/padded Ring capacity mismatch");
+    float filled_area=0;
+    for (unsigned i=48*6;i<48*6+48*3;i+=3) {
+        const auto a=scene.arrival_baseball[i].position,b=scene.arrival_baseball[i+1].position,c=scene.arrival_baseball[i+2].position;
+        require(a.x==scene.prediction_ndc.x && a.y==scene.prediction_ndc.y,"Fill fan shifted centre");
+        require(scene.arrival_baseball[i].color.x>0.9f,"Fill is not near white");
+        filled_area+=std::abs((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))*0.5f;
+        require(equal(scene.arrival_ring[i].position,{0,0,0}),"Ring acquired a fill");
+    }
+    require(filled_area>0,"Filled cue has no surface");
     const auto check_cue=[&] {
         const auto before=sample(d);
         const bool visible=d.ball_owner==BallOwner::Simulation && d.pitch.phase==PitchPhase::InFlight;

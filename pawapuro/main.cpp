@@ -147,7 +147,7 @@ int main(int argc, char** argv)
             const auto ball=delivery.ball_center();
             std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu Contact:NotEvaluated | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
                 "ball=(%.6f,%.6f,%.6f) frozen-after-arrival | backlog=%llu | Space:play/replay J:swing[432..496] P:pause .:step Esc:quit Arrows:aim R:center",
-                ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Baseball":"Ring",
+                ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
                 cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,
                 ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
@@ -166,7 +166,9 @@ int main(int argc, char** argv)
             assembly_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-assembly_start).count();
             ++assembly_samples;
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
-                delivery.ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count);
+                delivery.ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count,
+                arrival_style==pawapuro::ArrivalCueStyle::Baseball ? static_cast<UINT>(pawapuro::PlayerAim::vertex_count) : 0,
+                arrival_style==pawapuro::ArrivalCueStyle::Baseball ? pawapuro::arrival_cue_vertex_count : 0);
         }
         if (motion.samples) std::fprintf(stderr,"CPU motion: samples=%llu pose_mean_us=%.3f skin_expand_basis_mean_us=%.3f\n",
             motion.samples,motion.pose_us/static_cast<double>(motion.samples),motion.skin_us/static_cast<double>(motion.samples));

@@ -10,7 +10,7 @@ inline constexpr unsigned ball_readability_vertex_count = 32 * 6 * 2;
 void append_ball_readability(std::vector<engine::Vertex>& vertices, const BattingStaging& staging,
     DirectX::XMFLOAT3 center, PitchPhase phase, bool enabled, unsigned width, unsigned height);
 enum class ArrivalCueStyle { Baseball, Ring };
-inline constexpr unsigned arrival_cue_vertex_count = 48*6 + 2*(12+5)*6;
+inline constexpr unsigned arrival_cue_vertex_count = 48*6 + 48*3 + 2*(12+5)*6;
 inline bool arrival_cue_visible(PitchPhase phase) { return phase == PitchPhase::InFlight; }
 struct BattingReference {
     std::vector<engine::Vertex> arrival_baseball, arrival_ring;
