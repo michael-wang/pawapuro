@@ -47,7 +47,7 @@ int main(int argc, char** argv)
         const float aspect = static_cast<float>(width) / static_cast<float>(height);
         const auto scene=pawapuro::make_batting_reference(staging,prediction.state.position_m,aspect,{});
         std::vector<engine::Vertex> dynamic_characters;
-        dynamic_characters.reserve(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count);
+        dynamic_characters.reserve(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count+pawapuro::ball_readability_vertex_count);
         double assembly_us=0; std::uint64_t assembly_samples=0;
         std::fprintf(stderr,"S3 delivery: one 240 Hz clock; ball Hand -> Simulation at animation marker.\n");
         bool arrival_reported=false;
@@ -74,11 +74,12 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "Overlay bounds: left=%.6f top=%.6f right=%.6f bottom=%.6f; predicted pixel=[%.6f, %.6f]\n",
             zone_left_top.x, zone_left_top.y, zone_right_bottom.x, zone_right_bottom.y, predicted_screen.x, predicted_screen.y);
         engine::D3D12View view;
-        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count));
+        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count+pawapuro::ball_readability_vertex_count));
         auto last_time = SDL_GetTicksNS();
         auto last_input_time=SDL_GetTicksNS();
         std::string last_title;
         bool running = true;
+        bool ball_readability = true;
         while (running) {
             const auto now = SDL_GetTicksNS();
             // Account for the old state before handling this frame's input boundary.
@@ -91,6 +92,7 @@ int main(int argc, char** argv)
                 if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
                     running = false;
                 if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+                    if (event.key.scancode == SDL_SCANCODE_B) ball_readability = !ball_readability;
                     if (event.key.scancode == SDL_SCANCODE_J) swing_edge=true;
                     if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
                     if (event.key.scancode == SDL_SCANCODE_SPACE && preview.start()) {
@@ -137,9 +139,9 @@ int main(int argc, char** argv)
             const auto ad=aim.diagnostic(prediction.state.position_m);
             char title[1024];
             const auto ball=delivery.ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | Swing:%s %s commit=%llu Contact:NotEvaluated | live aim=(%.4f,%.4f) error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | Swing:%s %s commit=%llu Contact:NotEvaluated | live aim=(%.4f,%.4f) error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
                 "ball=(%.6f,%.6f,%.6f) frozen-after-arrival | backlog=%llu | Space:play/replay J:swing[432..496] P:pause .:step Esc:quit Arrows:aim R:center",
-                preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,
+                ball_readability?"ON":"OFF",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,
                 ac.x,ac.y,ad.dx,ad.dy,ad.ex,ad.ey,ad.q,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
             if (last_title != title) {
@@ -151,10 +153,12 @@ int main(int argc, char** argv)
             dynamic_characters.insert(dynamic_characters.end(),motion.triangles.begin(),motion.triangles.end());
             dynamic_characters.insert(dynamic_characters.end(),batter.triangles.begin(),batter.triangles.end());
             aim.append_triangles(dynamic_characters);
+            pawapuro::append_ball_readability(dynamic_characters,staging,ball,delivery.pitch.phase,ball_readability,
+                static_cast<unsigned>(width),static_cast<unsigned>(height));
             assembly_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-assembly_start).count();
             ++assembly_samples;
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
-                delivery.ball_translation(),dynamic_characters);
+                delivery.ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count);
         }
         if (motion.samples) std::fprintf(stderr,"CPU motion: samples=%llu pose_mean_us=%.3f skin_expand_basis_mean_us=%.3f\n",
             motion.samples,motion.pose_us/static_cast<double>(motion.samples),motion.skin_us/static_cast<double>(motion.samples));

@@ -24,7 +24,8 @@ struct D3D12View {
     D3D12View& operator=(const D3D12View&) = delete;
     void initialize(HWND window, UINT width, UINT height, std::span<const Vertex> vertices, UINT translated_vertex_start, UINT overlay_vertex_start, UINT dynamic_capacity = 0);
     void resize(UINT width, UINT height);
-    void draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices = {});
+    // The optional NDC suffix shares the upload/fence lifetime and existing overlay pipeline.
+    void draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices = {}, UINT dynamic_overlay_count = 0);
 
 private:
     void wait_for_gpu();

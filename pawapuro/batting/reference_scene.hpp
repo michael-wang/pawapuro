@@ -1,9 +1,14 @@
 #pragma once
+#include "reference_pitch.hpp"
 #include "engine/rendering/d3d12_view.hpp"
 #include <vector>
 #include "staging.hpp"
 
 namespace pawapuro {
+inline constexpr unsigned ball_readability_vertex_count = 32 * 6 * 2;
+// App-owned toggle; hidden states append degenerate triangles to retain fixed capacity.
+void append_ball_readability(std::vector<engine::Vertex>& vertices, const BattingStaging& staging,
+    DirectX::XMFLOAT3 center, PitchPhase phase, bool enabled, unsigned width, unsigned height);
 struct BattingReference {
     std::vector<engine::Vertex> vertices;
     unsigned ball_vertex_start = 0;

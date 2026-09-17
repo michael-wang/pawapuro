@@ -343,3 +343,7 @@ Bat Contact S2 是read-only phase-offset geometry study：只在non-mutating sam
 
 
 [Hit Authorization S0](batting-contact.md) 已完成 design／bounded reference analysis candidate，待 Michael＋Julia review。五層責任與未決 gameplay 值由該文件唯一擁有；physical S0／S1／S2 不變，沒有 production authorization、player input 或 response，M1 未完成。
+
+## Ball Readability S0：開／關試玩原型（2026-09-17）
+
+為比較 release 後球與投手輪廓重疊時的辨識性，app 預設開啟 `BallAid:ON`，按 **B** 切換 ON／OFF，關閉即保留原畫面。僅在 `PitchPhase::InFlight` 於 authoritative `ball_center()` 的相同投影畫黑底亮黃空心外框；沿用視覺球半徑的投影，最小半徑 5 pixels，外框向外延伸 2 pixels。重用既有不受深度遮擋的 pipeline，只有新標記作為 dynamic NDC suffix，沿用 upload／fence lifetime。Release 前與 flight Complete 後隱藏，不讀 predicted arrival、不預告軌跡；球路、物理半徑、相機、角色、準星、J commit 與 Contact:NotEvaluated 不變。這是 presentation prototype；辨識改善、大小／對比是否干擾出棒仍待 Michael 開／關試玩，未做自動試玩或證據影片，也未量測端到端視覺反應。

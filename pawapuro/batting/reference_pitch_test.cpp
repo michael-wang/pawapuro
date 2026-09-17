@@ -34,6 +34,43 @@ int main(int argc, char** argv)
     try {
         require(argc == 2, "Expected authored staging path");
         fixture_staging = load_batting_staging(argv[1]);
+        // Current-ball marker follows every authoritative flight sample, never the arrival prediction.
+        for (const auto size : {DirectX::XMUINT2{1920,1080}, DirectX::XMUINT2{1280,720}}) {
+            auto flight=fixture();
+            std::vector<engine::Vertex> marker;
+            marker.reserve(ball_readability_vertex_count);
+            const auto hidden=[&](bool enabled) {
+                marker.clear();
+                append_ball_readability(marker,fixture_staging,flight.current.position_m,flight.phase,enabled,size.x,size.y);
+                require(marker.size()==ball_readability_vertex_count,"Marker capacity changed");
+                for (const auto& vertex:marker)
+                    require(equal(vertex.position,{0,0,0}),"Hidden ball marker draws geometry");
+            };
+            hidden(true); // Before release.
+            flight.release();
+            while (flight.phase==PitchPhase::InFlight) {
+                hidden(false);
+                const auto before=flight.current;
+                marker.clear();
+                append_ball_readability(marker,fixture_staging,flight.current.position_m,flight.phase,true,size.x,size.y);
+                require(equal(before.position_m,flight.current.position_m) && equal(before.velocity_mps,flight.current.velocity_mps),
+                    "Presentation changed flight state");
+                float left=1e9f,right=-1e9f,bottom=1e9f,top=-1e9f;
+                for (const auto& vertex:marker) {
+                    require(std::isfinite(vertex.position.x)&&std::isfinite(vertex.position.y),"Nonfinite marker");
+                    left=std::min(left,vertex.position.x);right=std::max(right,vertex.position.x);
+                    bottom=std::min(bottom,vertex.position.y);top=std::max(top,vertex.position.y);
+                }
+                const auto matrix=batting_view_projection(fixture_staging,float(size.x)/float(size.y));
+                const auto center=DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat3(&flight.current.position_m),DirectX::XMLoadFloat4x4(&matrix));
+                require(std::abs((left+right)/2-DirectX::XMVectorGetX(center))*size.x/2<0.02f
+                    && std::abs((bottom+top)/2-DirectX::XMVectorGetY(center))*size.y/2<0.02f,"Marker/ball projection differs");
+                require(std::abs((right-left)*size.x-(top-bottom)*size.y)<0.02f,"Marker is not circular in pixels");
+                flight.step_tick();
+            }
+            hidden(true); // Frozen Complete ball must not retain the aid.
+        }
+        std::puts("PASS: ball readability flight projection, OFF/Ready/Complete suppression, fixed capacity, unchanged flight.");
         BattingStaging geometry;
         require(geometry.home_plate_depth_m() == geometry.strike_zone_width_m
             && geometry.strike_zone_plane_z() == geometry.home_plate_depth_m() / 2, "Plate proportions/centre differ");

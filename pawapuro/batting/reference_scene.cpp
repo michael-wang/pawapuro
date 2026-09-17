@@ -5,6 +5,36 @@
 
 using namespace DirectX;
 namespace pawapuro {
+void append_ball_readability(std::vector<engine::Vertex>& vertices, const BattingStaging& staging,
+    XMFLOAT3 center, PitchPhase phase, bool enabled, unsigned width, unsigned height)
+{
+    if (!enabled || phase != PitchPhase::InFlight || width == 0 || height == 0) {
+        vertices.resize(vertices.size() + ball_readability_vertex_count);
+        return;
+    }
+    const float w=static_cast<float>(width), h=static_cast<float>(height);
+    const float aspect = w/h;
+    const auto p = project_batting_point(staging, center, aspect);
+    const auto forward = XMVectorSubtract(XMLoadFloat3(&staging.camera_target_m), XMLoadFloat3(&staging.camera_position_m));
+    const auto right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0,1,0,0), forward));
+    XMFLOAT3 edge;
+    XMStoreFloat3(&edge, XMVectorAdd(XMLoadFloat3(&center), XMVectorScale(right, staging.ball_marker_radius_m)));
+    // Follow the existing visual radius, with a small screen-space readability floor.
+    const float radius = std::max(5.0f, std::abs(project_batting_point(staging, edge, aspect).x-p.x)*w/2);
+    const auto band = [&](float inner, float outer, XMFLOAT3 color) {
+        const auto point = [&](float angle, float r) -> XMFLOAT3 {
+            return {p.x+2*r*std::cos(angle)/w, p.y+2*r*std::sin(angle)/h, 0};
+        };
+        for (unsigned i=0; i<32; ++i) {
+            const float a=XM_2PI*static_cast<float>(i)/32, b=XM_2PI*static_cast<float>(i+1)/32;
+            const auto v0=point(a,inner), v1=point(b,inner), v2=point(b,outer), v3=point(a,outer);
+            vertices.insert(vertices.end(), {{v0,color},{v1,color},{v2,color},{v0,color},{v2,color},{v3,color}});
+        }
+    };
+    band(radius-2, radius+2, {0.015f,0.015f,0.015f});
+    band(radius-1, radius+1, {1,1,0.2f});
+}
+
 BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 predicted_position, float aspect,
     std::span<const engine::Vertex> pitcher_vertices, std::span<const engine::Vertex> batter_vertices)
 {
