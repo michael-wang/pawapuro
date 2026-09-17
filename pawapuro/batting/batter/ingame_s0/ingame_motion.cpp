@@ -156,6 +156,17 @@ void IngameMotion::sample(double value,std::optional<std::uint64_t> commit,engin
     }
     engine::rebuild_glb_pose(asset,out);
 }
+BatBarrelSample IngameMotion::sample_barrel(double time,std::uint64_t commit,engine::GlbPose& scratch) const {
+    sample(time*240,commit,scratch);
+    const auto world=[&](std::size_t bone) {
+        auto out=scratch.world[nodes[bone]];
+        for(std::size_t col=0;col<4;++col)for(std::size_t row=0;row<4;++row)
+            out[col*4+row]*=(col==0?-1.f:1.f)*(row==0?-1.f:1.f);
+        out[12]+=placement.x;out[13]+=placement.y;out[14]+=placement.z;return out;
+    };
+    const auto b=world(9),t=world(10);
+    return {{b[12],b[13],b[14]},{t[12],t[13],t[14]},b};
+}
 void IngameMotion::evaluate_tick(std::uint64_t value,std::optional<std::uint64_t> commit) {
     end_tick=commit?*commit+456:800;tick=std::min(value,end_tick);const auto begin=std::chrono::steady_clock::now();sample(static_cast<double>(tick),commit,pose);
     pose_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-begin).count();

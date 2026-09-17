@@ -2,6 +2,7 @@
 #include "engine/rendering/mesh_glb.hpp"
 #include "pawapuro/batting/staging.hpp"
 #include <optional>
+#include "../batter_motion.hpp"
 
 namespace pawapuro {
 // Owns immutable source samples, reusable pose/skin scratch and expanded geometry.
@@ -19,6 +20,7 @@ struct IngameMotion {
     double pose_us=0,body_skin_us=0,bat_skin_us=0;
     void evaluate_tick(std::uint64_t tick,std::optional<std::uint64_t> commit);
     void sample(double tick,std::optional<std::uint64_t> commit,engine::GlbPose& scratch) const;
+    BatBarrelSample sample_barrel(double preview_time_s,std::uint64_t commit,engine::GlbPose& scratch) const;
     double plant_frame(double commit_frame) const;
     bool complete() const { return tick==end_tick; }
 private:

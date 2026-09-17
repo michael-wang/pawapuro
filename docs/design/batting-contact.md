@@ -160,3 +160,17 @@ S0／S0.1 的責任分層保持不變；這次只將 Player Aim 做成實際 app
 ## Arrival Cue S0：release reveal 試玩原型（2026-09-18）
 
 操作模型為「看投手準備 → release 取得預期進壘位置 → 注意力移到打擊區 → 用實球接近判斷出棒」。Arrival Cue 表示固定 predicted evaluation-plane point，Actual ball／BallAid 表示當前球心，reticle 表示玩家意圖。提示僅由既有 `PitchPhase::InFlight` 揭露：Hand→Simulation 的 release 同次狀態轉換後，下次正常 render 即可見，不另加 timer／tick；Complete／reset 隱藏，pause 保留當下可見性，single-step 跟隨同一 simulation 狀態，與 J／commit 無關。移除常駐橘圈；**V** 比較預設 **Filled Baseball**（近白色不透明填色／細外輪廓／靜態紅縫線）與 **Ring**（原橘圈），共用 prediction、投影尺寸及揭露規則。縫線只有外觀，沒有球種／spin 語意；S0.1（2026-09-18）依 Michael 試玩回饋改為實心，中心與尺寸不變；Filled Baseball 模式，先畫提示，再畫既有 depth-tested 實球與準星，白底不覆蓋準星黑色 cross／core，也不靠 BallAid 才能看見靠近的實球。BallAid 維持原樣並最後繪製。Title 顯示外觀與 Hidden／Visible，隱藏時以 Hidden 取代 prediction-derived error／ex／ey／q，內部 signed diagnostic／snapshot 不變；**B** 仍切換預設 ON 的 BallAid。固定紅中只能驗證提示與會合感，尚未驗證未知落點難度；Michael 已確認 S0 進壘位置更清楚；S0.1 實心外觀與重疊辨識待 Michael＋Julia playtest review，Contact 仍 **NotEvaluated**，重疊不代表 Hit／Perfect。Flight Complete 隱藏是本 prototype 決定，不推論原作規則。
+
+
+## Manual Swing Contact S0：固定來球 geometry feedback（2026-09-18）
+
+Michael 已確認 presentation cleanup（移除 release 藍圈／直線與黃尺、紅色好球帶）使畫面更乾淨、球路較易辨識；本輪保留其視覺。以下取代 Gate C manual caller 的 Contact:NotEvaluated 邊界，**新 manual geometry candidate 待 Michael＋Julia review**，不代表 Hit Authorization／gameplay acceptance。
+
+- `ManualSwingPreview` 以實際 consumed commit tick `c` 查詢 **[c, c+64] ticks**（commit 後 266.667 ms），逐個完成的 240 Hz interval 查 earliest entry；包含 commit 接縫、6 authoring frames entry／support、主要 sweep 與初段收勢。這是目前固定球路的有界 diagnostic：最早入口查到 world496 時解析球已越過 evaluation plane，最晚入口查到560；不照搬舊472–488，也不把 marker±8 當保證。後續收勢與 commit 前均不屬於已查詢範圍。
+- `IngameMotion::sample_barrel` 使用 render 同一 `sample`，保留 fractional ticks／quarter-frame local interpolation、entry residual 與 support；game basis／placement 與 runtime semantics 一致。Caller 持有並重用獨立 pose scratch，不改播放 pose、clock 或 simulation，也不在 substep 載入資產。兩個具體 caller 共用既有 sphere/capsule earliest-entry、24 次 bisection 及 surface material-point velocity，正式64 substeps/tick；物理半徑仍 ball37／bat33 mm，與視覺無關。速度以事件前後0.1 ms唯讀取樣求得，不增加查詢事件範圍。
+- 球永遠從 immutable initial state 與 release time 取解析 reference path；evaluation plane 之後是 **geometry diagnostic 的解析延伸**，不是畫面上的 frozen ball。Mutable 球路、prediction、arrival、動畫、aim／snapshot、J domain均不變，aim 不作 authorization gate；沒有 Ball Response。
+- Title 前段顯示 `Geometry:Pending / No ball response`、`NoSwing`、`Contact` 或 `NoContactInWindow`。沒有 commit 且合法 domain 結束才確定 NoSwing；Contact 一球最多發布一次，於包含事件的已完成 simulation tick 才 dispatch；無接觸在 c+64 才確定，僅代表此區間未接觸。結果保留到 reset；pause 不另走時間、step 跟隨同一 clock。結果 log 包含 commit／事件時間／dispatch／segment u／normal／relative velocity 與查詢範圍。
+- Release 數值檢查：65個合法 commit 的32／64／128 refinement 接觸有無一致，事件時間差 <0.1 µs。**432–442 Contact（11例）**，443–496 NoContactInWindow。例：432→world475.736 tick（1.982233556 s，dispatch476）；442→479.770（dispatch480，已超過 arrival，屬解析延伸）；443 最近的1/8-tick grid centerline distance約79.625 mm、456約496.664 mm，與70 mm合併 envelope比較。Grid minimum 是取樣值，不宣稱全域精確最小值。
+- 604個既存 saved `.blend` bat semantic samples（含fractional entry）最大位置誤差4.77 µm，沿用0.1 mm fixture tolerance；亦檢查 sampler/render、唯讀性、Take、一次事件、reset、pause/step、Contact／NoContact 的30/60/120 Hz與backlog replay、interval split／初始overlap邊界。舊 S0–S2 使用原 BatterMotion／window，regression與容差保留。完整任意動作 CCD、未查詢時段、production authorization、quality／foul／fair／球速角度旋轉與 response 均未完成；手感、效能與畫面會合感未由數值測試驗收。
+
+可重現摘要由 `manual_swing_test` 輸出每個 commit 的結果／contact tick／grid minimum；本機精簡結果位於 ignored `build/manual-contact-s0/`，不依賴其內容才能重跑。

@@ -75,7 +75,7 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
-    add_executable(manual_swing_test pawapuro/batting/manual_swing_test.cpp pawapuro/batting/manual_swing.cpp
+    add_executable(manual_swing_test pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/manual_swing_test.cpp pawapuro/batting/manual_swing.cpp
         pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp
         pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
     target_compile_features(manual_swing_test PRIVATE cxx_std_20)

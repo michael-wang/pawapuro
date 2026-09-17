@@ -183,10 +183,10 @@ int main(int argc, char** argv)
             if (cue_visible) std::snprintf(aim_error,sizeof(aim_error),"error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f",ad.dx,ad.dy,ad.ex,ad.ey,ad.q);
             char title[1200];
             const auto ball=delivery.ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu Contact:NotEvaluated | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu Geometry:%s / No ball response | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
                 "ball=(%.6f,%.6f,%.6f) frozen-after-arrival | backlog=%llu | Space:play/replay J:swing[432..496] P:pause .:step Esc:quit Arrows:aim R:center",
                 ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
-                cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,
+                cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,preview.contact_state(),
                 ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
             if (last_title != title) {
