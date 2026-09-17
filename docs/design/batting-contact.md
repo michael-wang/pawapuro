@@ -174,3 +174,7 @@ Michael 已確認 presentation cleanup（移除 release 藍圈／直線與黃尺
 - 604個既存 saved `.blend` bat semantic samples（含fractional entry）最大位置誤差4.77 µm，沿用0.1 mm fixture tolerance；亦檢查 sampler/render、唯讀性、Take、一次事件、reset、pause/step、Contact／NoContact 的30/60/120 Hz與backlog replay、interval split／初始overlap邊界。舊 S0–S2 使用原 BatterMotion／window，regression與容差保留。完整任意動作 CCD、未查詢時段、production authorization、quality／foul／fair／球速角度旋轉與 response 均未完成；手感、效能與畫面會合感未由數值測試驗收。
 
 可重現摘要由 `manual_swing_test` 輸出每個 commit 的結果／contact tick／grid minimum；本機精簡結果位於 ignored `build/manual-contact-s0/`，不依賴其內容才能重跑。
+
+### In-Game Contact Result Panel S0（2026-09-18）
+
+左上「本球結果」固定列出「未出棒／碰到球／未測到碰球」，直接對應 owner 的 NoSwing／Contact／NoContactInWindow；僅確定結果使用亮底與三角指示，其他項目仍清楚顯示。Pending 不選結果：Ready 顯示「按 Space 開始」，開始但未 consumed commit 顯示「等待出棒」，已 commit 顯示「揮棒中」。結果保留至下一球 reset，pause／收勢／B／V 不另設計時。說明為「接觸測試：只檢查出棒後的一小段，球暫時不會飛出去。」若既有 event 的解析球心已越過 evaluation plane，補充「依球繼續前進的位置判斷；畫面中的球仍停住。」不重算碰撞、不新增判定等級或球路。固定中文以系統字型於啟動時光柵化並快取為 triangle geometry，使用既有 dynamic overlay／upload lifetime；未提交字型檔或加入 UI 系統。判定契約不變；中文閱讀、遮擋與操作感待 Michael 試玩。
