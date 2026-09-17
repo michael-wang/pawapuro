@@ -15,6 +15,17 @@ trade-offs; it is not a mandate to implement every discussed feature.
 - Never force push or rewrite Git history.
 - Never inspect, print, export, recover, expose or modify stored credentials. Use the configured Git credential helper for authorized normal Git operations.
 
+## Execution and verification gate
+
+- At a new execution session, workspace switch, or after environment repair, use the agent's own execution path to confirm cwd, repository root, HEAD, and working tree. Reuse a recent successful baseline in the same environment; check only tools needed for the task, without a default full build. Michael's manual terminal or GitHub remote cannot substitute for local agent verification.
+- Distinguish runner/sandbox/process startup failures, shell/command invocation failures, and actual compiler/test failures. Fix normally executed compiler/test failures within the authorized scope; never delete tests or loosen tolerances to pass.
+- Record the tool, operation, shell/cwd, failure stage, and a short sanitized error. Start with one minimal, non-destructive diagnostic; stop when the same error recurs without new evidence. Continue diagnosis only when new evidence can answer a specific question, not by blindly retrying or changing wrappers. One execution through the permitted per-command approval flow is not a blind retry; stop if that approved command still fails.
+- If a required capability is unavailable, report BLOCKED and stop dependent implementation. Do not downgrade implementation-and-verification to remote review or unverified edits and claim completion. Preserve existing changes, report changed/verified/unverified status, and do not expand the diff or clean up/revert human work.
+- Use alternatives only within existing permissions and scope, with equivalent required evidence; disclose the method and limitations without lowering acceptance criteria. Offline renders cannot replace runtime evidence, and per-tick reconstructed videos cannot prove wall-time latency. Authorized independent work may continue, but cannot stand in for the blocked delivery.
+- Do not disable the sandbox, switch to Full Access, change owners/ACLs, reinstall tools, rebuild the repository, or access credentials to eliminate tool errors. Specific environment repairs require Michael's explicit authorization. Distinguish a sandbox policy denial from a broken execution environment. For an in-scope operation, use the available per-command approval flow when session policy permits; approved execution is not a bypass. If approval is unavailable or denied, or the approved command still fails, preserve changes and report the blocker rather than weakening controls.
+- After repair, retest through the originally failed agent execution path before resuming affected work. Claim only the recovery actually verified, not permanent health of every tool.
+- Deliveries must distinguish actual verification, user-reported evidence, assumptions, and remaining blockers. See the [execution runner recovery case](docs/development/environment.md#codex-execution-runner-recovery-2026-09-17) for evidence and limits.
+
 ## Documentation language
 
 - Write design, architecture, research, milestone and development documents under `docs/` in Traditional Chinese using Taiwan usage, unless explicitly requested otherwise.

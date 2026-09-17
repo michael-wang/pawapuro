@@ -1069,3 +1069,40 @@ Runtime evidence 全部在 ignored `build/pitcher-s3/`，review 入口由 pitche
 - `.toml`：`bf59cb5da49d487b25304ea93bbe59570738366eb24144ac5173c916d836aae5`
 
 未重跑 Blender export／round-trip／Khronos validator：資產 bytes 未改，本輪新增 runtime 整合由 S1／S2／S3 CTest 驗證；不把上一輪 export checks 寫成本輪執行。Rubber Arm 未 promotion，v1C rejected artifact 保留；鞋／material／highlight／cleats／articulation debts 延後。六條 Character Motion Rules 原文不改；S3 待 review、M1 未完成。
+
+<a id="codex-execution-runner-recovery-2026-09-17"></a>
+
+## Codex execution runner：sandbox setup blocker 與恢復（2026-09-17）
+
+本節只記錄本次案例與限制；通用工作規則由 [AGENTS.md](../../AGENTS.md#execution-and-verification-gate) 擁有。既有 UI helper 失敗後使用替代工具完成 app 驗證的歷史紀錄保留，不推定那些事件與本次具有相同根因。
+
+### 失敗證據與來源
+
+- **Agent 實際回報**：`exec_command` 在建立程序階段失敗，PowerShell 連 `shell-started` 都未輸出；簡短 signature 為 `CreateProcess ... Failed to create unified exec process: helper_unknown_error: setup refresh had errors`。Node runner 另回報 `trusted Node process exited unexpectedly; kernel reset, rerun your request`。這不是 Git 執行後回傳的錯誤。
+- **Michael 提供的 sandbox log**：exec 與 Node 啟動相關紀錄均有 repo `.git` 的 setup refresh 錯誤。交接提供的必要 signature 原樣保留如下；未複製完整 log、SID 或私人目錄內容，也未由 agent 重新取得原始 log。
+
+  ```text
+  deny ACE failed on C:\astra-dev\pawapuro.git:
+  SetNamedSecurityInfoW failed for C:\astra-dev\pawapuro.git: 5
+  ```
+
+- **Michael 提供的唯讀 owner／ACL 結果**：repo 根目錄 owner 為一般 Windows 使用者，`.git` 目錄 owner 為 `CodexSandboxOffline`，兩者 inheritance 均未 blocked。Michael 的 integrated terminal 當時能正常執行 Git，但 agent execution runner 仍失敗；手動終端的成功不代表 agent 路徑已恢復。
+
+### 人工處置與 agent 恢復驗證
+
+**Michael 的修復交接**：只將 `C:\astra-dev\pawapuro\.git` 目錄本身的 owner 設回原本的 Windows 使用者，並回報 DACL 未變更；未遞迴修改、未 reset ACL、未停用 sandbox。這是人工處置的回報；agent 未直接取得修復後 ACL 快照或比較值，不列為本輪親自量測，也不提供例行修復指令。
+
+**後續 agent 實際驗證**：透過原先失敗的 `exec_command`，以 PowerShell、working directory `C:\astra-dev\pawapuro` 執行最小驗證：
+
+- 輸出 `shell-started`，`Get-Location` 回報 `C:\astra-dev\pawapuro`。
+- Git 成功執行，該次命令 exit code 為 `0`；`git status --short --branch` 顯示 `main...origin/main`，工作樹乾淨。
+- `git --no-pager log -1 --oneline` 顯示 HEAD 為 `18b4f14 Normalize player aim test source whitespace`。
+- 當次未 build，也未開始 gameplay implementation。
+
+後續 docs-only 工作的 agent 實際觀察：runner 已能啟動，兩份文件修改完成；初次 `git add -- AGENTS.md docs/development/environment.md` 已執行，但建立 `.git/index.lock` 時回報 `Permission denied`。這是 Git 執行後的寫入限制，與先前程序建立前的 setup failure 分屬不同階段，不能據此判定環境再次損壞。當時尚未透過正式逐命令核准執行 staging，因此不預寫核准或交付成功；沒有刪除 lock、修改 owner／ACL 或變更 sandbox 設定。
+
+### 限制與教訓
+
+`.git` 為何、何時變成該 owner 仍未知；不宣稱已查明某版本的 Codex bug 成因。本次恢復只證明 agent shell／Git 路徑可用，不代表 Node runner、build、GPU 或 capture 已同時重新通過，也不保證工具永久正常。
+
+Owner 修改不是例行 preflight 或通用自動修法。本案是必要 execution 能力失效的案例，不表示任一個別工具失敗都必須停止所有工作；是否能繼續，須依必要能力與替代工具實際提供的同等證據判斷。
