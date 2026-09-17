@@ -1,5 +1,6 @@
 #include "contact_panel.hpp"
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 using namespace pawapuro;
@@ -13,9 +14,22 @@ int main(int argc,char**argv){try {
     for(unsigned height:{1080u,1620u}) {
         ContactResultPanel panel(height*16/9,height);
         require(panel.vertex_count>0&&panel.vertex_count%3==0,"invalid panel capacity");
+        std::vector<engine::Vertex> drawn;
+        const auto check_annotation=[&](unsigned slot,unsigned expected){
+            const auto offset=panel.base_vertex_count+slot*panel.annotation_vertex_count;
+            require(std::memcmp(drawn.data()+offset,panel.annotations[expected].data(),panel.annotation_vertex_count*sizeof(engine::Vertex))==0,"wrong panel annotation");
+        };
+        p.reset();panel.append(drawn,p);require(drawn.size()==panel.vertex_count,"append capacity");check_annotation(0,0);check_annotation(3,6);
+        p.toggle_tempo();drawn.clear();panel.append(drawn,p);check_annotation(0,1);
+        p.start();p.input_boundary(false,false,true,{});p.input_boundary(true,true,true,{});
+        drawn.clear();panel.append(drawn,p);check_annotation(3,5);
+        while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);
+        p.toggle_tempo();drawn.clear();panel.append(drawn,p);check_annotation(0,1);check_annotation(1,2);check_annotation(3,5);
+        p.reset();drawn.clear();panel.append(drawn,p);check_annotation(0,0);check_annotation(3,6);
+
         for(unsigned index=0;index<7;++index) {
             const auto state=static_cast<ContactPanelState>(index);const auto& mesh=panel.variants[index];
-            require(mesh.size()==panel.vertex_count,"variant capacity differs");
+            require(mesh.size()==panel.base_vertex_count,"variant capacity differs");
             unsigned highlight_quads=0;
             for(size_t i=0;i<mesh.size();i+=3) {
                 const auto& a=mesh[i];const auto& b=mesh[i+1];const auto& c=mesh[i+2];

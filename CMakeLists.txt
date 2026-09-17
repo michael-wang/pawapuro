@@ -92,6 +92,14 @@ if(BUILD_TESTING)
     target_include_directories(manual_swing_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(manual_swing_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
     add_test(NAME manual_swing COMMAND manual_swing_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting")
+    add_executable(swing_tempo_test pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/swing_tempo_test.cpp pawapuro/batting/manual_swing.cpp
+        pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp
+        pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(swing_tempo_test PRIVATE cxx_std_20)
+    target_compile_options(swing_tempo_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(swing_tempo_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(swing_tempo_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME swing_tempo COMMAND swing_tempo_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting")
     add_executable(ingame_motion_test pawapuro/batting/batter/ingame_s0/ingame_motion_test.cpp
         pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/staging.cpp)
     target_compile_features(ingame_motion_test PRIVATE cxx_std_20)

@@ -177,4 +177,21 @@ Michael 已確認 presentation cleanup（移除 release 藍圈／直線與黃尺
 
 ### In-Game Contact Result Panel S0（2026-09-18）
 
-左上「本球結果」固定列出「未出棒／碰到球／未測到碰球」，直接對應 owner 的 NoSwing／Contact／NoContactInWindow；僅確定結果使用亮底與三角指示，其他項目仍清楚顯示。Pending 不選結果：Ready 顯示「按 Space 開始」，開始但未 consumed commit 顯示「等待出棒」，已 commit 顯示「揮棒中」。結果保留至下一球 reset，pause／收勢／B／V 不另設計時。說明為「接觸測試：只檢查出棒後的一小段，球暫時不會飛出去。」若既有 event 的解析球心已越過 evaluation plane，補充「依球繼續前進的位置判斷；畫面中的球仍停住。」不重算碰撞、不新增判定等級或球路。固定中文以系統字型於啟動時光柵化並快取為 triangle geometry，使用既有 dynamic overlay／upload lifetime；未提交字型檔或加入 UI 系統。判定契約不變；中文閱讀、遮擋與操作感待 Michael 試玩。
+左上「本球結果」固定列出「未出棒／碰到球／未測到碰球」，直接對應 owner 的 NoSwing／Contact／NoContactInWindow；僅確定結果使用亮底與三角指示，其他項目仍清楚顯示。Pending 不選結果：Ready 顯示「按 Space 開始」，開始但未 consumed commit 顯示「等待出棒」，已 commit 顯示「揮棒中」。結果保留至下一球 reset，pause／收勢／B／V 不另設計時。說明為「接觸測試：只檢查出棒後的一小段，球暫時不會飛出去。」若既有 event 的解析球心已越過 evaluation plane，補充「依球繼續前進的位置判斷；畫面中的球仍停住。」不重算碰撞、不新增判定等級或球路。固定中文以系統字型於啟動時光柵化並快取為 triangle geometry，使用既有 dynamic overlay／upload lifetime；未提交字型檔或加入 UI 系統。判定契約不變；Michael 已確認結果面板更清楚。
+
+
+### Swing Tempo S0：Original／Compact Entry A/B（2026-09-18）
+
+固定球路與畫面，只比較 committed swing 前段。啟動預設 **A 原節奏**；**T** 僅於 Ready／Complete 選下一球，**Space** 開始時鎖定模式與 startup `[swing_tempo].compact_area_ticks`（預設30，finite 且 0 < T ≤ 40）。選擇跨球保留；Playing／Paused 不切換。面板保留本球標籤，Complete 另列下一球選擇，不替既有結果換模式。
+
+以真正 consumed commit tick `c`、world offset `x = world_tick − c`，A 原樣取樣；B 在 x > 0 時令 `u = clamp(x/T, 0, 1)`、`sample_tick = c + x + (40 − T)(3u² − 2u³)`。未 commit／x ≤ 0 的 preparation 不變。映射只在 whole-pose／barrel 取樣入口套用一次，原 evaluator 仍以真正 c 計算 entry residual／support，保留 quarter-frame interpolation。球保持 world time，bat surface velocity 的 t±epsilon 各自映射；render、semantics、contact 與 completion 共用 `SwingTempoTiming`。Command snapshot 保留模式／T，log 記錄 `smoothstep-v1`、實際 commit 與推導 cue；replay 需相同 recorded tick、aim、attempt tempo、startup Data 與原資產。
+
+| Commit 後動作 cue | A | B（T=30） |
+|---|---:|---:|
+| Sweep 起點 | 24 ticks／100 ms | 約17.6761 ticks／73.6504 ms |
+| 同一 contact-area pose | 40 ticks／166.667 ms | 30 ticks／125 ms |
+| 完整 finish | 456 ticks／1900 ms | 446 ticks／1858.333 ms |
+
+這些是 motion cue，非 actual contact／Perfect 或端到端 input latency。B 在30 ticks 後保持提前10 ticks、以1×繼續；Take 不變。J domain 432–496、world query `[c,c+64]`、球／棒半徑、解析延伸與 Geometry only／No ball response 均不變。真實新 J edge 因 domain 被拒絕時，owner 保留「已按下，但不在本輪可出棒時段。」至下一次有效排程或 reset；這是獨立操作提示，不是第四種結果，也不預約出棒。
+
+Release 集中檢查：A 原 manual/contact regression 通過；B 全65個 commit 查詢完成，**436–452 Contact（17例）**，432–435／453–496 為 NoContactInWindow。例：436→world473.213、452→479.853 ticks；這不是正式 timing window 或命中率。端點與接觸轉換兩側的32／64／128 refinement 一致；代表性入口 whole-pose／fractional semantics 與原 evaluator 的映射後姿勢一致（沿用0.1 mm門檻），包含支撐與 attachment，非完整 mesh collision 驗收。另檢查映射單調／兩端速率、完整 finish、30／60／120 Hz與backlog replay、模式鎖定／保留、拒絕提示／清除與面板顯示。短 app smoke 確認 A→B、Take、Complete 下一球切換不改舊標籤與正常退出；未實測 A/B 出棒手感或端到端 latency，B 仍待 Michael＋Julia human review。

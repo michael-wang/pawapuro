@@ -71,3 +71,8 @@ Asset、225-frame cache、pose／skinning scratch 與 triangles 由 `IngameMotio
 - [少量 runtime poses](../../../../build/player-swing-s0/runtime-poses.jpg)、`debug-entry.png`、input／GPU logs、capture timestamps 與 encode validation 位於 ignored `build/player-swing-s0/`。錄影只能協助看完整流程；快速 sweep 的細節請以 app／saved-source fixtures 檢查。未量測端到端 latency，未宣告玩法手感接受；新 motion physical contact 明確 NotEvaluated。
 
 Gate B 舊 evidence 與 acceptance 歷史保留；Gate C 不重新 author、不修下巴疊影／大頭遮擋，不開始 contact integration。
+
+
+### Swing Tempo S0 接點
+
+`swing_tempo.hpp` 在原 `sample()` 外提供本球時間映射；`evaluate_tick()` 與 `sample_barrel()` 接受相同 snapshot，原 commit、entry／support 配方與資產不變。Raw `sample()` 仍是未映射的基線，caller 不可再預先映射一次。A/B 操作、startup T、cue／contact 與驗證限制由 [batting-contact owning note](../../../../docs/design/batting-contact.md#swing-tempo-s0originalcompact-entry-ab2026-09-18) 擁有；本輪不重新 export 或 author。

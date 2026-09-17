@@ -59,12 +59,13 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim"}, "");
-        for (const char* section : {"window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim"}) {
+        only_keys(table, {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim"}, "");
+        for (const char* section : {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
+                if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks"}, prefix);
                 if (prefix == "window.") only_keys(fields, {"width_fraction"}, prefix);
                 if (prefix == "player_aim.") only_keys(fields, {"normal_radius_x_m", "normal_radius_y_m", "cursor_speed_mps"}, prefix);
                 if (prefix == "bat_contact.") only_keys(fields, {"ball_radius_m", "bat_radius_m"}, prefix);
@@ -87,6 +88,12 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
             std::fprintf(stderr, "Staging default: camera.preset = right_handed_pitcher_vs_left_handed_batter\n");
         }
         BattingStaging candidate;
+        if (const auto node=table.at_path("swing_tempo.compact_area_ticks")) {
+            const auto value=node.value<double>();
+            if(!node.is_number()||!value||!std::isfinite(*value)||*value<=0||*value>40)
+                throw std::runtime_error("swing_tempo.compact_area_ticks must be finite in (0, 40].");
+            candidate.compact_area_ticks=*value;
+        }
         if (const auto node=table.at_path("window.width_fraction")) {
             const auto value=node.value<double>();
             if (!node.is_number() || !value || !std::isfinite(*value) || *value<=0 || *value>1)

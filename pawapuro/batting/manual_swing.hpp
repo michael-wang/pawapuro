@@ -5,15 +5,16 @@ namespace pawapuro {
 // Fixed-pitch diagnostic: commit through commit+64 ticks, including analytic flight past the plane.
 inline constexpr std::uint64_t manual_contact_window_ticks=64;
 ContactSample sample_manual_contact(const BallState& initial,double release,const IngameMotion& motion,
-    std::uint64_t commit,double time,engine::GlbPose& scratch);
+    std::uint64_t commit,double time,engine::GlbPose& scratch,SwingTempoTiming tempo={});
 std::optional<BatContact> first_manual_contact(const BallState& initial,double release,const IngameMotion& motion,
-    std::uint64_t commit,BatContactEnvelope envelope,double start,double end,engine::GlbPose& scratch,unsigned substeps=64);
+    std::uint64_t commit,BatContactEnvelope envelope,double start,double end,engine::GlbPose& scratch,unsigned substeps=64,SwingTempoTiming tempo={});
 enum class ManualGeometry { Pending, NoSwing, Contact, NoContactInWindow };
 enum class SwingMode { Normal };
 struct SwingCommand {
     std::uint64_t target_tick=0,consumed_tick=0,boundary_tick=0,backlog=0;
     DirectX::XMFLOAT2 aim_center{};
     SwingMode mode=SwingMode::Normal;
+    SwingTempoTiming tempo;
     // S0 has one fixed Normal mode. Replay also requires motion asset SHA/recipe.
 };
 struct ManualSwingPreview {
@@ -23,6 +24,10 @@ struct ManualSwingPreview {
     IngameMotion batter;
     PreviewPhase phase=PreviewPhase::Ready;
     bool paused=false;
+    SwingTempo next_tempo=SwingTempo::Original;
+    SwingTempoTiming attempt_tempo;
+    bool domain_rejected=false;
+    bool toggle_tempo();
     std::uint64_t tick=0,pending_ticks=0,arrival_tick=0;
     std::optional<SwingCommand> pending,committed;
     ManualGeometry geometry=ManualGeometry::Pending;

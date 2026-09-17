@@ -52,6 +52,9 @@ int main(int argc, char** argv)
             throw std::runtime_error("Window default differs.");
         if (values(pawapuro::load_batting_staging(fixture)) != values(defaults))
             throw std::runtime_error("Missing fields did not use defaults.");
+        write("[swing_tempo]\ncompact_area_ticks=29.5\n");
+        if(pawapuro::load_batting_staging(fixture).compact_area_ticks!=29.5)
+            throw std::runtime_error("Tempo startup override not loaded.");
         write("[camera]\nvertical_fov_degrees = 42\n");
         if (pawapuro::load_batting_staging(fixture).vertical_fov_degrees != 42)
             throw std::runtime_error("Valid integer override was not applied.");
@@ -106,6 +109,10 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[swing_tempo]\ncompact_area_ticks=0\n", "swing_tempo.compact_area_ticks"},
+            {"[swing_tempo]\ncompact_area_ticks=41\n", "swing_tempo.compact_area_ticks"},
+            {"[swing_tempo]\ncompact_area_ticks=nan\n", "swing_tempo.compact_area_ticks"},
+            {"[swing_tempo]\ncompact_area_ticks='fast'\n", "swing_tempo.compact_area_ticks"},
             {"[window]\nwidth_fraction=0\n", "window.width_fraction"},
             {"[window]\nwidth_fraction=-0.1\n", "window.width_fraction"},
             {"[window]\nwidth_fraction=1.01\n", "window.width_fraction"},

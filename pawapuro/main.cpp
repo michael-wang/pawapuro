@@ -136,6 +136,7 @@ int main(int argc, char** argv)
                     if (event.key.scancode == SDL_SCANCODE_V) arrival_style=arrival_style==pawapuro::ArrivalCueStyle::Baseball
                         ? pawapuro::ArrivalCueStyle::Ring : pawapuro::ArrivalCueStyle::Baseball;
                     if (event.key.scancode == SDL_SCANCODE_B) ball_readability = !ball_readability;
+                    if (event.key.scancode == SDL_SCANCODE_T) preview.toggle_tempo();
                     if (event.key.scancode == SDL_SCANCODE_J) swing_edge=true;
                     if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
                     if (event.key.scancode == SDL_SCANCODE_SPACE && preview.start()) {
@@ -203,7 +204,7 @@ int main(int argc, char** argv)
             pawapuro::append_arrival_cue(dynamic_characters,scene,delivery.pitch.phase,arrival_style);
             pawapuro::append_ball_readability(dynamic_characters,staging,ball,delivery.pitch.phase,ball_readability,
                 static_cast<unsigned>(width),static_cast<unsigned>(height));
-            result_panel.append(dynamic_characters,pawapuro::contact_panel_state(preview));
+            result_panel.append(dynamic_characters,preview);
             assembly_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-assembly_start).count();
             ++assembly_samples;
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
