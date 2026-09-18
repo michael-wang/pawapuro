@@ -1,6 +1,6 @@
 # Hit Authorization S0 — Gameplay Contact Model
 
-最新 runtime 狀態見文末 **Timing Interaction S1**；Hit Authorization S1 已獲 human acceptance，下方 S0／Gate C 等歷史記錄保留。
+最新 runtime 狀態見文末 **Timing Interaction S1** 與 **Follow-through Compression S1**；Hit Authorization S1 已獲 human acceptance，下方 S0／Gate C 等歷史記錄保留。
 
 2026-09-17；**Hit Authorization S0 五層責任已獲 Michael＋Julia human review accepted；S0.1 Reticle Semantics 亦已 human review accepted；Player Aim S0 interactive candidate 待 review**。僅定責任與 normalized examples；沒有 production authorization、正式 swing input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
 
@@ -290,3 +290,7 @@ Manual preview 的球在 slab entry 起使用與 contact 相同的 analytic traj
 Agent 自身 PowerShell execution 核對 main／clean baseline，fetch 後 HEAD／origin/main 同為 accepted `b998a4c92c2add62a15b221a79a565a77dca5ce3`；提交前再次 fetch 亦無後續 commit。使用既有 VS 2022 x64／CMake／Ninja，完整 Debug、Release build 均通過。Release 完整 CTest **18/18 通過（35.56 s）**；之後補強舊441明確 regression 與 tuning valid-override 測試，重新 build 並跑受影響兩項 **2/2 通過（1.53 s）**。最終 Debug 完整 CTest **18/18 通過（569.50 s）**。首次 Release test failures 是舊441預期與 interval-split fixture 尚未套用新 temporal intersection，已修正 fixture 契約並保留原 unrestricted solver regression，沒有刪除測試或放寬容差。
 
 本機 ignored `build/timing-interaction-s1/` 保留 `debug-build.log`、`debug-ctest.log`、`debug-details.log`、`release-build.log`、`release-ctest.log`、`release-final-build.log`、`release-final-ctest.log` 與 `timing-fixtures.txt`。既有 physical solver、ReferencePitch／PitchDelivery、SwingTempo mapping、authorization evaluator 與 PlayerAim implementation 沒有變更；未宣稱本輪 GPU validation 或 early／normal 實機 playback 已完成。
+
+## Follow-through Compression S1（2026-09-18）
+
+Michael 已確認 Timing Interaction S1 的極早輸入可用，但post-potential follow-through過長。本輪只在world commit＋190 ms之後壓縮原authored tail，A／Compact前綴與既有Timing Interaction／spatial／raw geometry不變；初始完成候選為＋240 ticks（1000 ms），約675 ms的major silhouette只作visual review target。Reference whiff僅為約略視覺時序，非逆向內部規格。Mapping／支撐／attachment／momentum、regression與evidence由 [batter-motion](batter-motion.md) 擁有。早揮完成後hold，投手／球繼續；仍一球一次，沒有multi-swing／rearm、correction、Contact Quality或Ball Response，待Michael＋Julia的1×human review。

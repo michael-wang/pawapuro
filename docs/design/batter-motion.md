@@ -220,3 +220,47 @@ Gate C 將 saved source 的原配方接入 Pawapuro Native：共同 preparation 
 首輪連續 commit domain 的 support 延伸是明示 development policy：未 plant 時，剩餘下降長度在 Gate B 的 Early／Nominal 與已 plant 邊界間連續銜接；已 plant 不重抬腳。所有 65 ticks 的 common prefix、finite pose、支撐、attachment 與完整尾段已做 Native 檢查，三個 fixtures 加 Take 與 saved source 比對；不把有限 proxy 檢查稱為完整 mesh collision。
 
 實際 source／export／取樣方式、timing 數字與 evidence 由 [ingame_s0 README](../../pawapuro/batting/batter/ingame_s0/README.md#gate-c-runtime-candidate) 擁有；input／snapshot／NotEvaluated 邊界見 [batting-contact](batting-contact.md#player-swing-s0-gate-c)。**Gate C runtime candidate 仍待 Michael＋Julia human review**：重點是連續入口是否可信、J 到可辨認反應與 sweep 的節奏、晚揮的完整收勢及重複打下一球的體感。240 Hz 與 source timing 都不能代替端到端 latency 或手感驗收。
+
+## Swing Follow-through Compression S1（2026-09-18，候選）
+
+Michael 已確認 Timing Interaction S1 可極早出棒；本輪保留其 input／potential／slab／spatial／geometry 行為。Human review 指出 post-potential 尾段過長，連 Michael 的女兒也注意到結尾動作奇怪。Michael＋Julia 提供參考遊戲 whiff 的約略觀察：主要 follow-through 約650–750 ms，約1秒收穩；約30 fps capture 含重複格，只用作 visual timing guidance，**沒有逆向得知內部 timing，agent 也未自行觀看未附上的原片**。
+
+只重新安排既有 authored tail 的播放時間，不改官方 `.blend`／GLB、支撐路徑、entry residual、body／hand lead-lag 或 bat attachment。前腳 planted／後腳 toe anchor 繼續成立；原手棒繞身後的縮小 spacing 負責 momentum resolution，最後到完整 f225 並 hold，不回 Ready。
+
+**受保護前綴是 commit-relative WORLD time 0–190 ms（含邊界）**，不是 source frame。`SwingTempoTiming` 先保留原 entry mapping：A 在190 ms為 sample offset45.6 ticks／source f122.4；B Compact T=30為55.6 ticks／source f124.9。兩者從各自 boundary 才接相同形式的尾段 remap；低階無 tail 的 sampler 保留供歷史 asset／geometry regression，正式 manual attempt 在 start snapshot startup Data，queued command 沿用該 snapshot。
+
+唯一新增調整值是 `[swing_tempo].normal_finish_ticks=240`，240 Hz下恰為＋1000 ms；startup 僅接受46–456的 integer（須晚於45.6 protected ticks且不超過原 A 完成 tick），沒有675 ms event／phase／第二個 tuning。令 b=45.6、F=finish ticks、a=原 mapping 在 b 的 sample offset、D=456−a、L=F−b、u=(world offset−b)/L、v=1−u、m=L/D：
+
+`sample offset = a + D * [1 − v³(1+3u) + m*u*v³]`
+
+僅 b<world offset<F 使用此 concrete quartic；之前逐值使用舊 mapping，F以後固定456。導數為 `D/L * (1−u)² * [m+(12−4m)u]`，在目前合法 Data 下非負，boundary speed=1、finish speed=0：接續後先平滑加速，之後 spacing 逐漸縮小至 hold。source f225 不截斷；沒有 generic curve／timeline framework。
+
+| Commit-relative world time | 舊 Compact source frame | 候選 Compact source frame |
+|---|---:|---:|
+| +125 ms | 121 | 121 |
+| +190 ms | 124.9 | 124.9 |
+| +400 ms | 137.5 | 157.793 |
+| +675 ms | 154 | 208.799 |
+| +1000 ms | 173.5 | 225，hold |
+
+原 source f195 時 grip／bat axis 已接近終點，chest 約f205達最後小幅回穩區域；故675 ms落在約f209，適合作為「major follow-through 已成立」的候選，而非新增 gameplay state。A 約同時落在f208.348；最終仍需 Michael 以1×判斷重量感、結尾句點及是否太快。舊完成 A＋456 ticks=1.900 s／B＋446 ticks≈1.858333 s；候選 A／B 都＋240 ticks=1.000 s。
+
+Attempt completion 仍等待 pitcher／ball 與 batter。例：early commit96，batter336完成（release384之前），繼續 hold、球照常通過互動區，整球816完成；normal448的batter688完成、整球仍816完成。晚揮則等待自己的完整＋240。**仍一球一次，未加入第二次出棒或 swing rearm。**
+
+### 技術與 human evidence
+
+`follow_through_test` 比較 A／B、commit1／96／432／448／456／496／600／816，每0.1 world tick取樣至45.6，whole world／skin matrices與barrel／tip逐值相同；boundary近側姿勢、速度連續、全尾段單調、render／semantic共用mapping、完整原終點與hold皆有檢查。Timing fixtures96／432／433／448／456／460／600直接與無tail baseline對照，timing state／efficiency／signed offset、spatial、raw geometry及contact time／u／normal／relative velocity保持相同；448 Contact time仍1.9913564701 s。原 saved-source fixtures、65-commit A／B unrestricted geometry與既有容差保留。30／60／120 Hz與backlog完成姿勢／tick一致。
+
+實際 Release app：early consumed80，在preview343時batter已固定320且投手仍Hand；繼續到519，batter320保持而球已完成passage。正常 consumed452，preview623（＋712.5 ms）已接近終點輪廓；preview724時batter692（＋1000 ms）固定、球照常保留。截圖已直接檢視；`early-finished-before-release.png`、`early-hold-pitch-continued.png`、`normal-plus-712ms.png`、`normal-final-hold.png`與對應title JSON保存在ignored `build/follow-through-s1/`。
+
+`phase-comparison.png` 是由同一 Native sampler／skinning 匯出的 baseline與candidate mesh，另以固定近景camera離線render，**不是app截圖或wall-time footage**。前綴影像相同、400／675／1000 ms差異可供pose review；不能據此宣稱正常速度手感通過。另有 `compact-comparison-1x-reconstructed.mp4`：同一Native sampler／skinning，world tick424–976每8 ticks一格、30 fps、70格，固定近景camera比較舊／新Compact；標示為tick-based reconstruction，非wall-time app capture。影片從commit前100 ms到commit後2200 ms，完整顯示新舊finish及hold；沒有投手／球場，也未宣稱agent已用播放器連續1×自看。Computer Use沒有連續錄影API，本輪沒有early／normal的實機1×錄影；early evidence是上述兩張真實app截圖與Native tests。人工重現：預設B、Space後約0.3秒按J看early finish，約1.85秒按J看正常節奏；看title consumed tick核對，P可暫停／恢復。請另以未暫停1×連續播放判斷。
+
+剩餘視覺問題：原尾段手臂在頭旁形成明顯折角／重疊，final pose與path本身並未重作；縮短時間是否足以解決「奇怪」仍待Michael＋Julia review。**沒有 multi-swing、correction、Contact Quality、Power、foul／fair、Ball Response或新VFX／SFX。**
+
+### 本輪驗證紀錄
+
+Agent 自身 execution 在 `C:\astra-dev\pawapuro` 核對clean main，fetch後HEAD／origin/main均為 `892e7b45ea222107c5a6c7b7b964839eeb6c2a8c`，提交前再次fetch亦未前進。沿用VS2022 x64／CMake／Ninja，完整Release build與CTest **19/19通過（39.37 s）**。首輪新測試有barrel欄位名稱及invalid-Data fixture initializer的compiler錯誤，已修正；既有manual test仍預期舊913完成tick造成首次CTest failure，已改為等待pitcher816的正確新completion，原contact fixtures與容差不變。這些是正常compiler／test failure，非runner失效。
+
+Ignored `build/follow-through-s1/` 保留build／CTest logs、`release-details.log`、phase資料／render腳本、影片decode metadata與實機截圖／title。Native重建資料經同一正式sampler產生，離線render曾修正camera座標轉換與取景，再檢視最終輸出；不將中間錯誤render列為review evidence。0／125／190 ms的最終phase images逐像素相同。沒有修改或重新匯出官方motion資產。
+
+最終完整Debug build與CTest **19/19通過（510.73 s）**，完整Release亦19/19通過。實機Release smoke已完成並正常退出；未宣稱Debug GPU validation或human feel acceptance。交付停在Michael＋Julia review。

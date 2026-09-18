@@ -16,6 +16,7 @@ struct SwingPhasePotentialTuning { float normal_start_ms=75,normal_peak_ms=125,n
 struct BattingStaging {
     double window_width_fraction=0.75;
     double compact_area_ticks=30;
+    unsigned normal_finish_ticks=240;
     PlayerAimTuning player_aim;
     HitAuthorizationTuning hit_authorization;
     BattingInteractionTuning batting_interaction;

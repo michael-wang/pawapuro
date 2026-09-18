@@ -65,7 +65,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
-                if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks"}, prefix);
+                if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks", "normal_finish_ticks"}, prefix);
                 if (prefix == "window.") only_keys(fields, {"width_fraction"}, prefix);
                 if (prefix == "player_aim.") only_keys(fields, {"cursor_speed_mps"}, prefix);
                 if (prefix == "hit_authorization.") only_keys(fields, {"normal_radius_x_m", "normal_radius_y_m"}, prefix);
@@ -91,6 +91,12 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
             std::fprintf(stderr, "Staging default: camera.preset = right_handed_pitcher_vs_left_handed_batter\n");
         }
         BattingStaging candidate;
+        if(const auto node=table.at_path("swing_tempo.normal_finish_ticks")) {
+            const auto value=node.value<std::int64_t>();
+            if(!node.is_integer()||!value||*value<46||*value>456)
+                throw std::runtime_error("swing_tempo.normal_finish_ticks must be an integer in [46, 456].");
+            candidate.normal_finish_ticks=static_cast<unsigned>(*value);
+        }
         candidate.batting_interaction.half_depth_m=number(table,"batting_interaction.half_depth_m",candidate.batting_interaction.half_depth_m,0.001f,2.f);
         auto& potential=candidate.swing_phase_potential;
         potential.normal_start_ms=number(table,"swing_phase_potential.normal_start_ms",potential.normal_start_ms,0,1000);

@@ -7,9 +7,9 @@
 #include <string>
 
 namespace {
-std::array<float, 46> values(const pawapuro::BattingStaging& s)
+std::array<float, 47> values(const pawapuro::BattingStaging& s)
 {
-    return {s.batting_interaction.half_depth_m,s.swing_phase_potential.normal_start_ms,s.swing_phase_potential.normal_peak_ms,s.swing_phase_potential.normal_end_ms,
+    return {static_cast<float>(s.normal_finish_ticks),s.batting_interaction.half_depth_m,s.swing_phase_potential.normal_start_ms,s.swing_phase_potential.normal_peak_ms,s.swing_phase_potential.normal_end_ms,
         s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
@@ -53,8 +53,8 @@ int main(int argc, char** argv)
             throw std::runtime_error("Window default differs.");
         if (values(pawapuro::load_batting_staging(fixture)) != values(defaults))
             throw std::runtime_error("Missing fields did not use defaults.");
-        write("[swing_tempo]\ncompact_area_ticks=29.5\n");
-        if(pawapuro::load_batting_staging(fixture).compact_area_ticks!=29.5)
+        write("[swing_tempo]\ncompact_area_ticks=29.5\nnormal_finish_ticks=288\n");
+        if(pawapuro::load_batting_staging(fixture).compact_area_ticks!=29.5||pawapuro::load_batting_staging(fixture).normal_finish_ticks!=288)
             throw std::runtime_error("Tempo startup override not loaded.");
         write("[batting_interaction]\nhalf_depth_m=0.3\n[swing_phase_potential]\nnormal_start_ms=60\nnormal_peak_ms=120\nnormal_end_ms=200\n");
         const auto timing=pawapuro::load_batting_staging(fixture);
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
             {"[hit_authorization]\nextra=1\n", "hit_authorization.extra"},
             {"hit_authorization=3\n", "hit_authorization must be a table"},
             {"[player_aim]\nnormal_radius_x_m=0.26\n", "player_aim.normal_radius_x_m"},
-            {"[swing_tempo]\ncompact_area_ticks=0\n", "swing_tempo.compact_area_ticks"},
+            {"[swing_tempo]\nnormal_finish_ticks=45\n", "swing_tempo.normal_finish_ticks"}, {"[swing_tempo]\nnormal_finish_ticks=457\n", "swing_tempo.normal_finish_ticks"}, {"[swing_tempo]\nnormal_finish_ticks=240.5\n", "swing_tempo.normal_finish_ticks"}, {"[swing_tempo]\nnormal_finish_ticks=nan\n", "swing_tempo.normal_finish_ticks"}, {"[swing_tempo]\ncompact_area_ticks=0\n", "swing_tempo.compact_area_ticks"},
             {"[swing_tempo]\ncompact_area_ticks=41\n", "swing_tempo.compact_area_ticks"},
             {"[swing_tempo]\ncompact_area_ticks=nan\n", "swing_tempo.compact_area_ticks"},
             {"[swing_tempo]\ncompact_area_ticks='fast'\n", "swing_tempo.compact_area_ticks"},
