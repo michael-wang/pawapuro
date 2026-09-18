@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 namespace pawapuro {
-PlayerAim::PlayerAim(const BattingStaging& s):tuning(s.player_aim),authorization(s.hit_authorization),half_width(s.strike_zone_width_m/2),
+PlayerAim::PlayerAim(const BattingStaging& s):tuning(s.player_aim),authorization(normal_authorization_region(s)),half_width(s.strike_zone_width_m/2),
     bottom(s.strike_zone_bottom_m),top(s.strike_zone_top_m),plane_z(s.strike_zone_plane_z()),
     visual_z(plane_z-0.002f) // Fixed camera is on -Z; rendering only, never aim truth.
 {

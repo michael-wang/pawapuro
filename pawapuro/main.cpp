@@ -187,17 +187,23 @@ int main(int argc, char** argv)
             const bool swing_held=(GetAsyncKeyState('J')&0x8000)!=0;
             preview.input_boundary(swing_held,swing_edge,eligible,ac);
             const auto ad=aim.diagnostic(prediction.state.position_m);
-            const bool cue_visible=pawapuro::arrival_cue_visible(delivery.pitch.phase);
+            const auto cue_phase=preview.flight?pawapuro::PitchPhase::Complete:delivery.pitch.phase;
+            const auto ball_phase=preview.flight?(preview.flight->complete(double(preview.tick)/pawapuro::pitch_hz)?pawapuro::PitchPhase::Complete:pawapuro::PitchPhase::InFlight):delivery.pitch.phase;
+            const bool cue_visible=pawapuro::arrival_cue_visible(cue_phase);
             char aim_error[160]="Hidden";
             if (cue_visible) std::snprintf(aim_error,sizeof(aim_error),"error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f",ad.dx,ad.dy,ad.ex,ad.ey,ad.q);
             char temporal[640];preview.timing_diagnostic(temporal,sizeof(temporal));
+            char response[180]="No launch";
+            if(preview.flight){const auto& r=*preview.latest()->response;
+                std::snprintf(response,sizeof(response),"speed=%.3fm/s launch=%+.3fdeg spray=%+.3fdeg effective=%.9fs %s",r.exit_speed_mps,r.launch_angle_deg,r.spray_angle_deg,r.contact_time_s,
+                    preview.flight->complete(double(preview.tick)/pawapuro::pitch_hz)?"GroundHold":"BattedFlight");}
             char title[2048];
             const auto ball=preview.displayed_ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Geometry:%s / No ball response | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
-                "ball=(%.6f,%.6f,%.6f) freeze-at-region-exit | backlog=%llu | Space:play/replay J:swing P:pause .:step Esc:quit Arrows:aim R:center",
+            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Gameplay:%s RawOverlap:%s | %s | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+                "ball=(%.6f,%.6f,%.6f)  | backlog=%llu | Space:play/replay J:swing P:pause .:step Esc:quit Arrows:aim R:center",
                 ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
-                cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed()?preview.committed()->consumed_tick:0,preview.attempts.size(),preview.active_attempt?*preview.active_attempt+1:0,preview.rearmed()?"YES":"NO",preview.contact_state(),temporal,
-                ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
+                cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed()?preview.committed()->consumed_tick:0,preview.attempts.size(),preview.active_attempt?*preview.active_attempt+1:0,preview.rearmed()?"YES":"NO",preview.gameplay_state(),preview.contact_state(),response,temporal,
+                ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,preview.flight?"BattedFlight":delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
             if (last_title != title) {
                 if (!SDL_SetWindowTitle(window.get(), title)) throw std::runtime_error(SDL_GetError());
@@ -208,8 +214,8 @@ int main(int argc, char** argv)
             dynamic_characters.insert(dynamic_characters.end(),motion.triangles.begin(),motion.triangles.end());
             dynamic_characters.insert(dynamic_characters.end(),batter.triangles.begin(),batter.triangles.end());
             aim.append_triangles(dynamic_characters);
-            pawapuro::append_arrival_cue(dynamic_characters,scene,delivery.pitch.phase,arrival_style);
-            pawapuro::append_ball_readability(dynamic_characters,staging,ball,delivery.pitch.phase,ball_readability,
+            pawapuro::append_arrival_cue(dynamic_characters,scene,cue_phase,arrival_style);
+            pawapuro::append_ball_readability(dynamic_characters,staging,ball,ball_phase,ball_readability,
                 static_cast<unsigned>(width),static_cast<unsigned>(height));
             result_panel.append(dynamic_characters,preview);
             batter_card.append(dynamic_characters);

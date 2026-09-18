@@ -2,6 +2,11 @@
 #include "staging.hpp"
 
 namespace pawapuro {
+// Contact75 anchors the accepted Normal ellipse; presentation and permission share this value.
+inline HitAuthorizationTuning normal_authorization_region(const BattingStaging& s) {
+    const float scale=.5f+float(s.batter_profile.contact)/150.f;
+    return {s.hit_authorization.normal_radius_x_m*scale,s.hit_authorization.normal_radius_y_m*scale};
+}
 struct HitAuthorizationDecision {
     bool authorized;
     DirectX::XMFLOAT2 pitch_point, error, normalized_error;

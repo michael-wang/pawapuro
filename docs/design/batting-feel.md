@@ -388,3 +388,9 @@ BatterCard是app-owned startup快取，借用profile建構後保存文字與NDC 
 新測試覆蓋所有grade邊界、required／invalid profile欄位、所有合法trajectory、450／1080／1620高的card bounds與1000次append的buffer pointer／capacity及cached geometry穩定性。把profile改成Other／0／120／1後，80→320 rearm→448兩揮序列逐tick ball／whole pose／barrel／lifecycle與reticle triangles相同，timing／authorization／contact event逐值一致；physical半徑仍37／33 mm。原multi-swing、protected-prefix及solver suite保留。
 
 最終Release實機已核對Ready與整球Complete，卡片沒有遮住batter、arrival ball、strike zone／reticle、top-left diagnostics或home plate；只有左下角少量場地背景被覆蓋。真實截圖與title JSON：ignored `build/batter-card-s1/card-ready.png`、`card-complete.png`，同目錄保存兩組態build／CTest／final-build／card-ctest logs與Debug完整details。先前桌面輸入中斷後由Michael交回操作才恢復擷取，未使用mock／離線render替代實機。App已正常退出；本輪沒有Debug GPU validation宣稱。Card外觀仍交Michael＋Julia human review。
+
+## Gameplay Contact／Ball Response S0 接續（2026-09-19）
+
+Batter Attributes／Batter Card S1 已由Michael接受。本次開始接上三項能力：Contact控制authorization尺寸，Power控制exit-speed ceiling，Trajectory控制launch-angle family；原75／85／3與card不變。以自己的ellipse內normalized q計算spatial transfer，ex暫不負責方向，ey控制上下角度，timing offset控制pull／opposite。這些候選公式、Data、Gameplay Contact權威、flight ownership與驗證由 [batting-contact文末](batting-contact.md#gameplay-contact-s1ball-responsebatted-ball-flight-s02026-09-19) 唯一擁有，取代前節S1「能力僅供HUD」的當前狀態，保留其歷史驗證。
+
+Gameplay成立由temporal overlap＋spatial authorization決定，raw physical overlap只作診斷。新增gravity-only出球與落地hold，沒有Contact Correction、Power mode、spin／drag／bounce或foul／fair。仍只有一位active development batter，沒有roster／lineup或generic player system；所有response tuning待Michael＋Julia人工review。

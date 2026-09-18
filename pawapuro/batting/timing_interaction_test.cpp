@@ -54,7 +54,7 @@ int main(int argc,char** argv){try {
             if(!hz){p.advance(5'000'000'000);while(p.pending_ticks)p.advance(0);}
             while(p.phase==PreviewPhase::Playing)p.advance(hz?1'000'000'000/hz:16'666'667);
             require(p.committed()->consumed_tick==c&&p.timing()->efficiency==timing.efficiency&&p.timing()->offset_ms==timing.offset_ms,"cadence changes decision");
-            require(p.tick==std::max(p.delivery.motion.end_tick,p.attempt_tempo.end_tick(c)),"completion truncates pitcher or batter");
+            require(p.tick==p.completion_tick(),"completion truncates pitcher or batter");
             if(!timing.overlap)require(p.contact_query_count()==0&&!p.searched_interval()&&!p.contact()&&p.geometry()==ManualGeometry::NoContactInWindow,"empty overlap queried ghost pitch");
             else {
                 require(p.contact_query_count()>0&&p.searched_interval(),"overlap never searched");

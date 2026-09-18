@@ -54,8 +54,8 @@ int main(int argc,char** argv){try {
         const BatterCard other({"Julia",100,49,4},h*16/9,h);
         require(other.lines[0]==L"Julia"&&other.lines[1]==L"CONTACT   S"&&other.lines[2]==L"POWER     F"&&other.lines[3]==L"彈道        4","card duplicated authored values");
     }
-    // Profile-only changes cannot affect any tick of the accepted two-swing sequence.
-    auto changed=s;changed.batter_profile={"Other",0,120,1};
+    // Display-name-only changes cannot affect the accepted two-swing sequence. Attributes now feed response.
+    auto changed=s;changed.batter_profile.display_name="Other";
     ManualSwingPreview a(d,s),b(d,changed);PlayerAim aim_a(s),aim_b(changed);
     std::vector<engine::Vertex> ra,rb;aim_a.append_triangles(ra);aim_b.append_triangles(rb);
     require(ra.size()==rb.size()&&std::memcmp(ra.data(),rb.data(),ra.size()*sizeof(engine::Vertex))==0,"profile changed reticle");

@@ -30,7 +30,7 @@ void ManualSwingPreview::query_contact() {
     auto& attempt=attempts[*active_attempt];
     if(attempt.geometry!=ManualGeometry::Pending)return;
     const auto finish_without_contact=[&]{attempt.geometry=ManualGeometry::NoContactInWindow;attempt.contact_dispatch_tick=tick;
-        std::fprintf(stderr,"ManualGeometry NoContactInWindow: commit=%llu dispatch_tick=%llu temporal=%s queries=%u; no ball response\n",attempt.command.consumed_tick,tick,timing_state(),attempt.contact_query_count);};
+        std::fprintf(stderr,"RawOverlap NoContactInWindow: commit=%llu dispatch_tick=%llu temporal=%s queries=%u; diagnostic only\n",attempt.command.consumed_tick,tick,timing_state(),attempt.contact_query_count);};
     if(!attempt.timing.overlap){finish_without_contact();return;}
     const auto interval=*attempt.timing.overlap;
     double start=std::max(double(tick-1)/pitch_hz,interval.start_s),end=std::min(double(tick)/pitch_hz,interval.end_s);
@@ -44,7 +44,7 @@ void ManualSwingPreview::query_contact() {
             batter,attempt.command.consumed_tick,tuning.bat_contact,start,end,contact_scratch,64,attempt.command.tempo);
         if(attempt.contact) {
             attempt.geometry=ManualGeometry::Contact;++attempt.contact_count;attempt.contact_dispatch_tick=tick;const auto& e=*attempt.contact;
-            std::fprintf(stderr,"ManualGeometry Contact: commit=%llu time_s=%.12f dispatch_tick=%llu u=%.9f normal=(%.9g,%.9g,%.9g) relative_velocity=(%.9g,%.9g,%.9g) temporal_query=[%.12f,%.12f] tempo=%s; Geometry only / No ball response\n",
+            std::fprintf(stderr,"RawOverlap Contact: commit=%llu time_s=%.12f dispatch_tick=%llu u=%.9f normal=(%.9g,%.9g,%.9g) relative_velocity=(%.9g,%.9g,%.9g) temporal_query=[%.12f,%.12f] tempo=%s; Raw physical overlap diagnostic\n",
                 attempt.command.consumed_tick,e.sample.preview_time_s,tick,e.sample.approach.u,e.normal.x,e.normal.y,e.normal.z,
                 e.relative_velocity.x,e.relative_velocity.y,e.relative_velocity.z,interval.start_s,interval.end_s,attempt.command.tempo.mode==SwingTempo::Original?"A":"B");
             return;
@@ -52,14 +52,34 @@ void ManualSwingPreview::query_contact() {
     }
     if(double(tick)/pitch_hz>=interval.end_s)finish_without_contact();
 }
+const char* ManualSwingPreview::gameplay_state() const {
+    switch(gameplay_result()) {
+    case GameplayResult::NoSwing:return "NoSwing";
+    case GameplayResult::Miss:return "Miss";
+    case GameplayResult::Contact:return "Contact";
+    default:return "Pending";
+    }
+}
+void ManualSwingPreview::dispatch_gameplay_contact() {
+    if(flight||!active_attempt)return;
+    auto& a=attempts[*active_attempt];
+    if(!a.response||double(tick)/pitch_hz<a.response->contact_time_s)return;
+    a.gameplay=GameplayResult::Contact;a.gameplay_dispatch_tick=tick;
+    flight.emplace(*a.response,tuning.bat_contact.ball_radius_m);pending.reset();armed=false;
+    const auto& r=*a.response;const auto& auth=a.authorization;
+    std::fprintf(stderr,"GameplayContact attempt=%zu commit=%llu dispatch_tick=%llu efficiency=%.9f offset_ms=%+.9f ex=%.9g ey=%.9g q=%.9g spatial=%.9g energy=%.9g Power=%d Trajectory=%d effective_s=%.12f speed_mps=%.9g speed_kmh=%.9g launch_deg=%.9g spray_deg=%.9g origin=(%.9g,%.9g,%.9g) ground_s=%.12f RawOverlap=%s (diagnostic only)\n",
+        *active_attempt+1,a.command.consumed_tick,tick,a.timing.efficiency,a.timing.offset_ms,auth.normalized_error.x,auth.normalized_error.y,auth.q,
+        r.spatial_transfer,r.energy_transfer,tuning.batter_profile.power,tuning.batter_profile.trajectory,r.contact_time_s,r.exit_speed_mps,r.exit_speed_mps*3.6f,r.launch_angle_deg,r.spray_angle_deg,
+        r.launch_position_m.x,r.launch_position_m.y,r.launch_position_m.z,flight->ground_s,contact_state());
+}
 ManualSwingPreview::ManualSwingPreview(const std::filesystem::path& d,const BattingStaging& s)
     :tuning(s),delivery(d/"pitcher/pitcher.glb",d/"pitcher/pitcher.toml",s),batter(d/"batter/ingame_s0",s),
      ball_passage(batting_interaction_passage(delivery.pitch,double(delivery.motion.release_tick)/pitch_hz,s.batting_interaction)) {
-    std::fprintf(stderr,"Manual Swing S0: source=%s recipe=gate-b-world-residual-v1 mode=Normal live-attempt input; Geometry only / No ball response; query=ball slab intersect swing potential; displayed ball continues through slab\n",batter.asset.sha256.c_str());
+    std::fprintf(stderr,"Manual Swing S0: source=%s recipe=gate-b-world-residual-v1 mode=Normal live-attempt input; Raw physical overlap diagnostic; query=ball slab intersect swing potential; displayed ball continues through slab\n",batter.asset.sha256.c_str());
 }
 void ManualSwingPreview::reset() {
     delivery.reset();batter.evaluate_tick(0,std::nullopt);tick=pending_ticks=fractional_credit=arrival_tick=0;
-    attempts.clear();active_attempt.reset();preparing=true;
+    attempts.clear();active_attempt.reset();flight.reset();preparing=true;
     pending.reset();paused=false;armed=false;input_result="Waiting";phase=PreviewPhase::Ready;
 }
 bool ManualSwingPreview::start(){if(phase==PreviewPhase::Playing)return false;reset();attempt_tempo={next_tempo,tuning.compact_area_ticks,tuning.normal_finish_ticks};delivery.start();phase=PreviewPhase::Playing;return true;}
@@ -97,7 +117,11 @@ bool ManualSwingPreview::step_tick() {
         auto command=*pending;pending.reset();command.consumed_tick=tick;
         const auto point=predict_arrival(delivery.pitch).state.position_m;
         attempts.push_back({command,timing_interaction(double(tick)/pitch_hz,ball_passage,tuning.swing_phase_potential),
-            authorize_normal_hit(command.aim_center,{point.x,point.y},tuning.hit_authorization)});
+            authorize_normal_hit(command.aim_center,{point.x,point.y},normal_authorization_region(tuning))});
+        auto& attempt=attempts.back();
+        attempt.response=ball_response(attempt.timing,attempt.authorization,tuning.batter_profile,tuning.ball_response,
+            delivery.pitch.initial,double(delivery.motion.release_tick)/pitch_hz);
+        if(!attempt.response)attempt.gameplay=GameplayResult::Miss;
         active_attempt=attempts.size()-1;preparing=false;input_result="Committed";
         char diagnostic[640];timing_diagnostic(diagnostic,sizeof(diagnostic));
         std::fprintf(stderr,"Swing consumed: attempt=%zu target_tick=%llu consumed_tick=%llu boundary_tick=%llu backlog=%llu aim=(%.9g,%.9g) tempo=%s finish_tick=%llu %s\n",
@@ -107,6 +131,7 @@ bool ManualSwingPreview::step_tick() {
     const auto* command=preparing?nullptr:committed();
     batter.evaluate_tick(tick,command?std::optional(command->consumed_tick):std::nullopt,command?command->tempo:attempt_tempo);
     query_contact();
+    dispatch_gameplay_contact();
     if(active_attempt&&batter.complete()) {
         active_attempt.reset();armed=false; // No active-swing press/held key survives this boundary.
         if(intent_live(tick+1)) {
@@ -115,7 +140,7 @@ bool ManualSwingPreview::step_tick() {
         }
     }
     if(!arrival_tick&&delivery.pitch.phase==PitchPhase::Complete)arrival_tick=tick;
-    if(delivery.phase==DeliveryPhase::Complete&&batter.complete()&&!pending) {phase=PreviewPhase::Complete;paused=false;pending_ticks=fractional_credit=0;return true;}
+    if(delivery.phase==DeliveryPhase::Complete&&batter.complete()&&!pending&&(!flight||flight->complete(double(tick)/pitch_hz))) {phase=PreviewPhase::Complete;paused=false;pending_ticks=fractional_credit=0;return true;}
     return false;
 }
 bool ManualSwingPreview::advance(std::uint64_t elapsed_ns) {
@@ -142,6 +167,7 @@ void ManualSwingPreview::timing_diagnostic(char* buffer,std::size_t size) const 
 }
 DirectX::XMFLOAT3 ManualSwingPreview::displayed_ball_center() const {
     const double time=double(tick)/pitch_hz;
+    if(flight)return flight->sample(time).position_m;
     if(delivery.ball_owner==BallOwner::Simulation&&time>=ball_passage.enter_s)
         return sample_reference_pitch(delivery.pitch.initial,std::min(time,ball_passage.exit_s)-double(delivery.motion.release_tick)/pitch_hz).position_m;
     return delivery.ball_center();

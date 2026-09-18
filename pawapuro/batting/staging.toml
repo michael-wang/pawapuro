@@ -93,9 +93,20 @@ normal_start_ms = 75
 normal_peak_ms = 125
 normal_end_ms = 190
 
-# Development fixture only; attributes do not affect gameplay in S1.
+# Active development batter. Contact, Power and Trajectory feed the S0 response candidate.
 [batter_profile]
 display_name = "Michael"
 contact = 75
 power = 85
 trajectory = 3
+
+# First playtest response values, not physical calibration or permanent balance.
+[ball_response]
+ideal_exit_speed_min_mps = 20.0
+ideal_exit_speed_max_mps = 55.0
+spatial_edge_transfer = 0.35
+minimum_exit_speed_factor = 0.20
+trajectory_launch_degrees = [8.0, 14.0, 20.0, 26.0]
+vertical_aim_bias_degrees = 24.0
+max_spray_degrees = 35.0
+full_spray_offset_ms = 65.0

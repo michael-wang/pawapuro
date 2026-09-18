@@ -20,10 +20,10 @@ int main(int argc,char**argv){try {
             require(std::memcmp(drawn.data()+offset,panel.annotations[expected].data(),panel.annotation_vertex_count*sizeof(engine::Vertex))==0,"wrong panel annotation");
         };
         p.reset();p.next_tempo=SwingTempo::Compact;panel.append(drawn,p);require(drawn.size()==panel.vertex_count,"append capacity");check_annotation(0,1);check_annotation(3,5);check_annotation(4,7);
-        for(bool authorized:{true,false})for(auto geometry:{ManualGeometry::Pending,ManualGeometry::Contact,ManualGeometry::NoContactInWindow}) {
-            p.attempts.clear();p.attempts.push_back({{}, {}, HitAuthorizationDecision{authorized,{},{},{},authorized?0.f:2.f}});p.attempts.back().geometry=geometry;
+        for(auto gameplay:{GameplayResult::Pending,GameplayResult::Miss,GameplayResult::Contact})for(bool authorized:{true,false})for(auto geometry:{ManualGeometry::Pending,ManualGeometry::Contact,ManualGeometry::NoContactInWindow}) {
+            p.attempts.clear();p.attempts.push_back({{}, {}, HitAuthorizationDecision{authorized,{},{},{},authorized?0.f:2.f}});p.attempts.back().geometry=geometry;p.attempts.back().gameplay=gameplay;
             drawn.clear();panel.append(drawn,p);check_annotation(4,authorized?8:9);
-            require(contact_panel_highlight(contact_panel_state(p))==(geometry==ManualGeometry::Contact?1:geometry==ManualGeometry::NoContactInWindow?2:-1),"authorization altered geometry row");
+            require(contact_panel_highlight(contact_panel_state(p))==(gameplay==GameplayResult::Contact?1:gameplay==GameplayResult::Miss?2:-1),"raw overlap altered gameplay row");
         }
         p.reset();
         p.toggle_tempo();drawn.clear();panel.append(drawn,p);check_annotation(0,0);
@@ -40,9 +40,9 @@ int main(int argc,char**argv){try {
         drawn.clear();panel.append(drawn,p);check_annotation(5,13);
         p.toggle_pause();drawn.clear();panel.append(drawn,p);check_annotation(5,6);
         p.toggle_pause();drawn.clear();panel.append(drawn,p);check_annotation(5,13);
-        require(contact_panel_highlight(contact_panel_state(p))==2,"rearm lost latest raw result");
+        require(contact_panel_highlight(contact_panel_state(p))==2,"rearm lost latest gameplay result");
         p.reset();
-        for(unsigned index=0;index<7;++index) {
+        for(unsigned index=0;index<6;++index) {
             const auto state=static_cast<ContactPanelState>(index);const auto& mesh=panel.variants[index];
             require(mesh.size()==panel.base_vertex_count,"variant capacity differs");
             unsigned highlight_quads=0;
@@ -66,21 +66,20 @@ int main(int argc,char**argv){try {
             const auto tick=p.tick;const auto pose=p.batter.pose.world;const auto ball=p.delivery.pitch.current;
             const auto state=contact_panel_state(p);
             require(tick==p.tick&&pose==p.batter.pose.world&&ball.position_m.z==p.delivery.pitch.current.position_m.z,"UI mutated simulation");
-            if(p.committed()&&p.geometry()==ManualGeometry::Pending) {
+            if(p.committed()&&p.gameplay_result()==GameplayResult::Pending) {
                 require(state==ContactPanelState::Swinging,"swinging prompt");
                 p.toggle_pause();p.advance(100'000'000);
                 require(p.tick==tick&&contact_panel_state(p)==state,"pause changed panel state or time");
                 p.toggle_pause();
             }
         }
-        const auto expected=commit==0?ContactPanelState::NoSwing:commit==432?ContactPanelState::Contact:
-            commit==441?ContactPanelState::ExtendedContact:ContactPanelState::NoContact;
-        require(contact_panel_state(p)==expected,"owner result mapping/analytic extension differs");
+        const auto expected=commit==0?ContactPanelState::NoSwing:ContactPanelState::Contact;
+        require(contact_panel_state(p)==expected,"owner result mapping/gameplay authority differs");
         const auto result=contact_panel_state(p);p.advance(9'000'000'000);p.toggle_pause();
         require(contact_panel_state(p)==result,"final result did not persist");
-        require(contact_panel_highlight(result)==(commit==0?0:commit==456?2:1),"wrong result row");
+        require(contact_panel_highlight(result)==(commit==0?0:1),"wrong result row");
         p.reset();require(contact_panel_state(p)==ContactPanelState::Ready&&!p.contact(),"reset retained highlight");
     }
-    std::cout<<"PASS panel: pending, three owner results, analytic extension, persistence/reset, 1080/1620 cached geometry\n";
+    std::cout<<"PASS panel: pending, three owner results, gameplay authority, persistence/reset, 1080/1620 cached geometry\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

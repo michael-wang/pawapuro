@@ -1,6 +1,6 @@
 # Hit Authorization S0 — Gameplay Contact Model
 
-最新 runtime 狀態見文末 **Timing Interaction S1** 與 **Follow-through Compression S1**；Hit Authorization S1 已獲 human acceptance，下方 S0／Gate C 等歷史記錄保留。
+最新 runtime 狀態見文末 **Gameplay Contact S1／Ball Response／Batted Ball Flight S0**；先前各階段記錄保留，不再以 raw physical overlap 決定 gameplay 擊球。
 
 2026-09-17；**Hit Authorization S0 五層責任已獲 Michael＋Julia human review accepted；S0.1 Reticle Semantics 亦已 human review accepted；Player Aim S0 interactive candidate 待 review**。僅定責任與 normalized examples；沒有 production authorization、正式 swing input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
 
@@ -336,3 +336,75 @@ Ignored `build/multi-swing-s1/` 保存兩組態build／CTest logs、final-build�
 ## Multi-Swing human acceptance／Batter Attributes S1（2026-09-19）
 
 Michael已人工驗證極早第一揮、live hard rearm、第二次獨立出棒及第二揮Contact，**Multi-Swing Intent S1 human accepted**。本輪沒有改動這個lifecycle、Timing Interaction、Spatial Authorization、reticle ellipse或physical solver。新增單一Michael profile與Batter Card純Data／HUD；domain／grade、未來Contact／Power／Trajectory責任與normalized spatial quality原則由 [Batting Feel](batting-feel.md#batter-attributesbatter-card-s12026-09-19) 擁有，尚未接入gameplay，沒有correction／quality／Ball Response。
+
+## Gameplay Contact S1／Ball Response／Batted Ball Flight S0（2026-09-19）
+
+**Batter Attributes／Batter Card S1 已由 Michael 接受。** 本節取代先前「profile 不影響 gameplay」與「尚無 Ball Response」的 runtime 狀態。新的權威順序為 Swing Intent → Temporal Match → Spatial Authorization → Gameplay Contact → Ball Response → Batted Ball Flight。Compact default、A comparison、75／125／190 ms potential、240 ticks finish、live multi-swing、±0.40 m slab、immutable command aim 與原 incoming pitch 全部保留。
+
+### Gameplay 與 raw 診斷分離
+
+每個 SwingAttempt 的 Gameplay Contact **只要求非空 temporal overlap 且 spatial authorized**；不另設 efficiency 門檻，不詢問 physical collider。沒有 overlap 或 spatial rejected 是 Miss；整球零 attempts 才是 NoSwing。面板顯示「未出棒／揮空／擊球成立」，raw 結果在 title／stderr 標為 RawOverlap，不能 veto 或授權 gameplay。
+
+Consumed 時，attempt 用自己的 command／timing／authorization 與 startup Data 計算一次 optional BallResponse。符合條件時先 Pending，直到第一個 world tick 到達 effective time 才 dispatch Contact，並由 preview 擁有唯一的 BattedBallFlight；Complete 保留、reset 清除，pause 不推進，single-step 只推進既有 clock。EffectiveContactTime = clamp(swing peak world time, overlap.start_s, overlap.end_s)。Launch origin 是 immutable incoming analytic pitch 在該 sub-tick 時間的位置；dispatch tick 的顯示位置已包含 effective time 到該 tick 的出球位移。這是 gameplay construction，不聲稱 bat mesh 在該處接觸。
+
+Raw sphere/capsule 仍在原 temporal intersection 搜尋首次事件，37／33 mm radii、earliest-entry solver、動作與容差未改。**出球後 raw 查詢仍針對原 immutable incoming pitch**，用來回答「若未出球，原動作與來球是否重疊」，不是再次碰撞已飛走的球。它可能晚於 gameplay dispatch 才結案，因此一次性出球 log 可先記 RawOverlap=Pending，稍後獨立 raw log／title 才有最終值。診斷不修改 BallResponse。
+
+### Profile 與第一版 response Data
+
+`staging.toml` 的 `[batter_profile]` 仍是 Michael／75／85／3，卡片不變。Contact scale = 0.5 + contact/150；`normal_authorization_region` 是 reticle rendering／diagnostics 與 committed authorization 共用的唯一計算。Contact75 精確保留 rx=.26、ry=.13 m；Contact0 為0.5倍、120為1.3倍，只改 gameplay region，沒有 physical radius 或額外 Contact bonus。
+
+Response 用自己的 ellipse 得到 signed ex／ey 與 q=ex²+ey²；q<=1 的邊界契約不變。同 normalized q 得到同 spatial transfer，而同公尺誤差在較大 ellipse 內有較小 q。
+
+第一版公式（皆為 development candidates，待 Michael playtest，不是實測棒球常數）：
+
+- u=clamp(q,0,1)，SpatialTransfer=1−0.65×u²(3−2u)，中心1、邊緣.35。
+- TemporalTransfer=既有 normalized timing_efficiency；EnergyTransfer=TemporalTransfer×SpatialTransfer，並非物理動能百分比。
+- IdealExitSpeed=lerp(20,55,Power/120) m/s；ActualExitSpeed=Ideal×(.20+.80×sqrt(clamp(EnergyTransfer,0,1)))。
+- Trajectory1／2／3／4 的 baseline 為8／14／20／26度。LaunchAngle=clamp(baseline+24×ey,−15,+50)；球在游標上半部 ey>0 則較高，下半部 ey<0 則較低。Power 不改角度，Trajectory 不改速度。
+- SprayAngle=clamp(−timing_offset_ms/65,−1,+1)×35度。負 offset（早）為正 pull，晚為負 opposite；ex 本輪只參與 q，不負責方向或 spin。
+
+Frequently tuned constants 全在 `[ball_response]`，由 `BallResponseTuning` 保存，沒有 generic curve framework。Startup 對已提供欄位檢查數值型別／finite／range／unknown keys：speed1..100且min<=max、transfer與minimum factor0..1、vertical bias0..90、spray0..80、full-offset1..500 ms；trajectory array 必須恰四個−15..50的有限數值。省略欄位沿用既有 staging default 規則，無 silent clamp；完整 authored section 列出本次所有候選值。
+
+World basis 取自既有球場：本壘往中外野為+Z，兩條 foul-line ray 為(±X,+Z)，目前固定左打的 pull 為+X（往一壘／右外野），opposite 為−X。Velocity=(v cos(launch) sin(spray), v sin(launch), v cos(launch) cos(spray))。不是 camera-space 左右，也沒有新增 handedness profile。
+
+### Flight 與生命週期
+
+BattedBallFlight 保存 launch position／velocity、effective start time 與 descending ground-crossing time。沿用 Native analytic constant-gravity sampling，直接依 preview 240 Hz world time 求值，不累加 render delta。Ground center height=.037 m；第一次下降到此高度後固定位置、velocity=0，不反彈。球出球後替代 incoming 的 gameplay／presentation ownership；原 PitchDelivery 留作投手播放與 raw 診斷。Arrival Cue 在 launch 後隱藏，既有 BallAid 隨 outgoing ball 到落地，camera／場景／card／upload lifetime 不變。
+
+Dispatch 當下關閉新 swing intent，既有 active swing 仍完整收尾，投手不重置；preview 等投手、打者與 flight ground-stop 都完成才 Complete。Early miss → hard rearm → 第二次 Gameplay Contact 仍成立，之後不能再排第三次。沒有新增 innings、terminal-hit hierarchy 或可變 flight clock。
+
+### Deterministic fixtures 與人工觀察
+
+固定 pitch passage 仍為[1.983233717173,2.002433563945] s。B Compact，aim=P、Michael Power85 ideal=44.791667 m/s：
+
+| Commit | Timing efficiency | Offset ms | RawOverlap | Effective s | Speed m/s | Launch ° | Spray ° |
+|---:|---:|---:|---|---:|---:|---:|---:|
+| 80 | 0 | −1534.500117 | NoContact | 無，早揮空 | — | — | — |
+| 433 | .014754884 | −63.666784 | NoContact | 1.983233717 | 13.310997 | 20 | +34.282112 |
+| 448 | .974447238 | −1.166784 | Contact | 1.991666667 | 44.330883 | 20 | +.628268 |
+| 456 | .301464925 | +32.166550 | NoContact | 2.002433564 | 28.632917 | 20 | −17.320450 |
+| 460 | .023203844 | +48.833216 | NoContact | 2.002433564 | 14.416755 | 20 | −26.294809 |
+| 480 | 0 | +132.166550 | NoContact | 無，晚揮空 | — | — | — |
+
+433／448／456／460 全部 Gameplay Contact。**456 的 Authorized＋RawNoContact 確實產生 flight**；448 將 ex 改成1.01後仍 Raw Contact，但 Gameplay Miss、不出球。448 raw event 仍為1.991356470102 s、u=0，normal／relative velocity 與原 regression 保持；effective gameplay time 刻意不同。
+
+448、ex=0、ey=+.8／0／−.8 的 launch 為39.2／20／.8度；兩個偏心例速度同為35.001453 m/s，中央44.330883。更靠下緣 ey=−1 的公式為−4度（此值是公式推導，不是實機量測）。Peak flight ground time=5.13218297545 s；30／60／120 Hz與backlog每個實際到達 tick 的球位置逐值相同，ground hold／completion 也相同。新測試另覆蓋 scaled visual diagnostic、tiny efficiency無門檻、Power／Trajectory獨立、ex不轉向、pause／single-step／reset與兩揮 lifecycle。
+
+實際 Release app 由 Computer Use 操作及擷取，**不是離線 render 或 tick reconstruction，也沒有宣稱影片／wall-time latency 證明**。本機 ignored `build/ball-response-s0/`：
+
+- `raw-no-contact-launch.png`＋同名JSON：實際commit436，Gameplay Contact＋RawOverlap NoContact，speed21.835 m/s、launch20°、spray+27.551°，球已離開來球軌道。
+- `near-center-launch.png`＋JSON：實際commit452、raw Contact，speed40.141 m/s、spray−8.346°；不是exact448，不能把OS按鍵當精確fixture。
+- `ground-hold.png`＋JSON：436出球已落地，Complete tick866，center.y=.037。
+- `no-overlap-miss.png`＋JSON：實際commit420，NoOverlapEarly／Gameplay Miss、無flight。
+
+自動短按方向鍵沒有可靠改變live aim，因此沒有宣稱已實機擷取upper／lower比較。人工玩法：R回中央、Space開球，約1.87 s按J看中央近peak；約1.80 s較早pull、1.90 s較晚opposite，以title實際consumed tick為準。上半部接球要把reticle中心移到約y=.671 m，下半部到y=.879 m（pitch P.y約.775，x約0）；使用方向鍵持續移動，title確認live aim。對應±.8 ey，移動應在J之前，commit後live reticle不影響本球。面板與出球方向可實機review，exact數值由Native test負責。
+
+固定鏡頭下飛球快速縮小／離開畫面；沒有追球或球場碰撞，長打可穿越既有外野牆視覺物件，落地球可能難以辨識。Gameplay launch也可能與mesh不重疊，正是本次權威分離的預期，不加snap修飾。這些可讀性與手感仍待Michael＋Julia review。
+
+未實作spin、drag、Magnus、seam、bounce、foul／fair、home run、wall collision、fielding、跑壘／計分、Contact Correction、Power mode、ex方向／spin、投手球速加成、Perfect／Good／Bad或generic系統。至此停止，不展開下一slice。
+
+### 本輪建置與驗證
+
+Agent自身execution確認cwd／main／clean baseline，fetch後HEAD與origin/main均為51440308177492314029a5277b4611f5c82f1b17；提交前再次fetch沒有後續accepted work。最終完整Debug／Release build均通過，完整CTest **Debug22/22（243.77 s，-j4）、Release22/22（35.25 s）**。本機`build/ball-response-s0/`保存`debug-final-build.log`、`debug-final-ctest.log`、`release-build.log`、`release-ctest.log`及從CTest輸出擷取的`numeric-fixtures.txt`。
+
+初次新測試compile遇到Windows `near` macro名稱衝突，已改名；首輪suite的唯一失敗是新backlog測試把目前live-input可用性誤當recorded replay command的條件，已改成檢查active attempt結束及原record_command契約，最終全suite通過。原始失敗log仍保留。舊panel raw結果預期改為gameplay結果，會出球的completion預期改為等待ground，舊profile「能力不影響任何gameplay」改為name-only invariance並由新response tests驗證能力效果；raw solver、motion fixtures與數值容差未放寬。實機Release smoke已完成並正常退出；未宣稱Debug GPU validation或human acceptance。

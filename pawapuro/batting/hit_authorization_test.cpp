@@ -49,7 +49,7 @@ int main(int argc,char** argv){try {
     }
     while(a.phase==PreviewPhase::Playing) {
         a.advance(4'166'667);b.advance(4'166'667);
-        require(a.tick==b.tick&&a.batter.pose.world==b.batter.pose.world&&a.batter.barrel_world==b.batter.barrel_world,"aim changed bat path");
+        require((a.tick==b.tick||(b.phase==PreviewPhase::Complete&&b.tick==b.completion_tick()))&&a.batter.pose.world==b.batter.pose.world&&a.batter.barrel_world==b.batter.barrel_world,"aim changed bat path");
         require(same(a.delivery.pitch.current.position_m,b.delivery.pitch.current.position_m)
             &&same(a.delivery.pitch.current.velocity_mps,b.delivery.pitch.current.velocity_mps),"aim changed ball path");
         require(a.geometry()==b.geometry()&&bool(a.contact())==bool(b.contact()),"aim changed geometry");

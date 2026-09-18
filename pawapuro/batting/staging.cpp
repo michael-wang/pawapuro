@@ -59,12 +59,15 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}, "");
-        for (const char* section : {"batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}) {
+        only_keys(table, {"ball_response", "batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}, "");
+        for (const char* section : {"ball_response", "batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
+                if (prefix == "ball_response.") only_keys(fields, {"ideal_exit_speed_min_mps", "ideal_exit_speed_max_mps",
+                    "spatial_edge_transfer", "minimum_exit_speed_factor", "trajectory_launch_degrees",
+                    "vertical_aim_bias_degrees", "max_spray_degrees", "full_spray_offset_ms"}, prefix);
                 if (prefix == "batter_profile.") only_keys(fields, {"display_name", "contact", "power", "trajectory"}, prefix);
                 if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks", "normal_finish_ticks"}, prefix);
                 if (prefix == "window.") only_keys(fields, {"width_fraction"}, prefix);
@@ -171,6 +174,21 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.batter_profile.contact=ability("batter_profile.contact",0,120);
         candidate.batter_profile.power=ability("batter_profile.power",0,120);
         candidate.batter_profile.trajectory=ability("batter_profile.trajectory",1,4);
+        auto& response=candidate.ball_response;
+        response.ideal_exit_speed_min_mps=number(table,"ball_response.ideal_exit_speed_min_mps",response.ideal_exit_speed_min_mps,1,100);
+        response.ideal_exit_speed_max_mps=number(table,"ball_response.ideal_exit_speed_max_mps",response.ideal_exit_speed_max_mps,1,100);
+        if(response.ideal_exit_speed_min_mps>response.ideal_exit_speed_max_mps)
+            throw std::runtime_error("ball_response requires min exit speed <= max exit speed.");
+        response.spatial_edge_transfer=number(table,"ball_response.spatial_edge_transfer",response.spatial_edge_transfer,0,1);
+        response.minimum_exit_speed_factor=number(table,"ball_response.minimum_exit_speed_factor",response.minimum_exit_speed_factor,0,1);
+        response.vertical_aim_bias_degrees=number(table,"ball_response.vertical_aim_bias_degrees",response.vertical_aim_bias_degrees,0,90);
+        response.max_spray_degrees=number(table,"ball_response.max_spray_degrees",response.max_spray_degrees,0,80);
+        response.full_spray_offset_ms=number(table,"ball_response.full_spray_offset_ms",response.full_spray_offset_ms,1,500);
+        if(const auto node=table.at_path("ball_response.trajectory_launch_degrees")) {
+            const auto* values=node.as_array();
+            if(!values||values->size()!=4)throw std::runtime_error("ball_response.trajectory_launch_degrees must contain exactly four numbers.");
+            for(std::size_t i=0;i<4;++i)response.trajectory_launch_degrees[i]=checked_number(*values->get(i),"ball_response.trajectory_launch_degrees",-15,50);
+        }
         std::fprintf(stderr, "Staging loaded: %s | owner: pawapuro/batting/staging.cpp | right_handed_pitcher_vs_left_handed_batter\n",
             source.c_str());
         std::fprintf(stderr, "Camera: [%g, %g, %g] -> [%g, %g, %g], vertical FOV %g degrees\n",

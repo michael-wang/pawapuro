@@ -20,7 +20,7 @@ int main(int argc,char**argv){try{
     until(p,432);require(p.committed()&&p.committed()->consumed_tick==432,"consume at recorded tick");
     p.toggle_pause();const auto paused_tick=p.tick;p.advance(1'000'000'000);require(p.tick==paused_tick,"pause advances");p.single_step();require(p.tick==paused_tick+1&&p.committed(),"step loses committed");
     p.lose_input();p.toggle_pause();p.input_boundary(true,true,true,b);require(p.committed()->aim_center.x==a.x,"committed snapshot changed");
-    while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816,"early finish truncated");
+    while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==p.completion_tick(),"early finish truncated");
     p.start();require(!p.pending&&!p.committed()&&!p.contact()&&!p.contact_count()&&p.geometry()==ManualGeometry::Pending,"reset leaks command/result");until(p,479);p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);until(p,480);require(p.committed()&&p.committed()->consumed_tick==480,"upper endpoint");
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816,"late finish truncated");
     p.start();until(p,496);p.input_boundary(false,false,true,a);require(p.geometry()==ManualGeometry::Pending,"tick496 finalized NoSwing");p.input_boundary(true,true,true,a);require(!p.pending,"post-exit input accepted");p.lose_input();
@@ -44,14 +44,14 @@ int main(int argc,char**argv){try{
         p.reset();p.start();require(p.record_command(457,a),"recorded replay command");
         std::uint64_t elapsed=0;unsigned frame=0;
         while(p.phase==PreviewPhase::Playing){++frame;const auto next=static_cast<std::uint64_t>(frame)*1'000'000'000/hz;p.advance(next-elapsed);elapsed=next;}
-        require(p.tick==816&&p.committed()->consumed_tick==457,"cadence replay result");
+        require(p.tick==p.completion_tick()&&p.committed()->consumed_tick==457,"cadence replay result");
         if(hz==30){final=p.batter.barrel_world;replay_contact=p.contact();}
         else {require(final==p.batter.barrel_world,"cadence changes final pose");
             require(bool(replay_contact)==bool(p.contact()),"cadence changes contact presence");
             if(p.contact())require(p.contact()->sample.preview_time_s==replay_contact->sample.preview_time_s,"cadence changes contact time");}
     }
     p.reset();p.start();p.record_command(457,a);p.advance(3'000'000'000);while(p.pending_ticks)p.advance(0);
-    while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816&&p.batter.barrel_world==final,"backlog replay result");
+    while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==p.completion_tick()&&p.batter.barrel_world==final,"backlog replay result");
     // Independent saved .blend semantic samples, including fractional entry/support times.
     engine::GlbPose scratch;
     std::ifstream fixtures(d/"batter/ingame_s0/motion_expected.txt");require(bool(fixtures),"missing saved-source fixtures");

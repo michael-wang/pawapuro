@@ -2,6 +2,7 @@
 #include <DirectXMath.h>
 #include "batter_profile.hpp"
 #include <filesystem>
+#include <array>
 
 namespace pawapuro {
 // Longitudinal field reference in metres; mound height is presentation Data.
@@ -14,7 +15,14 @@ struct HitAuthorizationTuning { float normal_radius_x_m=0.26f, normal_radius_y_m
 struct PlayerAimTuning { float cursor_speed_mps=0.65f; };
 struct BattingInteractionTuning { float half_depth_m=0.40f; };
 struct SwingPhasePotentialTuning { float normal_start_ms=75,normal_peak_ms=125,normal_end_ms=190; };
+struct BallResponseTuning {
+    float ideal_exit_speed_min_mps=20,ideal_exit_speed_max_mps=55;
+    float spatial_edge_transfer=.35f,minimum_exit_speed_factor=.20f;
+    std::array<float,4> trajectory_launch_degrees{8,14,20,26};
+    float vertical_aim_bias_degrees=24,max_spray_degrees=35,full_spray_offset_ms=65;
+};
 struct BattingStaging {
+    BallResponseTuning ball_response;
     BatterProfile batter_profile;
     double window_width_fraction=0.75;
     double compact_area_ticks=30;
@@ -23,7 +31,7 @@ struct BattingStaging {
     HitAuthorizationTuning hit_authorization;
     BattingInteractionTuning batting_interaction;
     SwingPhasePotentialTuning swing_phase_potential;
-    BatContactEnvelope bat_contact; // Gameplay candidate; independent of visual geometry.
+    BatContactEnvelope bat_contact; // Raw physical diagnostic; independent of authorization/render size.
     DirectX::XMFLOAT3 camera_position_m{-0.75f, 1.25f, -5.0f};
     DirectX::XMFLOAT3 camera_target_m{-0.75f, 1.30f, 16.8f};
     float vertical_fov_degrees = 36;

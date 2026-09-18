@@ -99,7 +99,7 @@ int main(int argc,char** argv){try {
             p.reset();p.start();p.record_command(c,{.1f,.8f});
             if(!hz){p.advance(3'000'000'000);while(p.pending_ticks)p.advance(0);}
             while(p.phase==PreviewPhase::Playing)p.advance(hz?1'000'000'000/hz:16'666'667);
-            require(p.tick==std::max(p.delivery.motion.end_tick,p.attempt_tempo.end_tick(c)),"B finish truncated");
+            require(p.tick==p.completion_tick(),"B finish truncated");
             if(hz==30){final=p.batter.barrel_world;event=p.contact();dispatch=p.contact_dispatch_tick();}
             else {require(final==p.batter.barrel_world&&bool(event)==bool(p.contact())&&dispatch==p.contact_dispatch_tick(),"replay changed result");
                 if(event)require(event->sample.preview_time_s==p.contact()->sample.preview_time_s&&event->relative_velocity.x==p.contact()->relative_velocity.x,"replay changed contact");}

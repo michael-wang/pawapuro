@@ -2,7 +2,7 @@
 #include <string>
 #include <stdexcept>
 namespace pawapuro {
-// Startup Data for the one active development batter; no gameplay consumers yet.
+// Startup Data for the one active development batter; Contact/Power/Trajectory feed the concrete batting rules.
 struct BatterProfile {
     std::string display_name;
     int contact=0,power=0,trajectory=1;
