@@ -122,7 +122,7 @@ int main(int argc,char** argv){try{
  p.reset();p.start();p.record_command(448,{center.x+region.normal_radius_x_m*1.01f,center.y});until(481);
  require(p.contact()&&!p.flight&&!p.start()&&p.tick==481,"raw overlap authorized restart");
  std::cout<<"PASS result hold, pre-contact rejection, airborne/follow-through/ground/Complete restart and clean tick-zero lifecycle\n";
- // The same presentation append used by main borrows the latest contacted attempt, never live intent.
+ // The same presentation append used by main always renders live next-pitch intent.
  PlayerAim live(s);std::vector<engine::Vertex> review;review.reserve(contact_review_vertex_count);
  static_assert(contact_review_vertex_count==PlayerAim::vertex_count);
  const auto cue_prediction=predict_arrival(p.delivery.pitch);
@@ -143,10 +143,10 @@ int main(int argc,char** argv){try{
   require(p.delivery.pitch.phase==phase,"presentation changed pitch phase");
  };
  const auto* storage=review.data();const auto capacity=review.capacity();
- const auto render_review=[&]{review.clear();append_contact_review(review,live,p);
+ const auto render_review=[&]{review.clear();append_contact_review(review,live);
   require(review.size()==contact_review_vertex_count&&review.data()==storage&&review.capacity()==capacity,"review count/allocation changed");check_cue();};
  const auto check_live=[&]{render_review();std::vector<engine::Vertex> expected;live.append_triangles(expected);
-  require(review.size()==expected.size()&&std::memcmp(review.data(),expected.data(),expected.size()*sizeof(engine::Vertex))==0,"non-contact did not show live reticle");};
+  require(review.size()==expected.size()&&std::memcmp(review.data(),expected.data(),expected.size()*sizeof(engine::Vertex))==0,"reticle did not follow live aim");};
  check_live(); // Spatial miss, despite raw Contact.
  p.reset();check_live();p.start();check_live();until(384);check_live();
  require(contact_review_arrival_visible(p),"normal release cue hidden");
@@ -155,42 +155,50 @@ int main(int argc,char** argv){try{
  const DirectX::XMFLOAT2 review_aim{center.x-.13f,center.y-.065f};
  p.record_command(448,review_aim);until(477);require(p.latest()->response&&!p.flight,"planned review fixture");check_live();
  until(478);require(p.attempts.size()==2&&p.gameplay_result()==GameplayResult::Contact,"second contact fixture");render_review();
- const auto frozen=review;std::vector<engine::Vertex> committed_geometry;live.append_triangles_at(committed_geometry,p.latest()->command.aim_center);
- require(std::memcmp(frozen.data(),committed_geometry.data(),committed_geometry.size()*sizeof(engine::Vertex))==0,"review did not use committed aim");
+ std::vector<engine::Vertex> committed_geometry;live.append_triangles_at(committed_geometry,p.latest()->command.aim_center);
+ check_live();
+ require(std::memcmp(review.data(),committed_geometry.data(),review.size()*sizeof(engine::Vertex))!=0,"contact substituted historical aim for live reticle");
  const auto point=p.latest()->authorization.pitch_point;
  require(point.x==cue_prediction.state.position_m.x&&point.y==cue_prediction.state.position_m.y,"fixed-pitch cue prediction differs from authorization");
  const auto projected=project_batting_point(s,{point.x,point.y,s.strike_zone_plane_z()},16.f/9);
  require(scene.prediction_ndc.x==projected.x&&scene.prediction_ndc.y==projected.y,"scene cue not at authorization point");
- require(frozen.size()==committed_geometry.size(),"extra contact marker geometry");
+ require(review.size()==committed_geometry.size(),"extra contact marker geometry");
  require(close_enough(p.latest()->authorization.q,.5)&&p.latest()->command.aim_center.x==review_aim.x&&p.latest()->command.aim_center.y==review_aim.y,"second attempt intent fixture");
  std::vector<unsigned char> immutable(sizeof(SwingAttempt));std::memcpy(immutable.data(),p.latest(),immutable.size());
- const auto check_frozen=[&]{render_review();require(std::memcmp(review.data(),frozen.data(),frozen.size()*sizeof(engine::Vertex))==0,"live cursor/time moved review");
+ const auto control_flight=*p.flight;
+ const auto check_history=[&]{check_live();
   require(contact_review_arrival_visible(p),"dispatched contact lost cue");
-  require(std::memcmp(immutable.data(),p.latest(),immutable.size())==0,"presentation mutated committed truth");};
- for(unsigned n=0;n<1000;++n){live.move(n%2?1.f:-1.f,1,.05);check_frozen();}
- p.toggle_pause();p.advance(5'000'000'000);check_frozen();p.single_step();check_frozen();p.toggle_pause();
- while(p.phase==PreviewPhase::Playing){p.advance(16'666'667);check_frozen();}
+  require(std::memcmp(immutable.data(),p.latest(),immutable.size())==0,"live aim mutated committed truth");
+  for(double time:{double(p.tick)/240,2.2,3.,4.,control_flight.ground_s,control_flight.ground_s+10}) {
+   const auto expected=control_flight.sample(time),observed=p.flight->sample(time);
+   require(same(expected.position_m,observed.position_m)&&same(expected.velocity_mps,observed.velocity_mps),"live aim changed outgoing flight");
+  }
+  require(same(p.displayed_ball_center(),control_flight.sample(double(p.tick)/240).position_m),"displayed flight changed with aim");
+ };
+ for(unsigned n=0;n<1000;++n){live.move(n%2?1.f:-1.f,1,.05);check_history();}
+ require(!p.record_command(479,live.center()),"post-contact movement reopened third swing");
+ live.recenter();require(live.center().x==0&&live.center().y==(s.strike_zone_bottom_m+s.strike_zone_top_m)/2,"post-contact R changed");check_history();
+ p.toggle_pause();p.advance(5'000'000'000);live.move(1,0,.05);check_history();p.single_step();check_history();p.toggle_pause();
+ while(p.phase==PreviewPhase::Playing){live.move(p.tick%2?1.f:-1.f,-1,.01);p.advance(16'666'667);check_history();}
  require(p.flight->complete(double(p.tick)/240),"review ground hold fixture");
  const auto actual=p.delivery.pitch.arrival_at_plane();
  require(actual.tick==cue_prediction.tick&&actual.time_s==cue_prediction.time_s&&same(actual.state.position_m,cue_prediction.state.position_m)&&same(actual.state.velocity_mps,cue_prediction.state.velocity_mps),"fixed-pitch actual arrival differs from prediction");
- for(unsigned n=0;n<10;++n){p.advance(60'000'000'000);check_frozen();}
- // Geometry evidence from the actual append, drawn in plane coordinates (not an app screenshot).
- std::filesystem::create_directories(temp);
- {std::ofstream svg(temp/"contact-review-off-center.svg");svg<<"<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'><rect width='640' height='360' fill='#40545d'/>";
-  for(std::size_t i=0;i<frozen.size();i+=3){const auto color=frozen[i].color;
-   svg<<"<polygon fill='rgb("<<int(color.x*255)<<','<<int(color.y*255)<<','<<int(color.z*255)<<")' points='";
-   for(unsigned j=0;j<3;++j)svg<<320+(frozen[i+j].position.x-review_aim.x)*900<<','<<190-(frozen[i+j].position.y-review_aim.y)*900<<' ';
-   svg<<"'/>";
-  }svg<<"<text x='16' y='28' fill='white' font-size='16'>Native geometry fixture (not app capture): attempt 2, ex=ey=0.5</text></svg>";
- }
+ for(unsigned n=0;n<10;++n){live.move(1,1,.02);p.advance(60'000'000'000);check_history();}
+ const auto adjusted=live.center();
  require(p.start(),"review Space restart");check_live();
+ require(live.center().x==adjusted.x&&live.center().y==adjusted.y,"Space reset adjusted live aim");
  require(!p.latest()&&!p.flight&&!contact_review_arrival_visible(p),"old review retained after Space");
+ p.input_boundary(false,false,true,live.center());until(447);p.input_boundary(true,true,true,live.center());until(448);
+ require(p.attempts.size()==1&&p.latest()->command.aim_center.x==adjusted.x&&p.latest()->command.aim_center.y==adjusted.y,"next input did not snapshot adjusted aim");
+ finish(p);p.start();
  // First-ground hold can precede overall completion; both selected cue styles still persist.
  p.record_command(433,center);until(735);
  require(p.phase==PreviewPhase::Playing&&p.flight&&p.flight->complete(double(p.tick)/240)&&contact_review_arrival_visible(p),"ground-before-completion cue fixture");check_cue();
- p.start();check_live();p.record_command(80,center);finish(p);
+ live.move(-1,-1,.05);live.recenter();const auto recentered=live.center();p.start();check_live();
+ require(live.center().x==recentered.x&&live.center().y==recentered.y,"Space undid post-contact R");
+ p.record_command(80,live.center());finish(p);
  require(p.gameplay_result()==GameplayResult::Miss&&!contact_review_arrival_visible(p),"miss persisted cue");check_live();
- std::cout<<"PASS review: immutable second attempt; exact cue prediction/authorization/actual arrival; both cue styles through flight/follow-through/ground/Complete; reset/miss/take; fixed 210 reticle + 636 cue vertices and stable allocation\n";
+ std::cout<<"PASS live aim: immutable second attempt and flight control; Space preserves adjusted/R aim; next command snapshots it; exact cue prediction/authorization/actual arrival; both cue styles through flight/follow-through/ground/Complete; reset/miss/take; fixed 210 reticle + 636 cue vertices and stable allocation\n";
  // Finite, bounded startup response Data; no silent clamping or unknown keys.
  std::filesystem::create_directories(temp);const auto path=temp/"candidate.toml";
  const std::string profile_text="[batter_profile]\ndisplay_name='Michael'\ncontact=75\npower=85\ntrajectory=3\n";

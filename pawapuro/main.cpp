@@ -213,7 +213,7 @@ int main(int argc, char** argv)
             dynamic_characters.clear();
             dynamic_characters.insert(dynamic_characters.end(),motion.triangles.begin(),motion.triangles.end());
             dynamic_characters.insert(dynamic_characters.end(),batter.triangles.begin(),batter.triangles.end());
-            pawapuro::append_contact_review(dynamic_characters,aim,preview);
+            pawapuro::append_contact_review(dynamic_characters,aim);
             pawapuro::append_arrival_cue(dynamic_characters,scene,cue_visible,arrival_style);
             pawapuro::append_ball_readability(dynamic_characters,staging,ball,ball_phase,ball_readability,
                 static_cast<unsigned>(width),static_cast<unsigned>(height));

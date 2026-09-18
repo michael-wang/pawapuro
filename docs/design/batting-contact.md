@@ -466,3 +466,21 @@ Release 實機：448 Contact 在 paused tick511 同時看得到飛出的球與�
 本輪不加入 timing diagram、panel cleanup／resize、step-control 或 Ball Response tuning；停止等待 Michael＋Julia human review。
 
 驗證：fetch／pull --ff-only 確認 HEAD／origin/main 均為 361433c6858c51605a40124da9ab6a250718983a，沒有後續 accepted commits。完整 Debug／Release build 通過；完整 CTest **Debug 22/22（249.25 s）、Release 22/22（17.14 s）**，未放寬容差。Build／CTest logs 在同一 build/arrival-review-s1/ 目錄。實機 Ready／Playing／Contact／Complete／reset 的固定 dynamic-count assertion 均未失敗，app 正常退出；沒有本輪 Debug GPU validation 宣稱。
+
+## Post-contact Live Aim S1（2026-09-19）
+
+Arrival Cue persistence 已由 Michael human accepted；frozen committed-reticle presentation 則被 human review 否決。本輪 reticle 全程使用 app-owned PlayerAim::center()，包括 Contact、outgoing flight、pause、ground hold 與 Complete。既有 Filled Baseball／Ring 仍固定在前一球 evaluation-plane point，作為 spatial review reference；沒有 ghost 或第二個 reticle。
+
+玩家可在結果仍顯示時用方向鍵準備下一球 aim，R 沿用原有 recenter。Space 只 reset/start ManualSwingPreview，不重設 PlayerAim；下一個 SwingCommand 依原 scheduling contract snapshot 當時新調整的 live aim。前一 SwingAttempt 的 committed aim、authorization、timing、BallResponse、GameplayResult 與 raw diagnostics 仍是 immutable historical truth，live reticle 可以刻意與它不同。Title 繼續顯示 current live aim，既有 committed logs 不改。
+
+Production 只讓 append_contact_review 委派 live PlayerAim append，移除不再需要的 preview 參數；arrival visibility policy、input owner、Space／R 實作、gameplay authorization、Ball Response／flight formulas 與 Data 均未改。固定 reticle 210／cue 636 vertices、reserve／draw contract 與 D3D12View 不變，沒有新 per-frame allocation。
+
+Native regression 使用80早揮→448第二次Contact、A=P−(.13,.065)，確認Contact reticle取live B而非歷史A；1000次movement及paused／flight／Complete movement後，整個SwingAttempt representation逐byte不變。Outgoing flight以dispatch時的control flight比較多個固定world times及當前displayed ball，position／velocity精確一致；接觸仍禁止第三次intent。Space保留adjusted B，下一球經input_boundary真正消耗的command精確snapshot B；另驗證Contact後R與Space carry-over。原prediction／authorization／actual arrival equality、兩種cue style、Miss／NoSwing、ground-before-overall-Complete及reset regressions保留。移除已失去用途的frozen-reticle SVG測試輸出，不把離線geometry當實機證據。
+
+沒有timing diagram、panel cleanup／resize、step-control或Ball Response tuning。
+
+本輪 agent execution 核對 clean main／origin/main 均為 2fdd7dd3ef5dbd938a5eddeb39417e8038761403，pull --ff-only 無後續 commits。完整 Debug／Release build 通過；完整 CTest Debug **22/22（252.36 s）**、Release **22/22（16.84 s）**，未放寬容差。Logs 保存在 ignored build/live-aim-s1/。
+
+Release 實機已完成協作 smoke：computer-use 的12次Right短按未改變SDL held-key aim，改由Michael真正長按並回覆「已移動」，agent重新擷取app確認。448 Contact空中paused tick511，live aim由(0,.7750)改為(.1735,.7750)，reticle向右、原baseball不動，ball position及response title不變；恢復至tick603後飛球繼續。Space後新球paused tick11仍保留(.1735,.7750)，swings=0、No launch、cue Hidden；下一次未再移aim，實際consumed commit444再次Contact。其後在非paused flight中按R，aim回中央，tick507→615球繼續飛行，speed36.399／launch20／spray9.603保持原值。這是人工長按＋agent操作的實際Release app evidence，不宣稱自動長按成功；精確flight等值與command snapshot由Native regression證明，截圖不代替逐tick精度測試。
+
+證據皆在本機ignored build/live-aim-s1/：before-movement.png、after-movement.png、flight-continued.png、next-pitch-aim.png、next-command-contact.png、recenter-during-flight.png及同名title JSON。App正常退出；production code未於前述完整build／CTest之後更改。本輪完成提交後停止等待Michael＋Julia review。
