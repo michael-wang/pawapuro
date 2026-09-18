@@ -41,6 +41,12 @@ int main(int argc,char**argv){try {
         p.toggle_pause();drawn.clear();panel.append(drawn,p);check_annotation(5,6);
         p.toggle_pause();drawn.clear();panel.append(drawn,p);check_annotation(5,13);
         require(contact_panel_highlight(contact_panel_state(p))==2,"rearm lost latest gameplay result");
+        p.reset();p.start();p.record_command(448,{0,.775f});while(!p.flight)p.advance(4'166'667);
+        require(contact_panel_state(p)==ContactPanelState::Contact,"contact hint variant");
+        p.toggle_pause();require(contact_panel_state(p)==ContactPanelState::Contact,"paused contact hint");
+        p.toggle_pause();while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);
+        drawn.clear();panel.append(drawn,p);check_annotation(1,p.next_tempo==SwingTempo::Original?2:3);
+        require(p.start(),"panel contact restart");drawn.clear();panel.append(drawn,p);check_annotation(1,6);
         p.reset();
         for(unsigned index=0;index<6;++index) {
             const auto state=static_cast<ContactPanelState>(index);const auto& mesh=panel.variants[index];

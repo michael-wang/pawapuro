@@ -200,7 +200,7 @@ int main(int argc, char** argv)
             char title[2048];
             const auto ball=preview.displayed_ball_center();
             std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Gameplay:%s RawOverlap:%s | %s | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
-                "ball=(%.6f,%.6f,%.6f)  | backlog=%llu | Space:play/replay J:swing P:pause .:step Esc:quit Arrows:aim R:center",
+                "ball=(%.6f,%.6f,%.6f)  | backlog=%llu | Space:start/next-after-contact J:swing P:pause .:step Esc:quit Arrows:aim R:center",
                 ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
                 cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed()?preview.committed()->consumed_tick:0,preview.attempts.size(),preview.active_attempt?*preview.active_attempt+1:0,preview.rearmed()?"YES":"NO",preview.gameplay_state(),preview.contact_state(),response,temporal,
                 ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,preview.flight?"BattedFlight":delivery.owner_name(),delivery.pitch.tick,

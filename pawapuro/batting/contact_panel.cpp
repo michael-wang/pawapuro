@@ -30,7 +30,7 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     const wchar_t* texts[]={L"本球／最近出棒結果",L"按 Space 開始",L"等待出棒",L"揮棒中",
         contact_panel_labels[0],contact_panel_labels[1],contact_panel_labels[2],
         L"時間重疊＋瞄準授權",L"共同決定擊球是否成立。",
-        L"出球後僅受重力影響。",L"物理重疊僅供開發診斷。",L"A 原節奏",L"B 快出棒",L"下一球：A 原節奏",L"下一球：B 快出棒",
+        L"Space：下一球",L"物理重疊僅供開發診斷。",L"A 原節奏",L"B 快出棒",L"下一球：A 原節奏",L"下一球：B 快出棒",
         L"T：下一球前切換",L"揮棒時機：等待",
         L"瞄準授權：等待",L"瞄準授權：通過",L"瞄準授權：超出範圍",
         L"揮棒時機：無重疊（早）",L"揮棒時機：有重疊",L"揮棒時機：無重疊（晚）",L"可再次出棒",L"揮棒中",L"出棒機會已結束",L"出棒已排程",L"等待第一次出棒"};

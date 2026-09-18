@@ -82,7 +82,11 @@ void ManualSwingPreview::reset() {
     attempts.clear();active_attempt.reset();flight.reset();preparing=true;
     pending.reset();paused=false;armed=false;input_result="Waiting";phase=PreviewPhase::Ready;
 }
-bool ManualSwingPreview::start(){if(phase==PreviewPhase::Playing)return false;reset();attempt_tempo={next_tempo,tuning.compact_area_ticks,tuning.normal_finish_ticks};delivery.start();phase=PreviewPhase::Playing;return true;}
+bool ManualSwingPreview::start(){
+    if(phase==PreviewPhase::Playing&&!can_restart_after_contact())return false;
+    reset();attempt_tempo={next_tempo,tuning.compact_area_ticks,tuning.normal_finish_ticks};
+    delivery.start();phase=PreviewPhase::Playing;return true;
+}
 bool ManualSwingPreview::toggle_tempo(){
     if(phase==PreviewPhase::Playing)return false;
     next_tempo=next_tempo==SwingTempo::Original?SwingTempo::Compact:SwingTempo::Original;return true;

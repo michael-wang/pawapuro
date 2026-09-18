@@ -52,6 +52,8 @@ struct ManualSwingPreview {
     std::optional<std::size_t> active_attempt;
     const BattingInteractionPassage ball_passage;
     std::optional<BattedBallFlight> flight;
+    // Flight exists only after Gameplay Contact dispatch, never for a planned response.
+    bool can_restart_after_contact() const { return flight.has_value(); }
     GameplayResult gameplay_result() const { return latest()?latest()->gameplay:phase==PreviewPhase::Complete?GameplayResult::NoSwing:GameplayResult::Pending; }
     const char* gameplay_state() const;
     std::uint64_t completion_tick() const {

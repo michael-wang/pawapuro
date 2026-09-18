@@ -1,6 +1,7 @@
 #include "manual_swing.hpp"
 #include "player_aim.hpp"
 #include <fstream>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -80,6 +81,46 @@ int main(int argc,char** argv){try{
   }
   require(p.tick==final_tick&&same(p.displayed_ball_center(),ground)&&p.attempts.size()==2&&p.latest()->response->exit_speed_mps==peak.exit_speed_mps,"cadence changed launch/ground/completion");
  }
+ // Result review has no timer: all completed attempt bytes and final poses remain owned until Space/start.
+ const auto held_tick=p.tick,held_count=p.attempts.size();const auto held_batter=p.batter.pose.world,held_pitcher=p.delivery.motion.pose.world;
+ const auto held_ball=p.displayed_ball_center();const auto held_flight=*p.flight;
+ std::vector<unsigned char> held_attempts(sizeof(SwingAttempt)*held_count);
+ std::memcpy(held_attempts.data(),p.attempts.data(),held_attempts.size());
+ for(unsigned n=0;n<20;++n){p.advance(60'000'000'000);p.single_step();p.input_boundary(true,true,true,{.4f,1.f});
+  require(p.phase==PreviewPhase::Complete&&p.tick==held_tick&&p.attempts.size()==held_count&&p.gameplay_result()==GameplayResult::Contact,"result hold advanced/reset");
+  require(p.batter.pose.world==held_batter&&p.delivery.motion.pose.world==held_pitcher&&same(p.displayed_ball_center(),held_ball),"final poses/ball changed");
+  require(std::memcmp(held_attempts.data(),p.attempts.data(),held_attempts.size())==0&&p.flight->start_s==held_flight.start_s&&p.flight->ground_s==held_flight.ground_s&&same(p.flight->initial.position_m,held_flight.initial.position_m)&&same(p.flight->initial.velocity_mps,held_flight.initial.velocity_mps),"review truth changed during hold");
+ }
+ ManualSwingPreview fresh(d,s);fresh.start();
+ const auto clean_restart=[&]{require(p.can_restart_after_contact()&&p.start(),"Space did not restart contacted pitch");
+  require(p.phase==PreviewPhase::Playing&&p.tick==0&&p.delivery.tick==0&&p.delivery.pitch.tick==0&&p.batter.tick==0&&!p.paused,"restart did not start at tick zero");
+  require(p.attempts.empty()&&!p.flight&&!p.pending&&!p.active_attempt&&!p.rearmed()&&!p.swing_available()&&p.pending_ticks==0&&p.arrival_tick==0&&p.gameplay_result()==GameplayResult::Pending&&!p.can_restart_after_contact(),"restart retained old result/input");
+  require(p.batter.pose.world==fresh.batter.pose.world&&p.delivery.motion.pose.world==fresh.delivery.motion.pose.world&&same(p.displayed_ball_center(),fresh.displayed_ball_center())&&same(p.delivery.pitch.current.position_m,fresh.delivery.pitch.current.position_m)&&same(p.delivery.pitch.current.velocity_mps,fresh.delivery.pitch.current.velocity_mps),"restart pose/pitch differs from fresh start");
+  p.advance(4'166'666);require(p.tick==0,"restart retained fractional debt");p.advance(1);require(p.tick==1,"fresh clock failed");
+ };
+ clean_restart(); // Complete after the accepted two-swing sequence.
+ const auto until=[&](std::uint64_t tick){while(p.tick<tick)p.advance(4'166'667);};
+ for(auto target:{478ull,600ull}){p.reset();p.start();p.record_command(448,center);until(target);
+  require(p.flight&&!p.flight->complete(double(p.tick)/240)&&p.active_attempt,"airborne/follow-through fixture");
+  const auto saved_aim=p.committed()->aim_center;const auto saved_response=*p.latest()->response;
+  p.input_boundary(false,false,true,{});p.input_boundary(true,true,true,{.4f,1.f});require(p.attempts.size()==1&&!p.pending&&!p.toggle_tempo(),"contact allowed new intent/tempo");
+  require(p.committed()->aim_center.x==saved_aim.x&&p.committed()->aim_center.y==saved_aim.y&&p.latest()->response->exit_speed_mps==saved_response.exit_speed_mps,"live input changed response snapshot");
+  if(target==478){p.toggle_pause();p.advance(1'000'000'000);require(p.tick==478,"post-contact pause failed");p.single_step();require(p.tick==479,"post-contact step failed");}
+  else p.advance(100'000'001); // Also reset nonzero backlog and fractional credit.
+  clean_restart();
+ }
+ p.reset();p.start();p.record_command(433,center);until(477);require(p.flight.has_value(),"433 contact fixture");
+ until(static_cast<std::uint64_t>(std::ceil(p.flight->ground_s*240)));
+ require(p.phase==PreviewPhase::Playing&&p.flight->complete(double(p.tick)/240)&&p.delivery.phase!=DeliveryPhase::Complete,"ground-before-pitcher-completion fixture");clean_restart();
+ p.reset();p.start();until(100);require(!p.start()&&p.tick==100,"ordinary Playing restarted");
+ p.record_command(448,center);until(477);require(p.latest()->response&&!p.flight&&!p.start()&&p.tick==477,"planned response enabled early restart");
+ p.toggle_pause();require(!p.start()&&p.paused&&p.tick==477,"pre-contact pause enabled restart");
+ p.reset();p.start();p.record_command(80,center);until(90);require(p.gameplay_result()==GameplayResult::Miss&&!p.start()&&p.tick==90,"miss enabled restart");
+ until(320);require(p.rearmed()&&!p.start()&&p.tick==320,"rearmed miss enabled restart");
+ p.record_command(448,center);until(478);require(p.attempts.size()==2&&p.flight&&!p.intent_live(479),"second contact did not close intent");clean_restart();
+ p.reset();p.start();p.record_command(448,{center.x+region.normal_radius_x_m*1.01f,center.y});until(481);
+ require(p.contact()&&!p.flight&&!p.start()&&p.tick==481,"raw overlap authorized restart");
+ std::cout<<"PASS result hold, pre-contact rejection, airborne/follow-through/ground/Complete restart and clean tick-zero lifecycle\n";
  // Finite, bounded startup response Data; no silent clamping or unknown keys.
  std::filesystem::create_directories(temp);const auto path=temp/"candidate.toml";
  const std::string profile_text="[batter_profile]\ndisplay_name='Michael'\ncontact=75\npower=85\ntrajectory=3\n";

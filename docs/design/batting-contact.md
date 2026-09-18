@@ -408,3 +408,23 @@ Dispatch 當下關閉新 swing intent，既有 active swing 仍完整收尾，�
 Agent自身execution確認cwd／main／clean baseline，fetch後HEAD與origin/main均為51440308177492314029a5277b4611f5c82f1b17；提交前再次fetch沒有後續accepted work。最終完整Debug／Release build均通過，完整CTest **Debug22/22（243.77 s，-j4）、Release22/22（35.25 s）**。本機`build/ball-response-s0/`保存`debug-final-build.log`、`debug-final-ctest.log`、`release-build.log`、`release-ctest.log`及從CTest輸出擷取的`numeric-fixtures.txt`。
 
 初次新測試compile遇到Windows `near` macro名稱衝突，已改名；首輪suite的唯一失敗是新backlog測試把目前live-input可用性誤當recorded replay command的條件，已改成檢查active attempt結束及原record_command契約，最終全suite通過。原始失敗log仍保留。舊panel raw結果預期改為gameplay結果，會出球的completion預期改為等待ground，舊profile「能力不影響任何gameplay」改為name-only invariance並由新response tests驗證能力效果；raw solver、motion fixtures與數值容差未放寬。實機Release smoke已完成並正常退出；未宣稱Debug GPU validation或human acceptance。
+
+## Gameplay Contact Result Hold／Space Reset S1（2026-09-19）
+
+Michael實機review認為Ball Response S0的整體Gameplay Contact → Response → Flight方向與飛行表現很有說服力。本輪只改接觸後的結果保留／玩家重開控制；所有Ball Response公式與Data完全不變，仍待後續human tuning。
+
+`ManualSwingPreview::can_restart_after_contact()`直接讀取既有flight是否存在；flight只在Gameplay Contact dispatch時建立，planned response或raw Contact不算。既有`start()`在Playing時僅為此條件開放，沿用同一份reset/start：preview／投手／球／打者回tick0，attempts、response、flight、active／pending／armed、backlog與fractional debt清空，下一球開始。Main的Space仍只呼叫Native owner，不複製reset邏輯；Ready及Complete照原契約start，接觸前Playing、Miss／rearmed miss與paused pre-contact仍拒絕重開。
+
+接觸dispatch後，Space可立即略過仍在空中的球、follow-through、ground hold或Complete；paused post-contact也可明確重開。若不按Space，投手／打者／flight依原完成條件自然播完，Complete永久hold。沒有三秒minimum、wall-clock timeout或auto-replay，也沒有新增result phase/state machine。Winning attempt的command／immutable aim、timing、authorization、response、raw診斷與flight持續保留至reset；raw診斷在原查詢期間仍可自然結案。J仍不能新增attempt，live aim不改快照，T不改當前attempt；原pause／single-step保留。
+
+Panel只在原固定文字列顯示startup-cached「Space：下一球」，沒有改寬度、layout或透明度；title同步註明start／next-after-contact。未加入review overlay、committed reticle rendering、timing diagram、step-control、panel cleanup或任何Ball Response tuning。
+
+測試沿用ball_response與panel targets：完整兩揮後20次各60秒advance仍逐位保留attempt representation與final poses／ball／flight；448 dispatch tick478、follow-through tick600、433落地tick735但投手尚未完成、自然Complete及paused contact都能清為fresh start。包含非零backlog／fractional debt清除、pre-contact tick100／planned response tick477／paused／early miss／rearm拒絕、80→448第二次Contact後重開，以及raw Contact＋RejectedSpatial不能授權重開。既有無Space的response／flight／physical regressions與容差不變。
+
+Release實機三情境均已操作：444擊球自然Complete於tick1178，額外等待五秒後title完全相同、場景保持；448空中tick511暫停取證後恢復播放，按Space立即開下一球，接著暫停擷取時已是tick11、swings=0、Gameplay/Raw=Pending、No launch、owner=Hand。這張圖不是tick0截圖，精確tick0與debt清除由Native測試驗證。新球pre-contact tick131恢復後按Space再暫停，為tick159而非重置，證明Playing的Space未變成cancel。App正常退出；這些是真實app截圖，非離線render／tick reconstruction。
+
+本機ignored `build/result-hold-s1/`保存`complete-initial.png`／`complete-held.png`、`airborne-before-space.png`／`space-restarted.png`、`pre-contact-space-ignored.png`與各同名title JSON；`pre-contact-before.json`保存對照tick131。結果自然hold的程式沒有時間上限；有限時長smoke不宣稱已觀察無限時間。停在Michael＋Julia review。
+
+最終提示改為替換Contact variant既有說明文字，保留原「下一球：A／B」列，實作只需一條cached string變更。重新啟動最終Release app，448自然完成tick1232，再等待五秒title不變；`final-complete.png`／`final-complete-held.png`與`final-complete-held.json`為最終UI證據，前述第一輪圖保留為transition操作紀錄。
+
+本輪fetch核對HEAD／origin/main均為a4ef9490356b327791909a6f231ea0136a616aaa，提交前無後續commit。完整Debug／Release build通過，完整CTest **Debug22/22（252.77 s）、Release22/22（17.16 s）**。Debug完整suite之後，僅將提示移回既有Contact說明列並保留下一球tempo列；最終再次完整Debug build、受影響contact_panel CTest **1/1（9.06 s）**通過。無失敗測試或放寬容差。Logs在同一evidence目錄：`debug-build.log`、`debug-ctest.log`、`debug-final-build.log`、`debug-final-panel.log`、`release-build.log`、`release-ctest.log`。
