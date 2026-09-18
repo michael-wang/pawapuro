@@ -231,3 +231,5 @@ Hit Authorization S1 已獲 human acceptance。Timing Interaction S1 已移除�
 Follow-through Compression S1 將post-potential尾段重排至約1秒完整完成，保留world＋190 ms前綴與Timing Interaction S1，仍一球一次；動作契約、技術檢查與review evidence見 [batter-motion](../design/batter-motion.md)。停在Michael＋Julia的1×human review，尚未授權multi-swing，M1未完成。
 
 Follow-through Compression S1 已由Michael接受為Normal baseline。Multi-Swing Intent S1加入同pitch的獨立SwingAttempts、完整finish後的live硬rearm與passage-exit新intent截止；不改motion／timing／spatial／physical tuning。Ownership、regression與human review evidence見 [batting-contact](../design/batting-contact.md)，hard reset手感待Michael＋Julia review，M1未完成，沒有進入recovery animation／correction／Contact Quality／Power／Ball Response。
+
+Multi-Swing Intent S1已由Michael human accepted。Batter Attributes／Batter Card S1建立單一Michael startup profile與左下角卡片；grade／trajectory契約、future intent、tests與實機evidence見 [Batting Feel](../design/batting-feel.md#batter-attributesbatter-card-s12026-09-19)。本輪不讓attributes影響gameplay，不加入roster／lineup，M1未完成；停止等待Michael＋Julia review。

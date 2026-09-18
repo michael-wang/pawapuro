@@ -59,12 +59,13 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}, "");
-        for (const char* section : {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}) {
+        only_keys(table, {"batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}, "");
+        for (const char* section : {"batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
+                if (prefix == "batter_profile.") only_keys(fields, {"display_name", "contact", "power", "trajectory"}, prefix);
                 if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks", "normal_finish_ticks"}, prefix);
                 if (prefix == "window.") only_keys(fields, {"width_fraction"}, prefix);
                 if (prefix == "player_aim.") only_keys(fields, {"cursor_speed_mps"}, prefix);
@@ -157,6 +158,19 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.mound_height_m = number(table, "mound.height_m", candidate.mound_height_m, 0.125f, 1.0f);
         candidate.mound_radius_m = number(table, "mound.radius_m", candidate.mound_radius_m, 2.2f, 3.5f);
         candidate.mound_top_radius_m = number(table, "mound.top_radius_m", candidate.mound_top_radius_m, 0.7f, 2.0f);
+        const auto name=table.at_path("batter_profile.display_name").value<std::string>();
+        if(!name||name->empty()||name->find_first_not_of(" \t\r\n")==std::string::npos)
+            throw std::runtime_error("batter_profile.display_name must be a present, non-empty string.");
+        candidate.batter_profile.display_name=*name;
+        const auto ability=[&](const char* key,int low,int high) {
+            const auto node=table.at_path(key);const auto value=node.value<std::int64_t>();
+            if(!node.is_integer()||!value||*value<low||*value>high)
+                throw std::runtime_error(std::string(key)+" must be a present integer in ["+std::to_string(low)+", "+std::to_string(high)+"].");
+            return static_cast<int>(*value);
+        };
+        candidate.batter_profile.contact=ability("batter_profile.contact",0,120);
+        candidate.batter_profile.power=ability("batter_profile.power",0,120);
+        candidate.batter_profile.trajectory=ability("batter_profile.trajectory",1,4);
         std::fprintf(stderr, "Staging loaded: %s | owner: pawapuro/batting/staging.cpp | right_handed_pitcher_vs_left_handed_batter\n",
             source.c_str());
         std::fprintf(stderr, "Camera: [%g, %g, %g] -> [%g, %g, %g], vertical FOV %g degrees\n",

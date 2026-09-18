@@ -92,3 +92,10 @@ half_depth_m = 0.40
 normal_start_ms = 75
 normal_peak_ms = 125
 normal_end_ms = 190
+
+# Development fixture only; attributes do not affect gameplay in S1.
+[batter_profile]
+display_name = "Michael"
+contact = 75
+power = 85
+trajectory = 3

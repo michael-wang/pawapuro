@@ -1,4 +1,5 @@
 #include "contact_panel.hpp"
+#include "startup_text.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -24,44 +25,6 @@ int contact_panel_highlight(ContactPanelState state) {
     default:return -1;
     }
 }
-namespace {
-struct TextMask {
-    struct Run {float x,y,w;};
-    std::vector<Run> runs;
-};
-TextMask raster(const wchar_t* text,int size) {
-    // GDI is only a startup rasterizer. No system font bytes or GDI objects reach the renderer.
-    struct RasterResources {
-        HDC dc=CreateCompatibleDC(nullptr); HFONT font=nullptr; HBITMAP bitmap=nullptr;
-        HGDIOBJ old_font=nullptr,old_bitmap=nullptr;
-        ~RasterResources(){if(dc){if(old_font)SelectObject(dc,old_font);if(old_bitmap)SelectObject(dc,old_bitmap);}
-            if(font)DeleteObject(font);if(bitmap)DeleteObject(bitmap);if(dc)DeleteDC(dc);}
-    } r;
-    if(!r.dc)throw std::runtime_error("Contact panel: CreateCompatibleDC failed");
-    r.font=CreateFontW(-size,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,CHINESEBIG5_CHARSET,
-        OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,NONANTIALIASED_QUALITY,DEFAULT_PITCH,L"Microsoft JhengHei");
-    if(!r.font)throw std::runtime_error("Contact panel: CreateFontW failed");
-    r.old_font=SelectObject(r.dc,r.font);
-    const int length=static_cast<int>(std::wcslen(text));SIZE extent{};
-    if(!GetTextExtentPoint32W(r.dc,text,length,&extent))throw std::runtime_error("Contact panel: text measurement failed");
-    const int w=extent.cx+4,h=extent.cy+4;
-    BITMAPINFO info{};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=w;
-    info.bmiHeader.biHeight=-h;info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
-    void* pixels=nullptr;r.bitmap=CreateDIBSection(r.dc,&info,DIB_RGB_COLORS,&pixels,nullptr,0);
-    if(!r.bitmap)throw std::runtime_error("Contact panel: CreateDIBSection failed");
-    r.old_bitmap=SelectObject(r.dc,r.bitmap);PatBlt(r.dc,0,0,w,h,BLACKNESS);
-    SetTextColor(r.dc,RGB(255,255,255));SetBkColor(r.dc,RGB(0,0,0));
-    if(!TextOutW(r.dc,0,0,text,length))throw std::runtime_error("Contact panel: TextOutW failed");
-    GdiFlush();const auto* data=static_cast<const unsigned*>(pixels);TextMask mask;
-    for(int y=0;y<h;++y)for(int x=0;x<w;) {
-        if(!(data[y*w+x]&0xffffff)){++x;continue;}
-        const int start=x;while(x<w&&(data[y*w+x]&0xffffff))++x;
-        mask.runs.push_back({float(start),float(y),float(x-start)});
-    }
-    if(mask.runs.empty())throw std::runtime_error("Contact panel: empty text raster");
-    return mask;
-}
-}
 ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     if(!width||!height)throw std::runtime_error("Contact panel needs client pixels");
     const float scale=float(height)/1080;
@@ -72,8 +35,8 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
         L"T：下一球前切換",L"揮棒時機：等待",
         L"瞄準授權：等待",L"瞄準授權：通過",L"瞄準授權：超出範圍",
         L"揮棒時機：無重疊（早）",L"揮棒時機：有重疊",L"揮棒時機：無重疊（晚）",L"可再次出棒",L"揮棒中",L"出棒機會已結束",L"出棒已排程",L"等待第一次出棒"};
-    std::array<TextMask,28> masks;
-    for(unsigned i=0;i<masks.size();++i)masks[i]=raster(texts[i],static_cast<int>(std::lround((i==0?30:i>=4&&i<=6?28:20)*scale)));
+    std::array<StartupTextMask,28> masks;
+    for(unsigned i=0;i<masks.size();++i)masks[i]=raster_startup_text(texts[i],static_cast<int>(std::lround((i==0?30:i>=4&&i<=6?28:20)*scale)));
     for(unsigned variant=0;variant<variants.size()+annotations.size();++variant) {
         auto& v=variant<7?variants[variant]:annotations[variant-7];const auto state=static_cast<ContactPanelState>(variant);
         const int selected=contact_panel_highlight(state);

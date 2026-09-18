@@ -26,7 +26,7 @@ int main(int argc, char** argv)
         const std::filesystem::path authored = argv[1], directory = argv[2];
         std::filesystem::create_directories(directory);
         const auto fixture = directory / "candidate.toml";
-        const auto write = [&](const char* text) { std::ofstream(fixture) << text; };
+        const auto write = [&](const char* text) { std::ofstream(fixture) << text << "\n[batter_profile]\ndisplay_name=\"Michael\"\ncontact=75\npower=85\ntrajectory=3\n"; };
         const pawapuro::BattingStaging defaults;
         // Tuning the authored preset must not require changing Native fallback values.
         (void)pawapuro::load_batting_staging(authored);

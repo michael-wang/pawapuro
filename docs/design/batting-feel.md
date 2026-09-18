@@ -352,3 +352,39 @@ Bat Contact S2 是read-only phase-offset geometry study：只在non-mutating sam
 ### Batting Presentation Cleanup S0（2026-09-18）
 
 目前試玩畫面移除 release 參考藍圈／直線及投手後方黃色量尺；上方相關度量說明保留為歷史。好球帶僅外框改紅色，位置、大小、厚度與繪製行為不變。Arrival Cue、BallAid、操作與 gameplay 語意維持原樣；待 Michael＋Julia 視覺 review。
+
+## Batter Attributes／Batter Card S1（2026-09-19）
+
+目前只有一名active development batter：**Michael**。`batter_profile.hpp`的具體`BatterProfile`只有`display_name`、`contact`、`power`、`trajectory`；startup值由`batting/staging.toml`的`[batter_profile]`擁有，載入後放在`BattingStaging` snapshot。正式fixture為Michael／75／85／3，僅供開發調整，不是在評價真實Michael的棒球能力。既有左打staging固定不變，不把handedness、隊伍、位置或roster資料加進profile。
+
+Contact／Power的authoritative值是 **0..120整數**。Grade只由共用`ability_grade`在presentation推導，不存入TOML：
+
+| Grade | Inclusive integer range |
+|---|---|
+| F | 0–49 |
+| E | 50–59 |
+| D | 60–69 |
+| C | 70–79 |
+| B | 80–89 |
+| A | 90–99 |
+| S | 100–120 |
+
+這些bands刻意讓C位於概念上的league平均附近：假設未來能力分布mean約75、standard deviation約10，C約平均，B／D明顯高／低於平均，A／E較少見，S／F為極端尾端。這只是design rationale；沒有Gaussian sampling、隨機球員或league population simulation。
+
+**彈道Trajectory是離散整數1／2／3／4，與Power獨立。** 未來責任方向：Contact主要控制authorization reticle尺寸／形狀與打擊控制容錯；spatial quality應依該打者自己authorization region內的normalized位置，而非原始公尺距離，避免高Contact打者因合法範圍較大而被隱性扣分。Power主要控制可用exit-speed／energy ceiling，不直接定義launch angle；Trajectory主要控制baseline launch-angle family。
+
+**S1完全不接上述gameplay效果。** Profile目前只有Data＋HUD consumer；既有.26／.13 m ellipse、timing、multi-swing、physical contact、球路全部保留。沒有Contact Correction、Contact Quality、Power swing mode或Ball Response，沒有roster／lineup／player-management／generic attribute framework。
+
+Startup嚴格要求profile四欄全部存在：name為非空字串（全ASCII空白亦拒絕），Contact／Power為0..120整數，Trajectory為1..4整數；unknown keys、錯誤型別、缺欄、越界皆報含source／key的錯誤，不clamp。其餘既有staging欄位仍沿用原fallback規則；舊partial-staging tests補上一份合法profile，原測試條件／容差未放寬。
+
+BatterCard是app-owned startup快取，借用profile建構後保存文字與NDC triangles，不持有profile reference。左下角在1080高的layout座標為x24–344、y852–1056，隨client height等比縮放；顯示name、CONTACT grade、POWER grade、彈道category，不把75／85當主要值。長name在卡片內水平縮合，沒有換行／scroll／動態layout系統；極長名稱可讀性不作本輪保證。
+
+兩個實際caller（既有result panel與新card）共用`startup_text`的GDI pixel-run raster helper，移出既有resource cleanup以避免重複；layout仍各自local。系統Microsoft JhengHei只在startup使用，沒有font檔入庫、每frame GDI或文字formatting。Main在startup把card vertex count加入既有CPU reserve／GPU dynamic容量與overlay範圍；append只複製cached triangles，renderer／upload／fence ownership沒有改動。Startup另記一次原整數與grade診斷，不逐frame輸出。
+
+### 驗證與review evidence
+
+完整Debug／Release build通過；完整CTest **Debug21/21（601.80 s）、Release21/21（49.55 s）**。實機初版發現比例字型空白使grade欄不齊，已改固定欄位；兩組態再次完整build，受影響`batter_profile`各1/1通過（Debug2.03 s、Release0.20 s）。其餘gameplay程式沒有變更，沒有重跑未受影響的長suite。
+
+新測試覆蓋所有grade邊界、required／invalid profile欄位、所有合法trajectory、450／1080／1620高的card bounds與1000次append的buffer pointer／capacity及cached geometry穩定性。把profile改成Other／0／120／1後，80→320 rearm→448兩揮序列逐tick ball／whole pose／barrel／lifecycle與reticle triangles相同，timing／authorization／contact event逐值一致；physical半徑仍37／33 mm。原multi-swing、protected-prefix及solver suite保留。
+
+最終Release實機已核對Ready與整球Complete，卡片沒有遮住batter、arrival ball、strike zone／reticle、top-left diagnostics或home plate；只有左下角少量場地背景被覆蓋。真實截圖與title JSON：ignored `build/batter-card-s1/card-ready.png`、`card-complete.png`，同目錄保存兩組態build／CTest／final-build／card-ctest logs與Debug完整details。先前桌面輸入中斷後由Michael交回操作才恢復擷取，未使用mock／離線render替代實機。App已正常退出；本輪沒有Debug GPU validation宣稱。Card外觀仍交Michael＋Julia human review。

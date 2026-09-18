@@ -5,6 +5,7 @@
 #include "batting/manual_swing.hpp"
 #include "batting/player_aim.hpp"
 #include "batting/contact_panel.hpp"
+#include "batting/batter_card.hpp"
 #include "startup_window.hpp"
 #include <chrono>
 #include <cstdio>
@@ -86,8 +87,13 @@ int main(int argc, char** argv)
         const float aspect = static_cast<float>(width) / static_cast<float>(height);
         const auto scene=pawapuro::make_batting_reference(staging,prediction.state.position_m,aspect,{});
         const pawapuro::ContactResultPanel result_panel(static_cast<unsigned>(width),static_cast<unsigned>(height));
+        const pawapuro::BatterCard batter_card(staging.batter_profile,static_cast<unsigned>(width),static_cast<unsigned>(height));
+        const auto& profile=staging.batter_profile;
+        std::fprintf(stderr,"BatterProfile name=%s contact=%d(%c) power=%d(%c) trajectory=%d\n",
+            profile.display_name.c_str(),profile.contact,pawapuro::ability_grade(profile.contact),
+            profile.power,pawapuro::ability_grade(profile.power),profile.trajectory);
         std::vector<engine::Vertex> dynamic_characters;
-        dynamic_characters.reserve(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count+pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count);
+        dynamic_characters.reserve(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count+pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count+batter_card.vertex_count());
         double assembly_us=0; std::uint64_t assembly_samples=0;
         std::fprintf(stderr,"S3 delivery: one 240 Hz clock; ball Hand -> Simulation at animation marker.\n");
         bool arrival_reported=false;
@@ -114,7 +120,7 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "Overlay bounds: left=%.6f top=%.6f right=%.6f bottom=%.6f; predicted pixel=[%.6f, %.6f]\n",
             zone_left_top.x, zone_left_top.y, zone_right_bottom.x, zone_right_bottom.y, predicted_screen.x, predicted_screen.y);
         engine::D3D12View view;
-        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count+pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count));
+        view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()+batter.triangles.size()+pawapuro::PlayerAim::vertex_count+pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count+batter_card.vertex_count()));
         auto last_time = SDL_GetTicksNS();
         auto last_input_time=SDL_GetTicksNS();
         std::string last_title;
@@ -206,10 +212,11 @@ int main(int argc, char** argv)
             pawapuro::append_ball_readability(dynamic_characters,staging,ball,delivery.pitch.phase,ball_readability,
                 static_cast<unsigned>(width),static_cast<unsigned>(height));
             result_panel.append(dynamic_characters,preview);
+            batter_card.append(dynamic_characters);
             assembly_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-assembly_start).count();
             ++assembly_samples;
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
-                preview.displayed_ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count,
+                preview.displayed_ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count+batter_card.vertex_count(),
                 arrival_style==pawapuro::ArrivalCueStyle::Baseball ? static_cast<UINT>(pawapuro::PlayerAim::vertex_count) : 0,
                 arrival_style==pawapuro::ArrivalCueStyle::Baseball ? pawapuro::arrival_cue_vertex_count : 0);
         }

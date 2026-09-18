@@ -1,5 +1,6 @@
 #pragma once
 #include <DirectXMath.h>
+#include "batter_profile.hpp"
 #include <filesystem>
 
 namespace pawapuro {
@@ -7,13 +8,14 @@ namespace pawapuro {
 inline constexpr float rubber_distance_m = 18.4404f;
 inline constexpr float mound_center_z_m = rubber_distance_m - 0.4572f;
 
-// Startup-only snapshot. Missing keys use these defaults; invalid files are rejected.
+// Startup-only snapshot. Profile fields are required; other missing keys use defaults.
 struct BatContactEnvelope { float ball_radius_m=0.037f,bat_radius_m=0.033f; };
 struct HitAuthorizationTuning { float normal_radius_x_m=0.26f, normal_radius_y_m=0.13f; };
 struct PlayerAimTuning { float cursor_speed_mps=0.65f; };
 struct BattingInteractionTuning { float half_depth_m=0.40f; };
 struct SwingPhasePotentialTuning { float normal_start_ms=75,normal_peak_ms=125,normal_end_ms=190; };
 struct BattingStaging {
+    BatterProfile batter_profile;
     double window_width_fraction=0.75;
     double compact_area_ticks=30;
     unsigned normal_finish_ticks=240;

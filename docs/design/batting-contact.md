@@ -332,3 +332,7 @@ Cached panel 增加「等待第一次出棒／揮棒中／可再次出棒／出�
 Agent自身PowerShell execution核對workspace／clean main，fetch後與提交前再次fetch的HEAD／origin/main皆為 `de58971957be0a502abb7e449662f19d131ef479`。VS2022 x64／CMake／Ninja完整Debug與Release build通過；完整CTest **Debug 20/20（524.62 s）、Release 20/20（34.81 s）**。最後僅修正Paused的cached lifecycle annotation，兩組態再次完整build，並各重跑受影響contact_panel **1/1通過**（Debug6.38 s、Release0.41 s）；沒有重跑未受影響的長物理suite或放寬容差。正常遷移期間曾修正舊upper-end assertion及文字腳本encoding／standalone mesh-dump編譯定義，並非runner／sandbox故障。
 
 Ignored `build/multi-swing-s1/` 保存兩組態build／CTest logs、final-build／panel-ctest logs、Debug完整details、Native dump／render／encode scripts、frame CSV、影片decode metadata與實機截圖。Diff另確認IngameMotion／SwingTempo、TimingInteraction／HitAuthorization evaluator、staging Data、reference pitch／delivery與physical solver未變；沒有重新匯出官方motion。實機smoke是Release，未宣稱Debug GPU validation或hard reset手感已驗收。
+
+## Multi-Swing human acceptance／Batter Attributes S1（2026-09-19）
+
+Michael已人工驗證極早第一揮、live hard rearm、第二次獨立出棒及第二揮Contact，**Multi-Swing Intent S1 human accepted**。本輪沒有改動這個lifecycle、Timing Interaction、Spatial Authorization、reticle ellipse或physical solver。新增單一Michael profile與Batter Card純Data／HUD；domain／grade、未來Contact／Power／Trajectory責任與normalized spatial quality原則由 [Batting Feel](batting-feel.md#batter-attributesbatter-card-s12026-09-19) 擁有，尚未接入gameplay，沒有correction／quality／Ball Response。
