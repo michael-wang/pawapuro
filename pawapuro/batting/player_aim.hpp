@@ -16,6 +16,7 @@ public:
     AimDiagnostic diagnostic(DirectX::XMFLOAT3 predicted) const;
     static constexpr size_t vertex_count = 32*6+2*6+6;
     void append_triangles(std::vector<engine::Vertex>& destination) const;
+    void append_triangles_at(std::vector<engine::Vertex>& destination,DirectX::XMFLOAT2 center) const;
 private:
     PlayerAimTuning tuning;
     HitAuthorizationTuning authorization;

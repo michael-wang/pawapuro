@@ -44,6 +44,17 @@ int main(int argc,char** argv) {
     }
     std::vector<engine::Vertex> vertices;vertices.reserve(PlayerAim::vertex_count);const auto capacity=vertices.capacity();
     for(int i=0;i<100;++i){vertices.clear();aim.append_triangles(vertices);require(vertices.size()==PlayerAim::vertex_count&&vertices.capacity()==capacity,"reticle allocation/count");}
+    std::vector<engine::Vertex> explicit_a,explicit_b;const DirectX::XMFLOAT2 center_a{0,.75f},center_b{.125f,.8125f};
+    aim.append_triangles_at(explicit_a,center_a);aim.append_triangles_at(explicit_b,center_b);
+    require(explicit_a.size()==PlayerAim::vertex_count&&explicit_b.size()==explicit_a.size(),"explicit-center count");
+    float rx=0,ry=0;
+    for(std::size_t i=0;i<explicit_a.size();++i){const auto pa=explicit_a[i].position,pb=explicit_b[i].position;
+        require(close_enough(pb.x-pa.x,center_b.x-center_a.x)&&close_enough(pb.y-pa.y,center_b.y-center_a.y)&&pa.z==pb.z&&same(explicit_a[i].color,explicit_b[i].color),"explicit center changed shape/color/depth");
+        rx=std::max(rx,std::abs(pa.x-center_a.x));ry=std::max(ry,std::abs(pa.y-center_a.y));
+    }
+    require(close_enough(rx,.26f)&&close_enough(ry,.13f),"Contact75 explicit ellipse radii");
+    explicit_a.clear();aim.append_triangles_at(explicit_a,aim.center());
+    for(std::size_t i=0;i<vertices.size();++i)require(same(vertices[i].position,explicit_a[i].position)&&same(vertices[i].color,explicit_a[i].color),"live and explicit render differ");
     BattingPreview baseline(argv[1],s),moving(argv[1],s);
     for(int placement=0;placement<3;++placement) {
         aim.recenter();if(placement==1)corner(aim,-1,1);if(placement==2)corner(aim,1,-1);

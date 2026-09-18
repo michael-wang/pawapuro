@@ -428,3 +428,23 @@ Release實機三情境均已操作：444擊球自然Complete於tick1178，額外
 最終提示改為替換Contact variant既有說明文字，保留原「下一球：A／B」列，實作只需一條cached string變更。重新啟動最終Release app，448自然完成tick1232，再等待五秒title不變；`final-complete.png`／`final-complete-held.png`與`final-complete-held.json`為最終UI證據，前述第一輪圖保留為transition操作紀錄。
 
 本輪fetch核對HEAD／origin/main均為a4ef9490356b327791909a6f231ea0136a616aaa，提交前無後續commit。完整Debug／Release build通過，完整CTest **Debug22/22（252.77 s）、Release22/22（17.16 s）**。Debug完整suite之後，僅將提示移回既有Contact說明列並保留下一球tempo列；最終再次完整Debug build、受影響contact_panel CTest **1/1（9.06 s）**通過。無失敗測試或放寬容差。Logs在同一evidence目錄：`debug-build.log`、`debug-ctest.log`、`debug-final-build.log`、`debug-final-panel.log`、`release-build.log`、`release-ctest.log`。
+
+## Contact Review Snapshot S1（2026-09-19）
+
+**Gameplay Contact Result Hold／Space Reset S1 已由Michael human accepted。** 本輪只加入接觸後的visual review，不改自然完成、永久hold或Space可隨時下一球的生命週期，也不改gameplay／Ball Response公式與Data。
+
+`contact_review.hpp`的presentation append只在`GameplayResult::Contact`已dispatch時借用latest SwingAttempt：ellipse中心直接讀`command.aim_center`，cyan marker中心直接讀`authorization.pitch_point`。沒有第二份snapshot、沒有重新算aim或用launch origin代替授權平面point；borrow只在當次append內，跨frame不保存attempt pointer。Planned BallResponse尚未dispatch、Miss與NoSwing仍顯示live reticle，miss review延後。
+
+PlayerAim新增explicit-center `append_triangles_at`，原live append委派至同一份ellipse／cross／black core implementation；PlayerAim不認識SwingAttempt。兩條路徑共用原Contact-scaled authorization region，Michael75仍精確為rx=.26／ry=.13 m。Main透過小型presentation helper選擇live或committed center，沒有修改input owner；接觸後箭頭仍可改internal live cursor，但不會移動review。
+
+Pitch-point marker是固定半對角線12 mm的cyan diamond（完整寬高24 mm、RGB=.35／1／1），小於既有black core；中心重合時仍可見black外緣。只把Z放在evaluation plane−6 mm，位於black core前2 mm，避免z-fighting；X／Y維持原immutable truth。不是physical baseball、Arrival Cue或launch position，也沒有新增q／ex／ey文字或象限標籤。
+
+每frame固定reticle210＋marker6＝**216 vertices**。未啟用時marker六點皆為零的degenerate triangles；CPU reserve、GPU capacity與既有late-world draw range同步增加6，dynamic overlay範圍保持原樣。沒有每frame allocation、variable upload或D3D12View變更，沒有alpha/blending。Review在flight、pause／single-step、ground hold及Complete一直保留，Space清掉attempt後立即回到live reticle與不可見marker。
+
+測試：explicit-center A／B只差預期translation、shape／color／depth／radii不變；Ready／Playing／planned response／early Miss／RejectedSpatial＋raw Contact／NoSwing均不啟用。80早揮→320 rearm→448第二次Contact，以A=P−(.13,.065)形成ex=ey=.5、q=.5；review只讀第二次snapshot。1000次live movement仍維持相同buffer pointer／capacity與逐byte相同geometry；pause、step、完整flight、ground、Complete再advance與Space reset皆驗證，stored attempt representation沒有改變。既有response／motion／physical tolerances全部保留。
+
+實際Release app取得448中央Contact／Complete screenshot，cyan小點位於black core內；Space後新pitch的marker立即消失。OS自動短按Right未可靠移動SDL live aim，因此**未宣稱取得實機偏心圖或以該短按證明cursor已移動**；偏心與immutability由Native fixture驗證。`build/contact-review-s1/centered-contact.png`、`space-reset-live.png`與同名title JSON是真實app擷取。`contact-review-off-center.svg`直接將同一append產生的triangle positions／colors畫成平面圖，明確標示Native geometry fixture；它是放大的離線幾何證據，不是app screenshot或wall-time影片。
+
+人工偏心重現：R回中央後，用方向鍵持續移到live aim約x=−.130、y=.710 m（固定pitch P約0／.775），確認title，再Space開球、約1.87秒按J；以實際consumed tick為準。Authorized Contact後，marker應在ellipse右上半部，black core留在committed center；再按箭頭、P／`.`或等待Complete，review不應移動。Space後則顯示當前live aim。沒有timing diagram／peak marker、panel cleanup／resize／transparency、新step controls、response／spray tuning、miss review、Contact Correction或Power mode；停止等待Michael＋Julia review。
+
+本輪agent自身execution核對cwd／clean main，fetch及提交前核對HEAD／origin/main均為ee6bc22d916c964b71ab7d1a2337d98c46d6b011，無後續accepted work。完整Debug／Release build通過，完整CTest **Debug22/22（248.32 s）、Release22/22（16.39 s）**。初次新PlayerAim test的區域變數觸發C4456 shadow warning／WX，已改名，沒有關閉warning或改容差。`build/contact-review-s1/`保存兩組態build／CTest logs、初次compile紀錄與`review-test-evidence.txt`。實機走過Ready、Playing、Contact、Complete及Space reset，固定dynamic-count assertion未失敗，app正常退出；沒有本輪Debug GPU validation或偏心實機驗收宣稱。

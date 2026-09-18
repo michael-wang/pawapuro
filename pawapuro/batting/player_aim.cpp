@@ -31,7 +31,10 @@ AimDiagnostic PlayerAim::diagnostic(DirectX::XMFLOAT3 p) const {
     return {a.error.x,a.error.y,a.normalized_error.x,a.normalized_error.y,a.q};
 }
 void PlayerAim::append_triangles(std::vector<engine::Vertex>& v) const {
-    const auto point=[&](float x,float y,float z) {return DirectX::XMFLOAT3{center_m.x+x,center_m.y+y,z};};
+    append_triangles_at(v,center_m);
+}
+void PlayerAim::append_triangles_at(std::vector<engine::Vertex>& v,DirectX::XMFLOAT2 center) const {
+    const auto point=[&](float x,float y,float z) {return DirectX::XMFLOAT3{center.x+x,center.y+y,z};};
     const auto quad=[&](DirectX::XMFLOAT3 a,DirectX::XMFLOAT3 b,DirectX::XMFLOAT3 c,DirectX::XMFLOAT3 d,DirectX::XMFLOAT3 color) {
         for(auto p:{a,b,c,a,c,d}) v.push_back({p,color});
     };
