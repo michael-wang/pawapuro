@@ -67,11 +67,12 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     const float scale=float(height)/1080;
     const wchar_t* texts[]={L"本球結果",L"按 Space 開始",L"等待出棒",L"揮棒中",
         contact_panel_labels[0],contact_panel_labels[1],contact_panel_labels[2],
-        L"接觸測試：只檢查出棒後的一小段，",L"球暫時不會飛出去。",
-        L"依球繼續前進的位置判斷；",L"畫面中的球仍停住。",L"A 原節奏",L"B 快出棒",L"下一球：A 原節奏",L"下一球：B 快出棒",
-        L"T：下一球前切換",L"已按下，但不在本輪可出棒時段。",
-        L"瞄準授權：等待",L"瞄準授權：通過",L"瞄準授權：超出範圍"};
-    std::array<TextMask,20> masks;
+        L"接觸測試：只檢查時機重疊區間，",L"尚未實作擊球後的球路。",
+        L"接觸在評估面之後；",L"實球顯示前進至互動區後緣。",L"A 原節奏",L"B 快出棒",L"下一球：A 原節奏",L"下一球：B 快出棒",
+        L"T：下一球前切換",L"揮棒時機：等待",
+        L"瞄準授權：等待",L"瞄準授權：通過",L"瞄準授權：超出範圍",
+        L"揮棒時機：無重疊（早）",L"揮棒時機：有重疊",L"揮棒時機：無重疊（晚）"};
+    std::array<TextMask,23> masks;
     for(unsigned i=0;i<masks.size();++i)masks[i]=raster(texts[i],static_cast<int>(std::lround((i==0?30:i>=4&&i<=6?28:20)*scale)));
     for(unsigned variant=0;variant<variants.size()+annotations.size();++variant) {
         auto& v=variant<7?variants[variant]:annotations[variant-7];const auto state=static_cast<ContactPanelState>(variant);
@@ -88,7 +89,8 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
         if(variant>=7) {
             const unsigned index=variant-7;
             if(index<6)text(11+index,42,index<2?394.f:index<4?420.f:index==4?446.f:474.f,white);
-            if(index>=7)text(17+index-7,42,510,bright);
+            if(index>=7&&index<10)text(17+index-7,42,510,bright);
+            if(index>=10)text(20+index-10,42,474,bright);
             annotation_vertex_count=std::max(annotation_vertex_count,static_cast<unsigned>(v.size()));
             continue;
         }
@@ -118,7 +120,7 @@ void ContactResultPanel::append(std::vector<engine::Vertex>& target,const Manual
     const auto mode=p.phase==PreviewPhase::Ready?p.next_tempo:p.attempt_tempo.mode;
     add(mode==SwingTempo::Original?0:1);
     add(p.phase==PreviewPhase::Complete?(p.next_tempo==SwingTempo::Original?2:3):6);
-    add(4);add(p.domain_rejected?5:6);
+    add(4);add(!p.timing?5:p.timing->state==SwingTimingState::Early?10:p.timing->state==SwingTimingState::Overlap?11:12);
     add(!p.authorization?7:p.authorization->authorized?8:9);
 }
 }

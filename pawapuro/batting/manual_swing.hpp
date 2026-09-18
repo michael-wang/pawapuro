@@ -2,8 +2,9 @@
 #include "batting_preview.hpp" // Baseline remains an independent contact regression caller.
 #include "batter/ingame_s0/ingame_motion.hpp"
 #include "hit_authorization.hpp"
+#include "timing_interaction.hpp"
 namespace pawapuro {
-// Fixed-pitch diagnostic: commit through commit+64 ticks, including analytic flight past the plane.
+// Historical offline regression bound only; runtime searches the temporal intersection.
 inline constexpr std::uint64_t manual_contact_window_ticks=64;
 ContactSample sample_manual_contact(const BallState& initial,double release,const IngameMotion& motion,
     std::uint64_t commit,double time,engine::GlbPose& scratch,SwingTempoTiming tempo={});
@@ -27,16 +28,23 @@ struct ManualSwingPreview {
     bool paused=false;
     SwingTempo next_tempo=SwingTempo::Compact;
     SwingTempoTiming attempt_tempo;
-    bool domain_rejected=false;
     bool toggle_tempo();
     std::uint64_t tick=0,pending_ticks=0,arrival_tick=0;
     std::optional<SwingCommand> pending,committed;
     std::optional<HitAuthorizationDecision> authorization;
+    const BattingInteractionPassage ball_passage;
+    std::optional<TimingInteraction> timing;
+    std::optional<TemporalInterval> searched_interval;
+    unsigned contact_query_count=0;
     ManualGeometry geometry=ManualGeometry::Pending;
     std::optional<BatContact> contact;
     unsigned contact_count=0;
     std::uint64_t contact_dispatch_tick=0;
     const char* contact_state() const;
+    const char* timing_state() const;
+    void timing_diagnostic(char* buffer,std::size_t size) const;
+    DirectX::XMFLOAT3 displayed_ball_center() const;
+    DirectX::XMFLOAT3 displayed_ball_translation() const;
     void reset();
     bool start();
     void toggle_pause();

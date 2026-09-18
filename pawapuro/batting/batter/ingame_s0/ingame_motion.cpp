@@ -95,6 +95,9 @@ IngameMotion::Bones IngameMotion::preparation(double f) const {
 }
 double IngameMotion::plant_frame(double c) const {
     if(c>=117)return 117;
+    // Early commits still plant through the authored lift/descent, within the six-frame entry.
+    // Never extrapolate the old [109,125] authoring domain into a long unsupported swing.
+    if(c<109)return c+6;
     // Continuous remaining descent through the two accepted incomplete-plant fixtures.
     const double duration=c<=115?6-(c-109)*.5:3-(c-115)*1.5;
     return c+duration;
@@ -106,7 +109,7 @@ void IngameMotion::semantics(Bones& m) const {
     m[14]=trs(load(rest[14])*XMMatrixInverse(nullptr,load(rest[7]))*matrix(m[7]));
 }
 void IngameMotion::sample_key(double tick_value,std::optional<std::uint64_t> commit,engine::GlbPose& out) const {
-    if(!std::isfinite(tick_value)||tick_value<0 || (commit&&(*commit<432||*commit>496)))throw std::runtime_error("Ingame sample outside domain");
+    if(!std::isfinite(tick_value)||tick_value<0 || (commit&&*commit==0))throw std::runtime_error("Ingame sample outside domain");
     const double f=1+tick_value/4;auto m=preparation(f);
     if(commit&&tick_value>static_cast<double>(*commit)) {
         const double c=1+static_cast<double>(*commit)/4,x=f-c; m=source_pose(swing_frame(x));

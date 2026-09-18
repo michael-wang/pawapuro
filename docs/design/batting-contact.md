@@ -1,6 +1,6 @@
 # Hit Authorization S0 — Gameplay Contact Model
 
-最新 runtime 狀態見文末 **Hit Authorization S1**；下方 S0／Gate C 等歷史記錄保留。
+最新 runtime 狀態見文末 **Timing Interaction S1**；Hit Authorization S1 已獲 human acceptance，下方 S0／Gate C 等歷史記錄保留。
 
 2026-09-17；**Hit Authorization S0 五層責任已獲 Michael＋Julia human review accepted；S0.1 Reticle Semantics 亦已 human review accepted；Player Aim S0 interactive candidate 待 review**。僅定責任與 normalized examples；沒有 production authorization、正式 swing input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
 
@@ -237,3 +237,56 @@ Focused tests 另含中心、兩軸精確 q=1、略超界、signed vectors、真
 完整 Debug／Release build 使用既有 VS 2022 x64 developer environment、UTF-8、CMake/Ninja，沒有安裝／修復環境。首輪 compiler C2039 是 staging test 欄位遷移時多寫一層 `player_aim`，已修正；首輪 authorization test 的 Take fixture 在仍 Playing 時呼叫 start，已補 reset。兩者是正常 compiler／test failure，不是 runner 問題，也沒有放寬測試容差。
 
 Release 完整 CTest **17/17 通過**（約 41 s）。Debug 完整 suite 約 583 s，既有 16 項通過；新測試的上述失敗修正後，authorization／panel／staging 直接執行均通過，並以 CTest 重跑這三項，**3/3 通過**（36.06 s）；合併結果涵蓋全部 17 項。`debug-ctest.log` 保留首輪失敗，`debug-final-ctest.log` 記錄修正後結果；`debug-final-build.log`／`release-build.log` 保存建置。實際 Release app 已啟動、從 Ready 完成 Compact swing、確認新 panel 的 Waiting／Authorized 與 Contact／Complete 保留狀態，並透過 Esc 關閉；未宣稱本輪有 Debug GPU validation 或 human playtest acceptance。
+
+## Timing Interaction S1（2026-09-18，待 Michael＋Julia review）
+
+**Hit Authorization S1 已獲 human acceptance**：Michael 手動確認正確時機＋正確 aim、正確時機＋RejectedSpatial，以及正確 aim＋晚揮可未接觸。以下更新取代歷史段落的 runtime input／query domain，保留其 regression evidence。責任順序現在是 Player Swing Intent → Temporal Interaction → Spatial Authorization → Physical Resolution → Contact Quality → Ball Response；本輪只到前四層，沒有最終 Hit／Miss。
+
+### 輸入與具體動作延伸
+
+舊 `[432,496]` 是 development input／motion domain，不是正式 timing gameplay。Playing、focused／eligible、未暫停、已 rearm 且尚無 queued／committed swing 時，fresh J edge 依既有 `tick + pending_ticks + 1` 排程，抵達該 authoritative tick 立即 consumed。沒有等 release、buffer 到好時機或 clamp；一球一次。Ready／Paused／Complete、focus loss、held-key rearm 與 backlog 邊界規則保留。NoSwing 只在整個 attempt 完成且從未 committed 時確定，tick496 不再結案。極早揮棒可以先完成，投手與球仍繼續。
+
+`IngameMotion` 保留 preparation、六個 source frames 的位置／旋轉 entry residual、rear-toe support、bat attachment、whole-pose／barrel 共用取樣、Compact remap 與完整 finish。小幅延伸為：在 source commit frame109 之前，front-foot plant 使用 commit＋6 frames，避免把舊 plant 公式外插成漫長懸空；109 之後原公式完全保留。支撐由既有 front-foot lift／descent 與 rear-toe anchor 解決，body intent／lead-lag 仍由原 authored swing 與 entry residual 銜接，momentum 仍由原完整 follow-through 收束；未重作官方動作、未加 IK／animation graph。
+
+標準無出棒 attempt 的可 consumed 範圍為 **tick1–816**（release384），排在 Playing input boundary 的 backlog command 也可在之後消費，測試含820；runtime 不另設 gameplay commit 上限，僅防止無效／溢位 tick。Motion tests 額外覆蓋1、96、240、360、431、497、600、815、816、840，原432–496全部 fixtures／容差與 A／B mapping regression 保留。這不是任意巨大 tick 的精度保證。完整 Compact finish 仍為 commit＋446 ticks；follow-through 感覺稍長是已知調整項，本輪刻意不縮短。
+
+### Data、時間與物理責任
+
+- **Batting Interaction Region**：`[batting_interaction].half_depth_m=0.40`，以既有 evaluation plane 為中心的 Z-only slab，X／Y 完全不限制；它不是 strike zone、第二個 aim gate 或 physical reach。固定 pitch 目前 Z 速度為常數，以 immutable initial Z／velocity 推導兩面 crossing world time，不寫死 ball ticks。速度不同便有不同 duration。當前 plane Z=0.4318 m、slab Z=[0.0318,0.8318] m；entry=1.983233717173 s、exit=2.002433563945 s，duration=**19.199846772 ms**。Reference time=1.99283345044 s，仍來自既有 `predict_arrival` plane crossing。
+- **Normal Swing Phase Potential**：`[swing_phase_potential]` 的 start／peak／end 為75／125／190 ms，全部以 consumed commit C 為相對起點。兩側使用 `smoothstep(u)=u²(3−2u)`，上升 u=(tau−start)/(peak−start)，下降 u=(end−tau)/(end−peak)；start 以前及 end 以後為0、peak為1。唯一有效 support 是 **S(tau)>0**，沒有另一份 contact-capable interval Data。Startup 檢查 finite、範圍與 start<peak<end。這些與 slab 深度都是 Michael 後續 playtest 的 development candidate，不是永久 balance。
+- **Temporal overlap**：ball passage 與 `[C+start,C+end]` 相交；僅有端點相等不算 overlap。空交集仍播完整 swing，分為 Early／Late，不是 input rejection。Consumed 時以 deterministic pitch／Data 計算一次，pause／cadence 不重算，Complete 保留、reset 清除。
+- **Timing transfer**：`timing_efficiency = integral(S(t−C), B_enter..B_exit) / (B_exit−B_enter)`，以 smoothstep 的精確 polynomial primitive `u³(1−u/2)` 在 peak 分段積分，避免 frame-dependent accumulation；只 clamp 浮點誤差至[0,1]，不設第二個品質門檻。`timing_offset_ms=(C+peak−ball_reference_time)*1000`，負為 power peak 早、正為晚。這是 deterministic development signal，尚未變成 Contact Quality 或球速。
+- **Spatial Authorization**：沿用 immutable aim snapshot、prediction plane P、同一 .26／.13 m ellipse、signed error／q 與 q<=1，沒有把 live reticle 或 physical contact 偷換成 P。即使時間空交集仍保留此診斷。
+- **Physical Resolution**：runtime 只在 temporal intersection 的已完成 fixed-tick 部分執行既有 continuous earliest-entry sphere／capsule solver；S=0 端點以相鄰 representable time 朝內處理，不加 gameplay epsilon。空交集不呼叫 solver；找到首次事件即停止後續搜尋。沒有 pre-release negative-time ghost pitch，也不搜尋球離開 slab 以後的位置。RejectedSpatial 不阻擋 raw geometry 診斷。歷史 `[commit,commit+64]` 僅留下作 offline regression；ball37／bat33 mm 與 solver 未改。Follow-through S=0 刻意不支援 batting interaction；現實偶發的非正常揮擊碰球不在此模型內。
+
+### 畫面一致性與可重現檢查
+
+Manual preview 的球在 slab entry 起使用與 contact 相同的 analytic trajectory，繼續通過 evaluation plane，於 slab rear edge 停住；這是小幅 presentation continuation，不改 ReferencePitch／PitchDelivery integration、release、原球路或 response。固定 pitch 的 Compact451／452 事件在 plane 後，現在位於實際顯示球路上，沒有「解析球已往後、畫面球卻停在 plane」的舊矛盾。Arrival Cue／BallAid 的原 phase gating 保留；pitch simulation 的 Complete 仍以 plane 為準，只有 manual displayed ball 繼續到 slab exit。此處不是一般化 pitch lifecycle，也未模擬 contact 後球路；完整 rear-slab 畫面可讀性仍待 human review。
+
+面板獨立顯示「揮棒時機：等待／無重疊（早）／有重疊／無重疊（晚）」，保留空間授權列與原三種 geometry 結果。Title／log 有 consumed tick、ball／potential／overlap world seconds、efficiency、signed offset、spatial 與 raw geometry；不是 Perfect／Good／Bad。
+
+固定 pitch、B Compact、aim=P 的 deterministic fixtures（秒；空交集記為「無」）：
+
+| Commit | Potential start／peak／end | Temporal overlap | Efficiency | Offset ms | Raw geometry |
+|---:|---|---|---:|---:|---|
+| 96 | 0.475／0.525／0.590 | 無，早 | 0 | −1467.833450 | NoContactInWindow，0 queries |
+| 433 | 1.879167／1.929167／1.994167 | 1.983234–1.994167 | 0.014755 | −63.666784 | NoContactInWindow |
+| 448 | 1.941667／1.991667／2.056667 | 1.983234–2.002434 | 0.974447 | −1.166784 | Contact |
+| 460 | 1.991667／2.041667／2.106667 | 1.991667–2.002434 | 0.023204 | +48.833216 | NoContactInWindow |
+| 600 | 2.575／2.625／2.690 | 無，晚 | 0 | +632.166550 | NoContactInWindow，0 queries |
+
+**Spatial S1 replacement fixture448**：A=P 與 A=(P.x+0.26×1.01,P.y) 分別 Authorized／RejectedSpatial，兩者 raw Contact data 逐值相同：time=1.9913564701 s、u=0、normal≈(0.101611606777,−0.163544073701,0.981289148331)、relative velocity≈(−1.27030932903,−3.71577167511,−72.503616333) m/s。Aim-only change 的 bat／ball path invariance 仍逐 tick 驗證。456仍為 Authorized＋NoContactInWindow。
+
+**刻意改變的舊 fixture441**：舊 unrestricted contact=1.98058356422 s，早於 slab entry，現在有 temporal overlap 但 NoContactInWindow；test 同時證明原 solver 在舊 domain 仍找到該事件，沒有隱藏分類變化。新 Compact runtime432–496 sweep 為442–452 Contact（11例）；歷史 unrestricted Compact436–452（17例）與 Original432–442（11例）仍全部 regression，既有 refinement／容差保留。
+
+人工 review：保持 B；R 回中央、Space 開始後，分別約 **0.400／1.80417／1.86667／1.91667／2.500 s** 按 J，對應上述五例；以 title 的實際 consumed tick 為準，OS 手按不能保證 exact tick。第一例在 release1.600 s 之前，應立即揮棒，之後球繼續接近本壘。P／`.` 可在出棒後暫停／單步觀察，paused 不接收新 J。要比較 rejected spatial，把 aim.x 移到約0.263–0.30 m、y維持約0.775 m，再按正常節奏出棒。Native tests 負責 exact command replay。
+
+本輪實際 Release app 已啟動，Ready 畫面確認 temporal／spatial 狀態列分開且可讀；接續自動按鍵時 Computer Use 回報該視窗偵測到使用者輸入並中止操作，刷新後 app 仍 Ready、桌面由其他應用程式佔用，因此停止搶用視窗。**未取得可信的 early／normal swing 截圖或影片**，不以 mock／離線圖替代 runtime evidence，也未宣稱手感已驗收。數值測試不能取代 Michael＋Julia 的實機 review。
+
+沒有 Contact ability/stat、correction、snap／magnetism、Contact Quality、sweet spot／barrel-u grading、Power、foul／fair、最終 Hit／Miss、VFX／SFX 或 Ball Response。本輪至此停止。
+
+### 本輪建置與驗證
+
+Agent 自身 PowerShell execution 核對 main／clean baseline，fetch 後 HEAD／origin/main 同為 accepted `b998a4c92c2add62a15b221a79a565a77dca5ce3`；提交前再次 fetch 亦無後續 commit。使用既有 VS 2022 x64／CMake／Ninja，完整 Debug、Release build 均通過。Release 完整 CTest **18/18 通過（35.56 s）**；之後補強舊441明確 regression 與 tuning valid-override 測試，重新 build 並跑受影響兩項 **2/2 通過（1.53 s）**。最終 Debug 完整 CTest **18/18 通過（569.50 s）**。首次 Release test failures 是舊441預期與 interval-split fixture 尚未套用新 temporal intersection，已修正 fixture 契約並保留原 unrestricted solver regression，沒有刪除測試或放寬容差。
+
+本機 ignored `build/timing-interaction-s1/` 保留 `debug-build.log`、`debug-ctest.log`、`debug-details.log`、`release-build.log`、`release-ctest.log`、`release-final-build.log`、`release-final-ctest.log` 與 `timing-fixtures.txt`。既有 physical solver、ReferencePitch／PitchDelivery、SwingTempo mapping、authorization evaluator 與 PlayerAim implementation 沒有變更；未宣稱本輪 GPU validation 或 early／normal 實機 playback 已完成。

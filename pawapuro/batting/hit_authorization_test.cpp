@@ -35,11 +35,11 @@ int main(int argc,char** argv){try {
     const auto predicted=predict_arrival(a.delivery.pitch).state.position_m;
     const DirectX::XMFLOAT2 point{predicted.x,predicted.y},outside{point.x+t.normal_radius_x_m*1.01f,point.y};
     require(!a.authorization,"Ready decision");a.start();b.start();
-    require(a.record_command(441,point)&&b.record_command(441,outside),"fixture commands");
+    require(a.record_command(448,point)&&b.record_command(448,outside),"fixture commands");
     require(!a.authorization&&!b.authorization,"queued decision too early");
-    until(a,440);until(b,440);require(!a.authorization&&!b.authorization,"pre-consumption decision");
-    until(a,441);until(b,441);
-    require(a.authorization->authorized&&!b.authorization->authorized&&a.authorization->q==0,"441 authorization pair");
+    until(a,447);until(b,447);require(!a.authorization&&!b.authorization,"pre-consumption decision");
+    until(a,448);until(b,448);
+    require(a.authorization->authorized&&!b.authorization->authorized&&a.authorization->q==0,"448 authorization pair");
     const auto saved_a=*a.authorization,saved_b=*b.authorization;
     for(auto* p:{&a,&b}) {
         p->toggle_pause();const auto saved=*p->authorization;const auto tick=p->tick;
@@ -55,24 +55,33 @@ int main(int argc,char** argv){try {
         require(a.geometry==b.geometry&&bool(a.contact)==bool(b.contact),"aim changed geometry");
         require(same(*a.authorization,saved_a)&&same(*b.authorization,saved_b),"decision mutated");
     }
-    require(a.geometry==ManualGeometry::Contact&&b.geometry==ManualGeometry::Contact,"441 Compact must contact");
+    require(a.geometry==ManualGeometry::Contact&&b.geometry==ManualGeometry::Contact,"448 Compact must contact");
     same_contact(*a.contact,*b.contact);const auto event=*a.contact;
-    std::cout<<std::setprecision(12)<<"Compact 441 Authorized + Contact and RejectedSpatial + Contact: P=("<<point.x<<','<<point.y
+    // Old S1 commit 441 contacted before the new slab front. Preserve that physical regression explicitly.
+    a.start();a.record_command(441,point);until(a,505);
+    require(a.timing->overlap&&!a.contact&&a.geometry==ManualGeometry::NoContactInWindow,"old 441 temporal classification");
+    engine::GlbPose scratch;std::optional<BatContact> legacy;
+    for(std::uint64_t tick=441;tick<505&&!legacy;++tick)legacy=first_manual_contact(a.delivery.pitch.initial,
+        double(a.delivery.motion.release_tick)/240,a.batter,441,s.bat_contact,double(tick)/240,double(tick+1)/240,scratch,64,a.attempt_tempo);
+    require(legacy&&legacy->sample.preview_time_s<a.ball_passage.enter_s
+        &&std::abs(legacy->sample.preview_time_s-1.98058356422)<1e-7,"old 441 raw solver changed");
+    while(a.phase==PreviewPhase::Playing)a.advance(16'666'667);
+    std::cout<<std::setprecision(12)<<"Compact 448 Authorized + Contact and RejectedSpatial + Contact: P=("<<point.x<<','<<point.y
         <<") rejected aim=("<<outside.x<<','<<outside.y<<") q="<<saved_b.q<<" time="<<event.sample.preview_time_s
         <<" u="<<event.sample.approach.u<<" normal=("<<event.normal.x<<','<<event.normal.y<<','<<event.normal.z
         <<") relative_velocity=("<<event.relative_velocity.x<<','<<event.relative_velocity.y<<','<<event.relative_velocity.z<<"); exact equality\n";
-    for(auto aim:{point,outside})for(std::uint64_t commit:{441ull,456ull})for(unsigned hz:{30u,60u,120u,0u}) {
+    for(auto aim:{point,outside})for(std::uint64_t commit:{448ull,456ull})for(unsigned hz:{30u,60u,120u,0u}) {
         a.start();require(!a.authorization,"new ball retained decision");a.record_command(commit,aim);
         if(!hz){a.advance(3'000'000'000);while(a.pending_ticks)a.advance(0);}
         while(a.phase==PreviewPhase::Playing)a.advance(hz?1'000'000'000/hz:16'666'667);
         require(a.committed->consumed_tick==commit&&same(*a.authorization,authorize_normal_hit(aim,point,t)),"cadence changed consumed decision");
-        require(a.geometry==(commit==441?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"fixture geometry");
-        if(commit==441)same_contact(*a.contact,event);
+        require(a.geometry==(commit==448?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"fixture geometry");
+        if(commit==448)same_contact(*a.contact,event);
     }
     // Live controller changes after scheduling and after consumption cannot alter the saved command.
-    a.start();live.recenter();const auto snapshot=live.center();a.record_command(441,snapshot);
-    live.move(1,0,.05);until(a,441);const auto decision=*a.authorization;
-    live.move(0,-1,.05);a.input_boundary(false,false,true,live.center());until(a,442);
+    a.start();live.recenter();const auto snapshot=live.center();a.record_command(448,snapshot);
+    live.move(1,0,.05);until(a,448);const auto decision=*a.authorization;
+    live.move(0,-1,.05);a.input_boundary(false,false,true,live.center());until(a,449);
     require(same(a.committed->aim_center,snapshot)&&same(*a.authorization,decision),"live controller leaked into command");
     a.reset();require(!a.authorization,"reset retained decision");
     // Existing boundary/backlog scheduling: 420 + 24 elapsed ticks schedules 445, never 437.

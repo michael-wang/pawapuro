@@ -11,11 +11,15 @@ inline constexpr float mound_center_z_m = rubber_distance_m - 0.4572f;
 struct BatContactEnvelope { float ball_radius_m=0.037f,bat_radius_m=0.033f; };
 struct HitAuthorizationTuning { float normal_radius_x_m=0.26f, normal_radius_y_m=0.13f; };
 struct PlayerAimTuning { float cursor_speed_mps=0.65f; };
+struct BattingInteractionTuning { float half_depth_m=0.40f; };
+struct SwingPhasePotentialTuning { float normal_start_ms=75,normal_peak_ms=125,normal_end_ms=190; };
 struct BattingStaging {
     double window_width_fraction=0.75;
     double compact_area_ticks=30;
     PlayerAimTuning player_aim;
     HitAuthorizationTuning hit_authorization;
+    BattingInteractionTuning batting_interaction;
+    SwingPhasePotentialTuning swing_phase_potential;
     BatContactEnvelope bat_contact; // Gameplay candidate; independent of visual geometry.
     DirectX::XMFLOAT3 camera_position_m{-0.75f, 1.25f, -5.0f};
     DirectX::XMFLOAT3 camera_target_m{-0.75f, 1.30f, 16.8f};

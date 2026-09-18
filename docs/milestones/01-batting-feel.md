@@ -225,3 +225,5 @@ Bat Contact S2 timing-to-contact geometry map 已獲 Michael＋Julia acceptance�
 [Hit Authorization S0](../design/batting-contact.md) 已完成 design／bounded reference analysis candidate，待 Michael＋Julia review。五層責任與未決 gameplay 值由該文件唯一擁有；physical S0／S1／S2 不變，沒有 production authorization、player input 或 response，M1 未完成。
 
 Hit Authorization S1 已實作最小 Normal spatial gate 與獨立 in-game 授權狀態，保留 Compact default 及 geometry truth；具體契約、fixtures 與 review 限制由 [batting-contact](../design/batting-contact.md) 擁有。此交付停在 Michael＋Julia review，M1 未完成，不接續 correction／ability／quality／Ball Response。
+
+Hit Authorization S1 已獲 human acceptance。Timing Interaction S1 已移除舊 development input domain、延伸具體 Normal motion，加入 trajectory-derived Z slab／swing potential 與 temporal intersection query；契約、數值 fixtures、presentation continuation 與實機 evidence 限制見 [batting-contact](../design/batting-contact.md)。本輪停在 Michael＋Julia review；follow-through 長度調整延後，M1 未完成，沒有進入 correction／Contact Quality／Power／Ball Response。

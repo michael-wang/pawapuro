@@ -11,6 +11,8 @@ entry_frames = 6
 velocity_epsilon_frames = 0.01
 commit_first_tick = 432
 commit_last_tick = 496
+# These identify the saved Gate B regression domain, not runtime input eligibility.
+# Native early-entry support now bounds remaining plant duration to six frames.
 # Remaining descent interpolates Gate B's two unfinished-support entries.
 # At/after authoring frame 117 the existing planted foot is retained.
 plant_duration_knots = [[109.0, 6.0], [115.0, 3.0], [117.0, 0.0]]

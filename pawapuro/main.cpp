@@ -184,12 +184,13 @@ int main(int argc, char** argv)
             const bool cue_visible=pawapuro::arrival_cue_visible(delivery.pitch.phase);
             char aim_error[160]="Hidden";
             if (cue_visible) std::snprintf(aim_error,sizeof(aim_error),"error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f",ad.dx,ad.dy,ad.ex,ad.ey,ad.q);
-            char title[1200];
-            const auto ball=delivery.ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu Geometry:%s / No ball response | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
-                "ball=(%.6f,%.6f,%.6f) frozen-after-arrival | backlog=%llu | Space:play/replay J:swing[432..496] P:pause .:step Esc:quit Arrows:aim R:center",
+            char temporal[640];preview.timing_diagnostic(temporal,sizeof(temporal));
+            char title[2048];
+            const auto ball=preview.displayed_ball_center();
+            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu Geometry:%s / No ball response | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+                "ball=(%.6f,%.6f,%.6f) freeze-at-region-exit | backlog=%llu | Space:play/replay J:swing P:pause .:step Esc:quit Arrows:aim R:center",
                 ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
-                cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,preview.contact_state(),
+                cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed?preview.committed->consumed_tick:0,preview.contact_state(),temporal,
                 ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
             if (last_title != title) {
@@ -208,7 +209,7 @@ int main(int argc, char** argv)
             assembly_us+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-assembly_start).count();
             ++assembly_samples;
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
-                delivery.ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count,
+                preview.displayed_ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count,
                 arrival_style==pawapuro::ArrivalCueStyle::Baseball ? static_cast<UINT>(pawapuro::PlayerAim::vertex_count) : 0,
                 arrival_style==pawapuro::ArrivalCueStyle::Baseball ? pawapuro::arrival_cue_vertex_count : 0);
         }

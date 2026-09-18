@@ -9,7 +9,7 @@ int contact_panel_highlight(ContactPanelState state);
 struct ContactResultPanel {
     explicit ContactResultPanel(unsigned pixel_width,unsigned pixel_height);
     std::array<std::vector<engine::Vertex>,7> variants;
-    std::array<std::vector<engine::Vertex>,10> annotations;
+    std::array<std::vector<engine::Vertex>,13> annotations;
     unsigned vertex_count=0,base_vertex_count=0,annotation_vertex_count=0;
     void append(std::vector<engine::Vertex>& target,const ManualSwingPreview& preview) const;
 };

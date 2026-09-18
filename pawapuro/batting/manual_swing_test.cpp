@@ -13,7 +13,7 @@ int main(int argc,char**argv){try{
     ManualSwingPreview p(d,s);p.next_tempo=SwingTempo::Original; // Explicit A regression baseline.
     const DirectX::XMFLOAT2 a{.1f,.8f},b{-.2f,.5f};
     p.input_boundary(true,true,true,a);require(!p.pending,"Ready must reject");p.start();
-    p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(!p.pending,"early input must reject without buffering");
+    p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==1,"early input must queue immediately");until(p,1);require(p.committed&&p.committed->consumed_tick==1,"early input buffered/clamped");p.reset();p.start();
     until(p,431);p.input_boundary(true,false,true,a);require(!p.pending,"held cannot trigger");
     p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==432,"lower endpoint");
     p.input_boundary(false,false,true,b);p.input_boundary(true,true,true,b);require(p.pending->aim_center.x==a.x,"queued snapshot immutable");
@@ -23,7 +23,7 @@ int main(int argc,char**argv){try{
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==888,"early finish truncated");
     p.start();require(!p.pending&&!p.committed&&!p.contact&&!p.contact_count&&p.geometry==ManualGeometry::Pending,"reset leaks command/result");until(p,495);p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);until(p,496);require(p.committed&&p.committed->consumed_tick==496,"upper endpoint");
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==952,"late finish truncated");
-    p.start();until(p,496);p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(!p.pending,"out-of-domain target not rejected");
+    p.start();until(p,496);p.input_boundary(false,false,true,a);require(p.geometry==ManualGeometry::Pending,"tick496 finalized NoSwing");p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==497,"late input rejected");p.lose_input();
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816&&!p.committed&&!p.contact&&p.geometry==ManualGeometry::NoSwing,"Take completion");
     // Account old elapsed debt first; target after debt, never tick+1 while behind.
     p.start();until(p,420);p.advance(100'000'000);require(p.tick==436&&p.pending_ticks==8,"controlled catch-up setup");
@@ -38,7 +38,7 @@ int main(int argc,char**argv){try{
     p.reset();p.start();until(p,475);p.advance(100'000'000);
     require(p.tick==491&&p.pending_ticks==8,"outside-target backlog setup");
     p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);
-    require(!p.pending,"target 500 rejected even though current tick 491 is in domain");
+    require(p.pending&&p.pending->target_tick==500,"late backlog command rejected");
     engine::GlbMatrix final{};std::optional<BatContact> replay_contact;
     for(unsigned hz:{30u,60u,120u}){
         p.reset();p.start();require(p.record_command(457,a),"recorded replay command");
@@ -107,10 +107,16 @@ int main(int argc,char**argv){try{
             p.advance(100'000'000);const auto before=p.tick;p.single_step();require(p.tick==before+1,"contact step clock");
             if(p.contact)require(p.contact->fractional_tick<=double(p.tick)+1e-9,"event dispatched early");
         }
-        require(bool(p.contact)==bool(expected)&&p.contact_count==(expected?1u:0u),"runtime query/result count mismatch");
-        require(p.geometry==(expected?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"pending result after window");
-        if(expected){++contacts;require(std::abs(p.contact->sample.preview_time_s-expected->sample.preview_time_s)<1e-7,"runtime entry differs");}
-        for(unsigned k=0;k<4;++k)p.single_step();require(p.contact_count==(expected?1u:0u),"duplicate event");
+        std::optional<BatContact> temporal_expected;
+        if(p.timing->overlap)for(auto t=c;t<c+manual_contact_window_ticks&&!temporal_expected;++t){
+            const double lo=std::max(double(t)/240,p.timing->overlap->start_s),hi=std::min(double(t+1)/240,p.timing->overlap->end_s);
+            if(lo<hi)temporal_expected=first_manual_contact(p.delivery.pitch.initial,release,p.batter,c,s.bat_contact,lo,hi,scratch);
+        }
+        require(bool(p.contact)==bool(temporal_expected)&&p.contact_count==(temporal_expected?1u:0u),"runtime temporal query/result count mismatch");
+        require(p.geometry==(temporal_expected?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"pending result after window");
+        if(expected)++contacts;
+        if(temporal_expected)require(std::abs(p.contact->sample.preview_time_s-temporal_expected->sample.preview_time_s)<1e-7,"runtime temporal entry differs");
+        for(unsigned k=0;k<4;++k)p.single_step();require(p.contact_count==(temporal_expected?1u:0u),"duplicate event");
         std::cout<<"GEOMETRY commit="<<c<<" result="<<p.contact_state()<<" contact_tick="<<(expected?expected->fractional_tick:0)
             <<" closest_grid_m="<<closest<<" closest_tick="<<closest_tick<<" query=["<<c<<","<<c+manual_contact_window_ticks<<"]\n";
     }
@@ -130,7 +136,7 @@ int main(int argc,char**argv){try{
                 if(reference)require(reference->sample.preview_time_s==p.contact->sample.preview_time_s,"geometry replay time differs");}
         }
         if(reference) {
-            const double event=reference->sample.preview_time_s,lo=std::floor(event*240)/240,hi=lo+1./240,mid=(lo+hi)/2;
+            const double event=reference->sample.preview_time_s,lo=std::max(std::floor(event*240)/240,p.timing->overlap->start_s),hi=std::min((std::floor(event*240)+1)/240,p.timing->overlap->end_s),mid=(lo+hi)/2;
             auto split=first_manual_contact(p.delivery.pitch.initial,release,p.batter,c,s.bat_contact,lo,mid,scratch);
             if(!split)split=first_manual_contact(p.delivery.pitch.initial,release,p.batter,c,s.bat_contact,mid,hi,scratch);
             require(split&&std::abs(split->sample.preview_time_s-event)<1e-7,"interval split lost earliest entry");
@@ -138,6 +144,7 @@ int main(int argc,char**argv){try{
             require(overlap&&overlap->sample.preview_time_s==event,"inside boundary not reported at start");
         }
     }
+    require(contacts==11,"historical Original geometry regression changed");
     std::cout<<"GEOMETRY contacts="<<contacts<<"/65; refinements 32/64/128 agree\n";
     std::cout<<"Manual input/state/snapshot/domain/completion/replay checks passed\n";return 0;
 }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

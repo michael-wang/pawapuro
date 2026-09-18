@@ -9,7 +9,7 @@
 | 文件 | 唯一責任 |
 |---|---|
 | [Batting Feel 設計與邊界](design/batting-feel.md) | 六階段體驗、Native／Data／Lua 責任、concept locality、時間與資料契約。 |
-| [Hit Authorization](design/batting-contact.md) | 五層責任與 Normal S1 spatial gate；獨立保留 authorization／geometry，S1 待 review。 |
+| [Hit Authorization](design/batting-contact.md) | Temporal Interaction／Normal spatial gate 與獨立 geometry；spatial S1 已接受，Timing Interaction S1 待 review。 |
 | [Pawapuro Character Motion Rules](design/character-motion.md) | 超現實角色仍須可信可讀的動作關係，以及完整 animation authoring 前的因果推理。 |
 | [Batter Motion S0](design/batter-motion.md) | 單一打擊 reference 的觀察、左打 Motion Brief 與下一輪 authoring review criteria。 |
 | [M1：Batting Feel](milestones/01-batting-feel.md) | 本次 scope、驗收方式、小步 implementation plan、第一個 coding task。 |

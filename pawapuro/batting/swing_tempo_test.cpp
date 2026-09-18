@@ -50,17 +50,17 @@ int main(int argc,char** argv){try {
     std::cout<<"Mapped whole-pose max error="<<max_pose_error<<"\n";
     require(p.toggle_tempo()&&p.next_tempo==SwingTempo::Compact,"Ready toggle");p.start();
     require(!p.toggle_tempo()&&p.attempt_tempo.mode==SwingTempo::Compact,"live switch accepted");
-    p.input_boundary(false,false,true,{});require(!p.domain_rejected,"CLOSED without edge");
-    p.input_boundary(true,true,true,{});require(p.domain_rejected&&!p.pending,"domain edge feedback");
+    p.input_boundary(false,false,true,{});require(p.swing_available(),"live input availability");
+    p.input_boundary(true,true,true,{});require(p.pending&&p.pending->target_tick==1,"early edge must queue");p.lose_input();
     until(p,431);p.input_boundary(false,false,true,{});p.input_boundary(true,true,true,{});
-    require(!p.domain_rejected&&p.pending,"accepted command did not clear hint");
+    require(bool(p.pending),"accepted command did not clear hint");
     until(p,432);require(p.committed->tempo.mode==SwingTempo::Compact&&p.committed->consumed_tick==432,"tempo snapshot");
     p.toggle_pause();require(!p.toggle_tempo(),"paused switch");p.toggle_pause();
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);
     const auto old_pose=p.batter.pose.world;const auto old_result=p.geometry;
     require(p.tick==878&&p.toggle_tempo()&&p.next_tempo==SwingTempo::Original,"Complete next switch");
     require(p.attempt_tempo.mode==SwingTempo::Compact&&p.batter.pose.world==old_pose&&p.geometry==old_result,"next selection relabelled last attempt");
-    p.toggle_tempo();p.reset();require(!p.domain_rejected&&p.next_tempo==SwingTempo::Compact,"reset mode/hint");
+    p.toggle_tempo();p.reset();require(p.next_tempo==SwingTempo::Compact,"reset mode/hint");
     if(argc==3) {
         p.start();require(p.attempt_tempo.mode==SwingTempo::Compact,"next attempt lost selected B");
         std::cout<<"Core timing/default/selection/snapshot checks passed; contact study skipped\n";return 0;
@@ -71,7 +71,9 @@ int main(int argc,char** argv){try {
     for(std::uint64_t c=432;c<=496;++c) {
         p.reset();p.start();p.record_command(c,{});until(p,c+64);
         require(p.geometry!=ManualGeometry::Pending&&p.contact_count==(p.contact?1u:0u),"window incomplete");
-        results[c-432]=p.contact;if(p.contact)++contacts;
+        // Keep the old unrestricted geometry sweep as an independent physical/motion regression.
+        for(auto t=c;t<c+64&&!results[c-432];++t)results[c-432]=first_manual_contact(p.delivery.pitch.initial,release,p.batter,c,s.bat_contact,double(t)/240,double(t+1)/240,scratch,64,b);
+        if(results[c-432])++contacts;
         std::cout<<"B commit="<<c<<" result="<<p.contact_state()<<" contact_tick="<<(p.contact?p.contact->fractional_tick:0)<<"\n";
     }
     // Refine endpoints and both sides of every contact/no-contact transition.
@@ -105,5 +107,6 @@ int main(int argc,char** argv){try {
     }
     p.reset();p.start();while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);
     require(p.tick==816&&p.geometry==ManualGeometry::NoSwing,"B Take changed");
+    require(contacts==17,"historical Compact geometry regression changed");
     std::cout<<"B contacts="<<contacts<<"/65; boundary refinement/replay/entry checks passed\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

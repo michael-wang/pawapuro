@@ -81,3 +81,12 @@ cursor_speed_mps = 0.65
 
 [swing_tempo]
 compact_area_ticks = 30
+
+# Development timing candidates, independent of aim and physical radii.
+[batting_interaction]
+half_depth_m = 0.40
+
+[swing_phase_potential]
+normal_start_ms = 75
+normal_peak_ms = 125
+normal_end_ms = 190

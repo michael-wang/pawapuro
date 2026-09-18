@@ -7,9 +7,10 @@
 #include <string>
 
 namespace {
-std::array<float, 42> values(const pawapuro::BattingStaging& s)
+std::array<float, 46> values(const pawapuro::BattingStaging& s)
 {
-    return {s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
+    return {s.batting_interaction.half_depth_m,s.swing_phase_potential.normal_start_ms,s.swing_phase_potential.normal_peak_ms,s.swing_phase_potential.normal_end_ms,
+        s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
         s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m, s.mound_height_m,
@@ -55,6 +56,11 @@ int main(int argc, char** argv)
         write("[swing_tempo]\ncompact_area_ticks=29.5\n");
         if(pawapuro::load_batting_staging(fixture).compact_area_ticks!=29.5)
             throw std::runtime_error("Tempo startup override not loaded.");
+        write("[batting_interaction]\nhalf_depth_m=0.3\n[swing_phase_potential]\nnormal_start_ms=60\nnormal_peak_ms=120\nnormal_end_ms=200\n");
+        const auto timing=pawapuro::load_batting_staging(fixture);
+        if(timing.batting_interaction.half_depth_m!=.3f||timing.swing_phase_potential.normal_start_ms!=60
+            ||timing.swing_phase_potential.normal_peak_ms!=120||timing.swing_phase_potential.normal_end_ms!=200)
+            throw std::runtime_error("Timing startup overrides not loaded.");
         write("[camera]\nvertical_fov_degrees = 42\n");
         if (pawapuro::load_batting_staging(fixture).vertical_fov_degrees != 42)
             throw std::runtime_error("Valid integer override was not applied.");
@@ -109,6 +115,18 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[batting_interaction]\nhalf_depth_m=0\n", "batting_interaction.half_depth_m"},
+            {"[batting_interaction]\nhalf_depth_m=nan\n", "batting_interaction.half_depth_m"},
+            {"[batting_interaction]\nhalf_depth_m='deep'\n", "batting_interaction.half_depth_m"},
+            {"[batting_interaction]\nx_extent=1\n", "batting_interaction.x_extent"},
+            {"[swing_phase_potential]\nnormal_start_ms=125\n", "start < peak < end"},
+            {"[swing_phase_potential]\nnormal_peak_ms=190\n", "start < peak < end"},
+            {"[swing_phase_potential]\nnormal_end_ms=10\n", "start < peak < end"},
+            {"[swing_phase_potential]\nnormal_start_ms=-1\n", "swing_phase_potential.normal_start_ms"},
+            {"[swing_phase_potential]\nnormal_peak_ms=inf\n", "swing_phase_potential.normal_peak_ms"},
+            {"[swing_phase_potential]\nnormal_end_ms=nan\n", "swing_phase_potential.normal_end_ms"},
+            {"[swing_phase_potential]\nnormal_end_ms='late'\n", "swing_phase_potential.normal_end_ms"},
+            {"[swing_phase_potential]\ncontact_start_ms=20\n", "swing_phase_potential.contact_start_ms"},
             {"[hit_authorization]\nnormal_radius_x_m='wide'\n", "hit_authorization.normal_radius_x_m"},
             {"[hit_authorization]\nextra=1\n", "hit_authorization.extra"},
             {"hit_authorization=3\n", "hit_authorization must be a table"},

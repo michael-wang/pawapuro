@@ -44,7 +44,9 @@ int main(int argc,char** argv) {
         if(foot_points[0].empty()||foot_points[1].empty())throw std::runtime_error("missing support geometry");
         float min_sole=1,max_slide=0,max_hand=0,max_grip=0,max_prefix=0;engine::GlbPose take;
         const auto rest=[&](std::size_t n){return DirectX::XMMatrixInverse(nullptr,matrix(motion.asset.inverse_binds[joint(n)]));};
-        for(std::uint64_t c=432;c<=496;++c){
+        std::vector<std::uint64_t> commits{1,96,240,360,431,497,600,815,816,840};
+        for(std::uint64_t c=432;c<=496;++c)commits.push_back(c);
+        for(const auto c:commits){
             engine::GlbMatrix planted{};bool has_plant=false;
             for(unsigned t=0;t<=c+456;++t){
                 motion.sample(t,c,scratch);for(const auto& m:scratch.world)for(float v:m)if(!std::isfinite(v))throw std::runtime_error("nonfinite pose");
