@@ -37,9 +37,9 @@ void append_ball_readability(std::vector<engine::Vertex>& vertices, const Battin
 }
 
 void append_arrival_cue(std::vector<engine::Vertex>& vertices, const BattingReference& scene,
-    PitchPhase phase, ArrivalCueStyle style)
+    bool visible, ArrivalCueStyle style)
 {
-    if (!arrival_cue_visible(phase)) {
+    if (!visible) {
         vertices.resize(vertices.size()+arrival_cue_vertex_count);
         return;
     }

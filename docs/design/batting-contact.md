@@ -448,3 +448,21 @@ Pitch-point marker是固定半對角線12 mm的cyan diamond（完整寬高24 mm�
 人工偏心重現：R回中央後，用方向鍵持續移到live aim約x=−.130、y=.710 m（固定pitch P約0／.775），確認title，再Space開球、約1.87秒按J；以實際consumed tick為準。Authorized Contact後，marker應在ellipse右上半部，black core留在committed center；再按箭頭、P／`.`或等待Complete，review不應移動。Space後則顯示當前live aim。沒有timing diagram／peak marker、panel cleanup／resize／transparency、新step controls、response／spray tuning、miss review、Contact Correction或Power mode；停止等待Michael＋Julia review。
 
 本輪agent自身execution核對cwd／clean main，fetch及提交前核對HEAD／origin/main均為ee6bc22d916c964b71ab7d1a2337d98c46d6b011，無後續accepted work。完整Debug／Release build通過，完整CTest **Debug22/22（248.32 s）、Release22/22（16.39 s）**。初次新PlayerAim test的區域變數觸發C4456 shadow warning／WX，已改名，沒有關閉warning或改容差。`build/contact-review-s1/`保存兩組態build／CTest logs、初次compile紀錄與`review-test-evidence.txt`。實機走過Ready、Playing、Contact、Complete及Space reset，固定dynamic-count assertion未失敗，app正常退出；沒有本輪Debug GPU validation或偏心實機驗收宣稱。
+
+## Contact Review Arrival Cue 修正（2026-09-19）
+
+Contact Review Snapshot S1 第一版尚未 human accepted：Michael 認為 cyan pitch-point diamond 不如原有 Filled Baseball Arrival Cue 清楚。本輪移除 diamond 與其六個 vertices；committed reticle 仍直接借用已 dispatch Gameplay Contact 的 latest SwingAttempt.command.aim_center，不建立第二份 snapshot。
+
+Arrival Cue 的 presentation visibility 明確為「原有 InFlight visibility，或 GameplayResult::Contact」。不修改 delivery.pitch.phase；仍使用啟動時 predict_arrival(delivery.pitch).state.position_m 建立的原有 cue geometry，沿用 V 選擇的 Filled Baseball／Ring style。接觸後它與 outgoing ball 同時存在，經 follow-through、ground hold、Preview Complete 保留至 Space reset；不移到 BallResponse launch origin、raw contact 或 outgoing ball。Space 開下一球後回到 normal cue lifecycle 與 live reticle；Miss／NoSwing 不延長 cue、不凍結歷史 aim。
+
+目前 deterministic fixed ReferencePitch 的 scene cue 與 Hit Authorization 使用相同 predicted evaluation-plane point。Regression 精確比較 prediction X／Y 與第二次 SwingAttempt.authorization.pitch_point、scene projection，並逐值比較實際 arrival_at_plane() 的 tick／time／position／velocity；沒有新增 epsilon 或放寬既有容差。這是目前固定軌跡的契約，不能假設未來 mid-flight modification、stochastic flight 或 player-controlled pitch movement 仍成立；未來若改變 trajectory，這項 regression 應揭露 prediction／actual 分歧，避免誤導 review。
+
+Contact Review 現在只有原本 210 個 reticle vertices，Arrival Cue 維持原有固定 636 個 vertices（含 Ring padding）。共用 count 同步縮減 CPU reserve／GPU dynamic capacity／late-world draw range；Ready、Playing、Contact、Complete 每 frame count 相同。Native tests 驗證既有 append 的 pointer／capacity 穩定、兩種 style 的 geometry 逐 byte 等於原 scene，且 presentation 不改 pitch phase。沒有 D3D12View、asset、gameplay 或 Ball Response formula／Data 變更。
+
+80 早揮 → 320 rearm → 448 第二次 Contact fixture 使用 A=P−(.13,.065)，確認只凍結第二次 intent；planned response 尚未 dispatch 仍為 live。原有 1000 次 live aim movement、pause／step、flight／ground／Complete／Space tests 保留，新增 cue persistence 與 Miss／NoSwing lifecycle 檢查；433 fixture 在 tick735 已 ground hold、整體仍 Playing，也保留 cue。
+
+Release 實機：448 Contact 在 paused tick511 同時看得到飛出的球與原有 Filled Baseball；自然 Complete tick1232 後保留相同 cue／reticle，額外等待後 title 不變；V 切換 Ring 仍可見。Space 後暫停取證是新球 tick7（不是 tick0 截圖），swings=0、No launch、cue Hidden、live reticle 恢復；精確 tick0 reset 由 Native tests 驗證。實機截圖與 title JSON 位於本機 ignored build/arrival-review-s1/：contact-airborne.png、contact-held.png、contact-ring.png、space-reset.png。沒有宣稱實機偏心 capture；偏心 immutable snapshot 由上述 Native fixture 驗證。人工重現可先用方向鍵將 aim 移到約(-.130,.710)，確認 title，再 Space 開球、約1.87秒按 J；以實際 consumed tick 為準，接觸後 baseball 應留在 ellipse 右上半部。
+
+本輪不加入 timing diagram、panel cleanup／resize、step-control 或 Ball Response tuning；停止等待 Michael＋Julia human review。
+
+驗證：fetch／pull --ff-only 確認 HEAD／origin/main 均為 361433c6858c51605a40124da9ab6a250718983a，沒有後續 accepted commits。完整 Debug／Release build 通過；完整 CTest **Debug 22/22（249.25 s）、Release 22/22（17.14 s）**，未放寬容差。Build／CTest logs 在同一 build/arrival-review-s1/ 目錄。實機 Ready／Playing／Contact／Complete／reset 的固定 dynamic-count assertion 均未失敗，app 正常退出；沒有本輪 Debug GPU validation 宣稱。

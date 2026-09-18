@@ -20,7 +20,11 @@ struct BattingReference {
     DirectX::XMFLOAT2 zone_min_ndc{}, zone_max_ndc{}, prediction_ndc{};
 };
 void append_arrival_cue(std::vector<engine::Vertex>& vertices, const BattingReference& scene,
-    PitchPhase phase, ArrivalCueStyle style);
+    bool visible, ArrivalCueStyle style);
+inline void append_arrival_cue(std::vector<engine::Vertex>& vertices, const BattingReference& scene,
+    PitchPhase phase, ArrivalCueStyle style) {
+    append_arrival_cue(vertices,scene,arrival_cue_visible(phase),style);
+}
 BattingReference make_batting_reference(const BattingStaging& staging,
     DirectX::XMFLOAT3 predicted_position, float aspect, std::span<const engine::Vertex> pitcher_vertices, std::span<const engine::Vertex> batter_vertices = {});
 DirectX::XMFLOAT2 project_batting_point(const BattingStaging& staging, DirectX::XMFLOAT3 point, float aspect);
