@@ -72,10 +72,11 @@ bat_thickness_scale = 1.25
 ball_radius_m = 0.037
 bat_radius_m = 0.033
 
-# Player Aim S0 human-review candidate, not authorization or permanent balance.
-[player_aim]
+# Normal authorization candidate, shared with the reticle; not permanent balance.
+[hit_authorization]
 normal_radius_x_m = 0.26
 normal_radius_y_m = 0.13
+[player_aim]
 cursor_speed_mps = 0.65
 
 [swing_tempo]

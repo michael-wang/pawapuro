@@ -75,6 +75,15 @@ add_custom_command(TARGET pawapuro POST_BUILD
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(hit_authorization_test pawapuro/batting/hit_authorization_test.cpp pawapuro/batting/player_aim.cpp
+        pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/manual_swing.cpp
+        pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp
+        pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(hit_authorization_test PRIVATE cxx_std_20)
+    target_compile_options(hit_authorization_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(hit_authorization_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(hit_authorization_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME hit_authorization COMMAND hit_authorization_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting")
     add_executable(contact_panel_test pawapuro/batting/contact_panel_test.cpp pawapuro/batting/contact_panel.cpp
         pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/manual_swing.cpp
         pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp

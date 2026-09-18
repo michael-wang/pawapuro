@@ -35,8 +35,8 @@ int main(int argc,char** argv) {
     for(float bad:{0.f,-1.f,std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()}) {
         for(int field=0;field<3;++field) {
             auto invalid=s;
-            if(field==0)invalid.player_aim.normal_radius_x_m=bad;
-            if(field==1)invalid.player_aim.normal_radius_y_m=bad;
+            if(field==0)invalid.hit_authorization.normal_radius_x_m=bad;
+            if(field==1)invalid.hit_authorization.normal_radius_y_m=bad;
             if(field==2)invalid.player_aim.cursor_speed_mps=bad;
             bool rejected=false;try{PlayerAim test(invalid);}catch(const std::runtime_error&){rejected=true;}
             require(rejected,"invalid tuning accepted");

@@ -52,7 +52,7 @@ ManualSwingPreview::ManualSwingPreview(const std::filesystem::path& d,const Batt
 }
 void ManualSwingPreview::reset() {
     delivery.reset();batter.evaluate_tick(0,std::nullopt);tick=pending_ticks=fractional_credit=arrival_tick=0;
-    domain_rejected=false;contact.reset();contact_count=0;contact_dispatch_tick=0;geometry=ManualGeometry::Pending;
+    domain_rejected=false;authorization.reset();contact.reset();contact_count=0;contact_dispatch_tick=0;geometry=ManualGeometry::Pending;
     pending.reset();committed.reset();paused=false;armed=false;input_result="Waiting";phase=PreviewPhase::Ready;
 }
 bool ManualSwingPreview::start(){if(phase==PreviewPhase::Playing)return false;reset();attempt_tempo={next_tempo,tuning.compact_area_ticks};delivery.start();phase=PreviewPhase::Playing;return true;}
@@ -87,6 +87,11 @@ void ManualSwingPreview::input_boundary(bool held,bool edge,bool eligible,Direct
 bool ManualSwingPreview::step_tick() {
     ++tick;delivery.step_tick();
     if(pending&&pending->target_tick==tick){committed=pending;pending.reset();committed->consumed_tick=tick;input_result="Committed";
+        const auto point=predict_arrival(delivery.pitch).state.position_m;
+        authorization=authorize_normal_hit(committed->aim_center,{point.x,point.y},tuning.hit_authorization);
+        const auto& a=*authorization;
+        std::fprintf(stderr,"HitAuthorization %s: consumed_tick=%llu pitch=(%.9g,%.9g) error=(%.9g,%.9g) normalized=(%.9g,%.9g) q=%.9g\n",
+            a.authorized?"Authorized":"RejectedSpatial",tick,a.pitch_point.x,a.pitch_point.y,a.error.x,a.error.y,a.normalized_error.x,a.normalized_error.y,a.q);
         std::fprintf(stderr,"Swing consumed: target_tick=%llu consumed_tick=%llu boundary_tick=%llu recorded_backlog=%llu aim=(%.9g,%.9g) tempo=%s compact_area_ticks=%.9g mapping=smoothstep-v1 sweep_tick=%.9f area_tick=%.9f finish_tick=%llu Geometry pending\n",committed->target_tick,tick,committed->boundary_tick,committed->backlog,committed->aim_center.x,committed->aim_center.y,committed->tempo.mode==SwingTempo::Original?"A":"B",committed->tempo.compact_area_ticks,double(tick)+committed->tempo.world_offset(SwingTempoTiming::sweep_ticks),double(tick)+committed->tempo.world_offset(SwingTempoTiming::area_ticks),committed->tempo.end_tick(tick));}
     batter.evaluate_tick(tick,committed?std::optional(committed->consumed_tick):std::nullopt,committed?committed->tempo:attempt_tempo);
     query_contact();

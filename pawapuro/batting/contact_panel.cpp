@@ -69,8 +69,9 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
         contact_panel_labels[0],contact_panel_labels[1],contact_panel_labels[2],
         L"接觸測試：只檢查出棒後的一小段，",L"球暫時不會飛出去。",
         L"依球繼續前進的位置判斷；",L"畫面中的球仍停住。",L"A 原節奏",L"B 快出棒",L"下一球：A 原節奏",L"下一球：B 快出棒",
-        L"T：下一球前切換",L"已按下，但不在本輪可出棒時段。"};
-    std::array<TextMask,17> masks;
+        L"T：下一球前切換",L"已按下，但不在本輪可出棒時段。",
+        L"瞄準授權：等待",L"瞄準授權：通過",L"瞄準授權：超出範圍"};
+    std::array<TextMask,20> masks;
     for(unsigned i=0;i<masks.size();++i)masks[i]=raster(texts[i],static_cast<int>(std::lround((i==0?30:i>=4&&i<=6?28:20)*scale)));
     for(unsigned variant=0;variant<variants.size()+annotations.size();++variant) {
         auto& v=variant<7?variants[variant]:annotations[variant-7];const auto state=static_cast<ContactPanelState>(variant);
@@ -87,10 +88,11 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
         if(variant>=7) {
             const unsigned index=variant-7;
             if(index<6)text(11+index,42,index<2?394.f:index<4?420.f:index==4?446.f:474.f,white);
+            if(index>=7)text(17+index-7,42,510,bright);
             annotation_vertex_count=std::max(annotation_vertex_count,static_cast<unsigned>(v.size()));
             continue;
         }
-        quad(24,24,540,510,dark);text(0,42,34,white);
+        quad(24,24,540,526,dark);text(0,42,34,white);
         if(variant<3)text(1+variant,42,76,white);
         for(unsigned row=0;row<3;++row) {
             const float y=110+46*float(row);const bool active=int(row)==selected;
@@ -107,7 +109,7 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     base_vertex_count=vertex_count;
     for(auto& v:variants)v.resize(base_vertex_count);
     for(auto& v:annotations)v.resize(annotation_vertex_count);
-    vertex_count=base_vertex_count+4*annotation_vertex_count;
+    vertex_count=base_vertex_count+5*annotation_vertex_count;
     std::fprintf(stderr,"Contact panel: cached fixed Chinese text, seven variants, %u vertices; no per-frame rasterization\n",vertex_count);
 }
 void ContactResultPanel::append(std::vector<engine::Vertex>& target,const ManualSwingPreview& p) const {
@@ -117,5 +119,6 @@ void ContactResultPanel::append(std::vector<engine::Vertex>& target,const Manual
     add(mode==SwingTempo::Original?0:1);
     add(p.phase==PreviewPhase::Complete?(p.next_tempo==SwingTempo::Original?2:3):6);
     add(4);add(p.domain_rejected?5:6);
+    add(!p.authorization?7:p.authorization->authorized?8:9);
 }
 }

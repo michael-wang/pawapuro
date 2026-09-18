@@ -1,6 +1,7 @@
 #pragma once
 #include "batting_preview.hpp" // Baseline remains an independent contact regression caller.
 #include "batter/ingame_s0/ingame_motion.hpp"
+#include "hit_authorization.hpp"
 namespace pawapuro {
 // Fixed-pitch diagnostic: commit through commit+64 ticks, including analytic flight past the plane.
 inline constexpr std::uint64_t manual_contact_window_ticks=64;
@@ -30,6 +31,7 @@ struct ManualSwingPreview {
     bool toggle_tempo();
     std::uint64_t tick=0,pending_ticks=0,arrival_tick=0;
     std::optional<SwingCommand> pending,committed;
+    std::optional<HitAuthorizationDecision> authorization;
     ManualGeometry geometry=ManualGeometry::Pending;
     std::optional<BatContact> contact;
     unsigned contact_count=0;

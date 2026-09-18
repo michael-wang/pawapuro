@@ -18,6 +18,7 @@ public:
     void append_triangles(std::vector<engine::Vertex>& destination) const;
 private:
     PlayerAimTuning tuning;
+    HitAuthorizationTuning authorization;
     DirectX::XMFLOAT2 center_m{};
     float half_width,bottom,top,plane_z,visual_z;
 };

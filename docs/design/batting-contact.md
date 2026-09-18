@@ -1,5 +1,7 @@
 # Hit Authorization S0 — Gameplay Contact Model
 
+最新 runtime 狀態見文末 **Hit Authorization S1**；下方 S0／Gate C 等歷史記錄保留。
+
 2026-09-17；**Hit Authorization S0 五層責任已獲 Michael＋Julia human review accepted；S0.1 Reticle Semantics 亦已 human review accepted；Player Aim S0 interactive candidate 待 review**。僅定責任與 normalized examples；沒有 production authorization、正式 swing input、correction solver 或 ball response。Bat Contact S0／S1／S2 已接受的 physical truth 保留，M1 未完成。
 
 ## Reference：觀察與解讀分開
@@ -198,3 +200,40 @@ Release 集中檢查：A 原 manual/contact regression 通過；B 全65個 commi
 
 
 **Compact promotion（2026-09-18）**：B 已獲 Michael＋Julia human acceptance，成為目前固定來球／Normal manual swing 的預設 gameplay baseline。Michael 回饋 B 在直覺正確的按鍵節奏下反應自然、能產生合理接觸；切回 A 後下棒前段明顯過慢。接受依據是 gameplay responsiveness／timing feel，不是 B 的接觸 commit 數量較多。本輪沒有調慢球速或改球路，回饋支持原揮擊前段過慢是先前操作困難的重要因素之一。125 ms contact-area cue 是目前 accepted tuning，未來仍可依新 gameplay evidence 調整，不是永久 production balance；完整 end-to-end input latency 仍未量測。Contact 仍為 bounded geometry feedback，不等於正式 Hit Authorization／Contact Quality／Ball Response。只改 manual entry 的預設選擇，底層 `SwingTempoTiming{}` 仍為 A；T、snapshot、mapping 與所有既有數值不變。
+
+## Hit Authorization S1：Normal spatial gate（2026-09-18）
+
+本節取代上方歷史 S0／Gate C「尚無 authorization」的 runtime 狀態；保留其研究與已接受行為。S1 是最小空間授權，待 Michael＋Julia review，不是最終 Hit／Miss。
+
+- **Data ownership**：`HitAuthorizationTuning`／`[hit_authorization]` 擁有 `normal_radius_x_m=0.26`、`normal_radius_y_m=0.13`。這是 development tuning baseline，不是永久 balance。沿用原 finite／range／zone extent startup validation；`PlayerAimTuning` 只保留 cursor speed。準星 ellipse 與 live signed diagnostics 消費相同半徑，沒有第二份 visual ellipse。
+- **決策時點／truth**：queued `SwingCommand` 真正 consumed 時，以不可變 `aim_center` 為 A；P 使用 `predict_arrival(delivery.pitch).state.position_m` 的 X/Y。它由 immutable initial pitch、既有 240 Hz integration／crossing interpolation 與 `strike_zone_plane_z()` 產生，與 Arrival Cue／prediction 同源；不使用 freeze 後球心、解析 contact sample、visual radius、bat capsule、u 或 live reticle。
+- **公式**：`dx=P.x-A.x`、`dy=P.y-A.y`；`ex=dx/rx`、`ey=dy/ry`；`q=ex*ex+ey*ey`。`q<=1` 為 Authorized，`q==1` 包含在內，不加 gameplay epsilon。決策保留 P、signed error、normalized error、q 與 authorized。
+- **生命週期／replay**：`ManualSwingPreview::authorization` 是 optional per-command value，消費前不存在，消費當下只算一次。移動 live aim、pause／step 不重算；Complete 保留，reset／新球清除。Owner 不依賴 PlayerAim object；同一 recorded command snapshot、startup Data、Native／motion versions 與 pitch truth 支援 deterministic replay，沒有承諾跨平台 bit identity。
+- **兩種 truth**：授權 Pending／Authorized／RejectedSpatial 與原 `ManualGeometry` Pending／NoSwing／Contact／NoContactInWindow 獨立保存。RejectedSpatial 不 short-circuit query，不改 BatContact、bat path 或 ball path。**RejectedSpatial + Contact** 是合法且刻意保留的開發觀察，physical overlap 不自動等於 accepted gameplay hit；**Authorized + NoContactInWindow** 也成立，permission 不保證 physical contact。
+- **畫面**：既有 fixed-text cached panel 新增「瞄準授權：等待／通過／超出範圍」，與「本球結果」三列分開；拒絕授權不是第四種 geometry 結果。沒有 correction、Contact ability/stat、quality、sweet spot、foul／fair、Ball Response 或最終 Hit／Miss。
+
+### 可重現 fixtures 與人工 review
+
+`hit_authorization_test` 使用正式 Compact（T=30）及固定 pitch：
+
+| Commit tick | Immutable aim A（m） | 授權 | Raw geometry |
+|---|---|---|---|
+| 441 | P≈(−0.000000449712, 0.775000631809) | Authorized，q=0 | Contact |
+| 441 | (P.x + 0.26×1.01, P.y)≈(0.262599527836, 0.775000631809) | RejectedSpatial，q≈1.02009999752 | Contact |
+| 456 | P | Authorized，q=0 | NoContactInWindow |
+
+441 pair 的 time=1.98058356422 s、u=0.479573283832、normal≈(0.328227907419, 0.290680110455, 0.898761093616)、relative velocity≈(−10.745803833, −8.63688278198, −64.9047622681) m/s **逐值完全相同**，比既有 tolerance 更嚴。測試逐 tick 比較 whole bat pose／barrel transform、ball position／velocity、geometry existence，並比較 contact time／u／normal／relative velocity／surface point／bat velocity／radii。Ball37／bat33 mm 及 physical solver 未改。
+
+Focused tests 另含中心、兩軸精確 q=1、略超界、signed vectors、真正 PlayerAim 在 schedule／commit 後移動、reset／新球／Complete、pause／step、30／60／120 Hz／backlog、tick420+100 ms→boundary436/backlog8→consumed445；也涵蓋 RejectedSpatial + NoContactInWindow、Pending authorization + NoSwing，以及面板獨立顯示。既有 tests／tolerances 保留。
+
+本機 ignored evidence 在 `build/hit-authorization-s1/`。實際 Release app screenshot `authorized-contact.png` 顯示「通過＋碰到球」，本次 OS input consumed **444**（不是數值 fixture 441），aim=(0,0.775)。`authorized-contact.json` 保存 window title。畫面已檢視，非合成圖。Computer Use 的短按方向鍵沒有讓 app 的 held-key aim 取樣移動，因此未取得可信的 RejectedSpatial + Contact screenshot；沒有以 mock screen 補作。部分未 foreground 的 capture 得到遮擋視窗，已以 foreground capture 覆寫，不列作 evidence。
+
+人工操作：預設 B；R 回中央，Space 開始，約開始後 1.84 s 按 J（以 title 的 consumed commit 為準，Compact 436–452 目前會 Contact）。下一球前按住右鍵讓 aim.x≈0.263～0.30 m、aim.y≈0.775 m，再以同樣節奏揮棒，應同時看見「超出範圍」與「碰到球」。精確 commit 441／456 由 Native test 重播；一般 OS 手按不保證同一 tick。P 暫停、`.` 單步保留原控制，paused 不接受新 J。截圖與測試不代表 human feel acceptance 或端到端 latency 測量。
+
+### 建置與執行紀錄
+
+使用 agent 自身 `exec_command`／PowerShell、cwd `C:\astra-dev\pawapuro` 核對 clean main／HEAD；fetch 後 origin/main 仍為 `6a482dc041f230ff44409276c3899defccc6a0f2`。首次 git fetch/pull 在 `.git/FETCH_HEAD` 遇到 sandbox `Permission denied`，單次 per-command 核准 fetch 成功；未改權限或歷史。
+
+完整 Debug／Release build 使用既有 VS 2022 x64 developer environment、UTF-8、CMake/Ninja，沒有安裝／修復環境。首輪 compiler C2039 是 staging test 欄位遷移時多寫一層 `player_aim`，已修正；首輪 authorization test 的 Take fixture 在仍 Playing 時呼叫 start，已補 reset。兩者是正常 compiler／test failure，不是 runner 問題，也沒有放寬測試容差。
+
+Release 完整 CTest **17/17 通過**（約 41 s）。Debug 完整 suite 約 583 s，既有 16 項通過；新測試的上述失敗修正後，authorization／panel／staging 直接執行均通過，並以 CTest 重跑這三項，**3/3 通過**（36.06 s）；合併結果涵蓋全部 17 項。`debug-ctest.log` 保留首輪失敗，`debug-final-ctest.log` 記錄修正後結果；`debug-final-build.log`／`release-build.log` 保存建置。實際 Release app 已啟動、從 Ready 完成 Compact swing、確認新 panel 的 Waiting／Authorized 與 Contact／Complete 保留狀態，並透過 Esc 關閉；未宣稱本輪有 Debug GPU validation 或 human playtest acceptance。

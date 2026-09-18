@@ -15,7 +15,7 @@ std::array<float, 42> values(const pawapuro::BattingStaging& s)
         s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m, s.mound_height_m,
         s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m,
         s.pitcher_blockout_position_m.x, s.pitcher_blockout_position_m.y, s.pitcher_blockout_position_m.z, s.pitcher_blockout_height_m,
-        s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m, s.blockout_head_scale, s.blockout_foot_planar_scale, s.blockout_foot_height_scale, s.blockout_hand_scale, s.blockout_bat_thickness_scale,s.bat_contact.ball_radius_m,s.bat_contact.bat_radius_m,s.player_aim.normal_radius_x_m,s.player_aim.normal_radius_y_m,s.player_aim.cursor_speed_mps};
+        s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m, s.blockout_head_scale, s.blockout_foot_planar_scale, s.blockout_foot_height_scale, s.blockout_hand_scale, s.blockout_bat_thickness_scale,s.bat_contact.ball_radius_m,s.bat_contact.bat_radius_m,s.hit_authorization.normal_radius_x_m,s.hit_authorization.normal_radius_y_m,s.player_aim.cursor_speed_mps};
 }
 }
 int main(int argc, char** argv)
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
         if (zone.strike_zone_width_m != 0.8636f || zone.strike_zone_bottom_m != 0.6f || zone.strike_zone_top_m != 1.4f)
             throw std::runtime_error("Gameplay strike-zone overrides were not applied.");
         for (float width : {0.25f, 0.75f, 0.86f, 0.95f, 1.5f}) {
-            const auto text = "[strike_zone]\nwidth_m = " + std::to_string(width) + "\n[player_aim]\nnormal_radius_x_m=0.1\n";
+            const auto text = "[strike_zone]\nwidth_m = " + std::to_string(width) + "\n[hit_authorization]\nnormal_radius_x_m=0.1\n";
             write(text.c_str());
             if (pawapuro::load_batting_staging(fixture).strike_zone_width_m != width)
                 throw std::runtime_error("Gameplay width candidate was not loaded.");
@@ -92,9 +92,9 @@ int main(int argc, char** argv)
         const auto contact=pawapuro::load_batting_staging(fixture);
         if(contact.bat_contact.ball_radius_m!=.04f || contact.bat_contact.bat_radius_m!=.03f || contact.ball_marker_radius_m!=defaults.ball_marker_radius_m)
             throw std::runtime_error("Gameplay envelope override mixed with visual radius.");
-        write("[player_aim]\nnormal_radius_x_m=0.2\nnormal_radius_y_m=0.1\ncursor_speed_mps=0.5\n");
-        const auto aim=pawapuro::load_batting_staging(fixture).player_aim;
-        if(aim.normal_radius_x_m!=.2f||aim.normal_radius_y_m!=.1f||aim.cursor_speed_mps!=.5f)
+        write("[hit_authorization]\nnormal_radius_x_m=0.2\nnormal_radius_y_m=0.1\n[player_aim]\ncursor_speed_mps=0.5\n");
+        const auto aim=pawapuro::load_batting_staging(fixture);
+        if(aim.hit_authorization.normal_radius_x_m!=.2f||aim.hit_authorization.normal_radius_y_m!=.1f||aim.player_aim.cursor_speed_mps!=.5f)
             throw std::runtime_error("Player aim tuning not loaded.");
         const auto reject = [&](const std::filesystem::path& path, const char* text) {
             try { (void)pawapuro::load_batting_staging(path); }
@@ -109,6 +109,10 @@ int main(int argc, char** argv)
         reject(fixture, "candidate.toml");
         struct Invalid { const char* toml; const char* diagnostic; };
         const Invalid invalid[] = {
+            {"[hit_authorization]\nnormal_radius_x_m='wide'\n", "hit_authorization.normal_radius_x_m"},
+            {"[hit_authorization]\nextra=1\n", "hit_authorization.extra"},
+            {"hit_authorization=3\n", "hit_authorization must be a table"},
+            {"[player_aim]\nnormal_radius_x_m=0.26\n", "player_aim.normal_radius_x_m"},
             {"[swing_tempo]\ncompact_area_ticks=0\n", "swing_tempo.compact_area_ticks"},
             {"[swing_tempo]\ncompact_area_ticks=41\n", "swing_tempo.compact_area_ticks"},
             {"[swing_tempo]\ncompact_area_ticks=nan\n", "swing_tempo.compact_area_ticks"},
@@ -119,14 +123,14 @@ int main(int argc, char** argv)
             {"[window]\nwidth_fraction=nan\n", "window.width_fraction"},
             {"[window]\nwidth_fraction=inf\n", "window.width_fraction"},
             {"[window]\nwidth_fraction='large'\n", "window.width_fraction"},
-            {"[player_aim]\nnormal_radius_x_m=0\n", "player_aim.normal_radius_x_m"},
-            {"[player_aim]\nnormal_radius_y_m=-0.1\n", "player_aim.normal_radius_y_m"},
+            {"[hit_authorization]\nnormal_radius_x_m=0\n", "hit_authorization.normal_radius_x_m"},
+            {"[hit_authorization]\nnormal_radius_y_m=-0.1\n", "hit_authorization.normal_radius_y_m"},
             {"[player_aim]\ncursor_speed_mps=0\n", "player_aim.cursor_speed_mps"},
-            {"[player_aim]\nnormal_radius_x_m=nan\n", "player_aim.normal_radius_x_m"},
-            {"[player_aim]\nnormal_radius_y_m=inf\n", "player_aim.normal_radius_y_m"},
+            {"[hit_authorization]\nnormal_radius_x_m=nan\n", "hit_authorization.normal_radius_x_m"},
+            {"[hit_authorization]\nnormal_radius_y_m=inf\n", "hit_authorization.normal_radius_y_m"},
             {"[player_aim]\ncursor_speed_mps=nan\n", "player_aim.cursor_speed_mps"},
-            {"[player_aim]\nnormal_radius_x_m=1.0\n", "player_aim radii"},
-            {"[player_aim]\nnormal_radius_y_m=1.0\n", "player_aim radii"},
+            {"[hit_authorization]\nnormal_radius_x_m=1.0\n", "hit_authorization radii"},
+            {"[hit_authorization]\nnormal_radius_y_m=1.0\n", "hit_authorization radii"},
             {"[player_aim]\nmode='Power'\n", "player_aim.mode"},
             {"[bat_contact]\nball_radius_m=0\n", "bat_contact.ball_radius_m"},
             {"[bat_contact]\nbat_radius_m=-0.01\n", "bat_contact.bat_radius_m"},

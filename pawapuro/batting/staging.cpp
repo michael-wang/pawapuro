@@ -59,15 +59,16 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim"}, "");
-        for (const char* section : {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim"}) {
+        only_keys(table, {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization"}, "");
+        for (const char* section : {"swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
                 if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks"}, prefix);
                 if (prefix == "window.") only_keys(fields, {"width_fraction"}, prefix);
-                if (prefix == "player_aim.") only_keys(fields, {"normal_radius_x_m", "normal_radius_y_m", "cursor_speed_mps"}, prefix);
+                if (prefix == "player_aim.") only_keys(fields, {"cursor_speed_mps"}, prefix);
+                if (prefix == "hit_authorization.") only_keys(fields, {"normal_radius_x_m", "normal_radius_y_m"}, prefix);
                 if (prefix == "bat_contact.") only_keys(fields, {"ball_radius_m", "bat_radius_m"}, prefix);
                 if (prefix == "camera.") only_keys(fields, {"preset", "position_m", "target_m", "vertical_fov_degrees"}, prefix);
                 if (prefix == "release.") only_keys(fields, {"position_m", "ball_marker_radius_m"}, prefix);
@@ -116,12 +117,12 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.strike_zone_top_m = number(table, "strike_zone.top_m", candidate.strike_zone_top_m, 0.8f, 2);
         if (candidate.strike_zone_top_m - candidate.strike_zone_bottom_m < 0.2f)
             throw std::runtime_error("strike_zone.top_m must exceed bottom_m by at least 0.2 m.");
-        candidate.player_aim.normal_radius_x_m=number(table,"player_aim.normal_radius_x_m",candidate.player_aim.normal_radius_x_m,0.001f,1.5f);
-        candidate.player_aim.normal_radius_y_m=number(table,"player_aim.normal_radius_y_m",candidate.player_aim.normal_radius_y_m,0.001f,1.8f);
+        candidate.hit_authorization.normal_radius_x_m=number(table,"hit_authorization.normal_radius_x_m",candidate.hit_authorization.normal_radius_x_m,0.001f,1.5f);
+        candidate.hit_authorization.normal_radius_y_m=number(table,"hit_authorization.normal_radius_y_m",candidate.hit_authorization.normal_radius_y_m,0.001f,1.8f);
         candidate.player_aim.cursor_speed_mps=number(table,"player_aim.cursor_speed_mps",candidate.player_aim.cursor_speed_mps,0.001f,10.0f);
-        if (candidate.player_aim.normal_radius_x_m >= candidate.strike_zone_width_m ||
-            candidate.player_aim.normal_radius_y_m >= candidate.strike_zone_top_m-candidate.strike_zone_bottom_m)
-            throw std::runtime_error("player_aim radii must be smaller than the zone width/height.");
+        if (candidate.hit_authorization.normal_radius_x_m >= candidate.strike_zone_width_m ||
+            candidate.hit_authorization.normal_radius_y_m >= candidate.strike_zone_top_m-candidate.strike_zone_bottom_m)
+            throw std::runtime_error("hit_authorization radii must be smaller than the zone width/height.");
         candidate.pitcher_blockout_position_m = vector(table, "pitcher_blockout.position_m", candidate.pitcher_blockout_position_m,
             {-0.5f, 0, 17}, {0.5f, 1, 19});
         candidate.pitcher_blockout_height_m = number(table, "pitcher_blockout.height_m", candidate.pitcher_blockout_height_m, 1.25f, 2.5f);
