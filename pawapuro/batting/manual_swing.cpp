@@ -18,7 +18,7 @@ std::optional<BatContact> first_manual_contact(const BallState& initial,double r
     return contact_detail::first(sample,bat_sample,release,envelope,start,end,substeps);
 }
 const char* ManualSwingPreview::contact_state() const {
-    switch(geometry) {
+    switch(geometry()) {
     case ManualGeometry::NoSwing:return "NoSwing";
     case ManualGeometry::Contact:return "Contact";
     case ManualGeometry::NoContactInWindow:return "NoContactInWindow";
@@ -26,25 +26,27 @@ const char* ManualSwingPreview::contact_state() const {
     }
 }
 void ManualSwingPreview::query_contact() {
-    if(geometry!=ManualGeometry::Pending||!committed)return;
-    const auto finish_without_contact=[&]{geometry=ManualGeometry::NoContactInWindow;contact_dispatch_tick=tick;
-        std::fprintf(stderr,"ManualGeometry NoContactInWindow: commit=%llu dispatch_tick=%llu temporal=%s queries=%u; no ball response\n",committed->consumed_tick,tick,timing_state(),contact_query_count);};
-    if(!timing->overlap){finish_without_contact();return;}
-    const auto interval=*timing->overlap;
+    if(!active_attempt)return;
+    auto& attempt=attempts[*active_attempt];
+    if(attempt.geometry!=ManualGeometry::Pending)return;
+    const auto finish_without_contact=[&]{attempt.geometry=ManualGeometry::NoContactInWindow;attempt.contact_dispatch_tick=tick;
+        std::fprintf(stderr,"ManualGeometry NoContactInWindow: commit=%llu dispatch_tick=%llu temporal=%s queries=%u; no ball response\n",attempt.command.consumed_tick,tick,timing_state(),attempt.contact_query_count);};
+    if(!attempt.timing.overlap){finish_without_contact();return;}
+    const auto interval=*attempt.timing.overlap;
     double start=std::max(double(tick-1)/pitch_hz,interval.start_s),end=std::min(double(tick)/pitch_hz,interval.end_s);
     // S is zero at its endpoints. Move only those numerical endpoints inward, not a gameplay epsilon.
-    if(start==timing->start_s)start=std::nextafter(start,end);
-    if(end==timing->end_s)end=std::nextafter(end,start);
+    if(start==attempt.timing.start_s)start=std::nextafter(start,end);
+    if(end==attempt.timing.end_s)end=std::nextafter(end,start);
     if(start<end) {
-        ++contact_query_count;
-        if(!searched_interval)searched_interval=TemporalInterval{start,end};else searched_interval->end_s=end;
-        contact=first_manual_contact(delivery.pitch.initial,double(delivery.motion.release_tick)/pitch_hz,
-            batter,committed->consumed_tick,tuning.bat_contact,start,end,contact_scratch,64,committed->tempo);
-        if(contact) {
-            geometry=ManualGeometry::Contact;++contact_count;contact_dispatch_tick=tick;const auto& e=*contact;
+        ++attempt.contact_query_count;
+        if(!attempt.searched_interval)attempt.searched_interval=TemporalInterval{start,end};else attempt.searched_interval->end_s=end;
+        attempt.contact=first_manual_contact(delivery.pitch.initial,double(delivery.motion.release_tick)/pitch_hz,
+            batter,attempt.command.consumed_tick,tuning.bat_contact,start,end,contact_scratch,64,attempt.command.tempo);
+        if(attempt.contact) {
+            attempt.geometry=ManualGeometry::Contact;++attempt.contact_count;attempt.contact_dispatch_tick=tick;const auto& e=*attempt.contact;
             std::fprintf(stderr,"ManualGeometry Contact: commit=%llu time_s=%.12f dispatch_tick=%llu u=%.9f normal=(%.9g,%.9g,%.9g) relative_velocity=(%.9g,%.9g,%.9g) temporal_query=[%.12f,%.12f] tempo=%s; Geometry only / No ball response\n",
-                committed->consumed_tick,e.sample.preview_time_s,tick,e.sample.approach.u,e.normal.x,e.normal.y,e.normal.z,
-                e.relative_velocity.x,e.relative_velocity.y,e.relative_velocity.z,interval.start_s,interval.end_s,committed->tempo.mode==SwingTempo::Original?"A":"B");
+                attempt.command.consumed_tick,e.sample.preview_time_s,tick,e.sample.approach.u,e.normal.x,e.normal.y,e.normal.z,
+                e.relative_velocity.x,e.relative_velocity.y,e.relative_velocity.z,interval.start_s,interval.end_s,attempt.command.tempo.mode==SwingTempo::Original?"A":"B");
             return;
         }
     }
@@ -57,8 +59,8 @@ ManualSwingPreview::ManualSwingPreview(const std::filesystem::path& d,const Batt
 }
 void ManualSwingPreview::reset() {
     delivery.reset();batter.evaluate_tick(0,std::nullopt);tick=pending_ticks=fractional_credit=arrival_tick=0;
-    timing.reset();searched_interval.reset();contact_query_count=0;authorization.reset();contact.reset();contact_count=0;contact_dispatch_tick=0;geometry=ManualGeometry::Pending;
-    pending.reset();committed.reset();paused=false;armed=false;input_result="Waiting";phase=PreviewPhase::Ready;
+    attempts.clear();active_attempt.reset();preparing=true;
+    pending.reset();paused=false;armed=false;input_result="Waiting";phase=PreviewPhase::Ready;
 }
 bool ManualSwingPreview::start(){if(phase==PreviewPhase::Playing)return false;reset();attempt_tempo={next_tempo,tuning.compact_area_ticks,tuning.normal_finish_ticks};delivery.start();phase=PreviewPhase::Playing;return true;}
 bool ManualSwingPreview::toggle_tempo(){
@@ -69,12 +71,13 @@ void ManualSwingPreview::lose_input(){if(pending)input_result="Cancelled";pendin
 void ManualSwingPreview::toggle_pause(){if(phase==PreviewPhase::Playing){paused=!paused;lose_input();}}
 bool ManualSwingPreview::single_step(){return phase==PreviewPhase::Playing&&paused?step_tick():false;}
 bool ManualSwingPreview::swing_available() const {
-    return armed&&phase==PreviewPhase::Playing&&!paused&&!pending&&!committed;
+    return armed&&phase==PreviewPhase::Playing&&!paused&&!pending&&!active_attempt&&intent_live(tick+pending_ticks+1);
 }
 bool ManualSwingPreview::record_command(std::uint64_t target,DirectX::XMFLOAT2 aim) {
     if(phase!=PreviewPhase::Playing||paused){input_result="RejectedState";return false;}
-    if(pending||committed){input_result="RejectedAlready";return false;}
+    if(pending||active_attempt){input_result="RejectedAlready";return false;}
     if(target<=tick||target>std::numeric_limits<std::uint64_t>::max()-456){input_result="RejectedTick";return false;}
+    if(!intent_live(target)){input_result="RejectedPitchClosed";return false;}
     if(!std::isfinite(aim.x)||!std::isfinite(aim.y)){input_result="RejectedAim";return false;}
     pending=SwingCommand{target,0,tick,pending_ticks,aim,SwingMode::Normal,attempt_tempo};input_result="Queued";
     std::fprintf(stderr,"Swing queued: boundary_tick=%llu backlog=%llu target_tick=%llu aim=(%.9g,%.9g) mode=Normal\n",tick,pending_ticks,target,aim.x,aim.y);return true;
@@ -90,19 +93,29 @@ void ManualSwingPreview::input_boundary(bool held,bool edge,bool eligible,Direct
 }
 bool ManualSwingPreview::step_tick() {
     ++tick;delivery.step_tick();
-    if(pending&&pending->target_tick==tick){committed=pending;pending.reset();committed->consumed_tick=tick;input_result="Committed";
-        timing=timing_interaction(double(tick)/pitch_hz,ball_passage,tuning.swing_phase_potential);
+    if(pending&&pending->target_tick==tick){
+        auto command=*pending;pending.reset();command.consumed_tick=tick;
         const auto point=predict_arrival(delivery.pitch).state.position_m;
-        authorization=authorize_normal_hit(committed->aim_center,{point.x,point.y},tuning.hit_authorization);
-        const auto& a=*authorization;
-        std::fprintf(stderr,"HitAuthorization %s: consumed_tick=%llu pitch=(%.9g,%.9g) error=(%.9g,%.9g) normalized=(%.9g,%.9g) q=%.9g\n",
-            a.authorized?"Authorized":"RejectedSpatial",tick,a.pitch_point.x,a.pitch_point.y,a.error.x,a.error.y,a.normalized_error.x,a.normalized_error.y,a.q);
-        std::fprintf(stderr,"Swing consumed: target_tick=%llu consumed_tick=%llu boundary_tick=%llu recorded_backlog=%llu aim=(%.9g,%.9g) tempo=%s compact_area_ticks=%.9g mapping=smoothstep-v1+tail-quartic-v1 sweep_tick=%.9f area_tick=%.9f finish_tick=%llu Geometry pending\n",committed->target_tick,tick,committed->boundary_tick,committed->backlog,committed->aim_center.x,committed->aim_center.y,committed->tempo.mode==SwingTempo::Original?"A":"B",committed->tempo.compact_area_ticks,double(tick)+committed->tempo.world_offset(SwingTempoTiming::sweep_ticks),double(tick)+committed->tempo.world_offset(SwingTempoTiming::area_ticks),committed->tempo.end_tick(tick));}
-    if(committed&&committed->consumed_tick==tick){char diagnostic[640];timing_diagnostic(diagnostic,sizeof(diagnostic));std::fprintf(stderr,"TimingInteraction commit=%llu %s\n",tick,diagnostic);}
-    batter.evaluate_tick(tick,committed?std::optional(committed->consumed_tick):std::nullopt,committed?committed->tempo:attempt_tempo);
+        attempts.push_back({command,timing_interaction(double(tick)/pitch_hz,ball_passage,tuning.swing_phase_potential),
+            authorize_normal_hit(command.aim_center,{point.x,point.y},tuning.hit_authorization)});
+        active_attempt=attempts.size()-1;preparing=false;input_result="Committed";
+        char diagnostic[640];timing_diagnostic(diagnostic,sizeof(diagnostic));
+        std::fprintf(stderr,"Swing consumed: attempt=%zu target_tick=%llu consumed_tick=%llu boundary_tick=%llu backlog=%llu aim=(%.9g,%.9g) tempo=%s finish_tick=%llu %s\n",
+            attempts.size(),command.target_tick,tick,command.boundary_tick,command.backlog,command.aim_center.x,command.aim_center.y,
+            command.tempo.mode==SwingTempo::Compact?"B":"A",command.tempo.end_tick(tick),diagnostic);
+    }
+    const auto* command=preparing?nullptr:committed();
+    batter.evaluate_tick(tick,command?std::optional(command->consumed_tick):std::nullopt,command?command->tempo:attempt_tempo);
     query_contact();
+    if(active_attempt&&batter.complete()) {
+        active_attempt.reset();armed=false; // No active-swing press/held key survives this boundary.
+        if(intent_live(tick+1)) {
+            preparing=true;batter.evaluate_tick(tick,std::nullopt,attempt_tempo);input_result="Rearmed";
+            std::fprintf(stderr,"Swing rearmed: swings=%zu world_tick=%llu next_target=%llu hard-reset=current-world-preparation\n",attempts.size(),tick,tick+1);
+        }
+    }
     if(!arrival_tick&&delivery.pitch.phase==PitchPhase::Complete)arrival_tick=tick;
-    if(delivery.phase==DeliveryPhase::Complete&&batter.complete()&&!pending) {if(!committed)geometry=ManualGeometry::NoSwing;phase=PreviewPhase::Complete;paused=false;pending.reset();pending_ticks=fractional_credit=0;return true;}
+    if(delivery.phase==DeliveryPhase::Complete&&batter.complete()&&!pending) {phase=PreviewPhase::Complete;paused=false;pending_ticks=fractional_credit=0;return true;}
     return false;
 }
 bool ManualSwingPreview::advance(std::uint64_t elapsed_ns) {
@@ -116,16 +129,16 @@ bool ManualSwingPreview::advance(std::uint64_t elapsed_ns) {
 const char* ManualSwingPreview::state_name() const {if(phase==PreviewPhase::Ready)return "Ready";if(phase==PreviewPhase::Complete)return "Complete";return paused?"Paused":"Playing";}
 const char* ManualSwingPreview::swing_state() const {return input_result;}
 const char* ManualSwingPreview::timing_state() const {
-    if(!timing)return "Pending";
-    return timing->state==SwingTimingState::Overlap?"Overlap":timing->state==SwingTimingState::Early?"NoOverlapEarly":"NoOverlapLate";
+    if(!timing())return "Pending";
+    return timing()->state==SwingTimingState::Overlap?"Overlap":timing()->state==SwingTimingState::Early?"NoOverlapEarly":"NoOverlapLate";
 }
 void ManualSwingPreview::timing_diagnostic(char* buffer,std::size_t size) const {
-    if(!timing){std::snprintf(buffer,size,"Timing:Pending Spatial:Pending");return;}
-    const auto& t=*timing;
+    if(!timing()){std::snprintf(buffer,size,"Timing:Pending Spatial:Pending");return;}
+    const auto& t=*timing();
     std::snprintf(buffer,size,"Timing:%s ball_s=[%.9f,%.9f] potential_s=[%.9f,%.9f,%.9f] overlap_s=[%.9f,%.9f] efficiency=%.6f offset_ms=%+.6f Spatial:%s",
         timing_state(),ball_passage.enter_s,ball_passage.exit_s,t.start_s,t.peak_s,t.end_s,
         t.overlap?t.overlap->start_s:0,t.overlap?t.overlap->end_s:0,t.efficiency,t.offset_ms,
-        authorization?(authorization->authorized?"Authorized":"RejectedSpatial"):"Pending");
+        authorization()?(authorization()->authorized?"Authorized":"RejectedSpatial"):"Pending");
 }
 DirectX::XMFLOAT3 ManualSwingPreview::displayed_ball_center() const {
     const double time=double(tick)/pitch_hz;

@@ -264,3 +264,9 @@ Agent 自身 execution 在 `C:\astra-dev\pawapuro` 核對clean main，fetch後HE
 Ignored `build/follow-through-s1/` 保留build／CTest logs、`release-details.log`、phase資料／render腳本、影片decode metadata與實機截圖／title。Native重建資料經同一正式sampler產生，離線render曾修正camera座標轉換與取景，再檢視最終輸出；不將中間錯誤render列為review evidence。0／125／190 ms的最終phase images逐像素相同。沒有修改或重新匯出官方motion資產。
 
 最終完整Debug build與CTest **19/19通過（510.73 s）**，完整Release亦19/19通過。實機Release smoke已完成並正常退出；未宣稱Debug GPU validation或human feel acceptance。交付停在Michael＋Julia review。
+
+## Multi-Swing Intent S1 的動作生命週期（2026-09-18）
+
+Michael已接受本頁的約1秒Follow-through Compression S1作為Normal baseline。本輪不改authored motion、retiming、protected＋190 ms prefix或＋240 ticks finish，只讓同一pitch可有多次獨立intent。Early swing若在ball passage exit前完成，完成tick直接切到**同world tick既有uncommitted preparation pose**，投手／球繼續；這取代上節early finish一路hold與一球一次的描述。Exit後完成的swing仍hold。沒有recovery／blend，硬切的姿勢不連續是prototype本意；一個active swing結束前不接受或buffer另一揮。
+
+Reference capture只顯示pitch result後硬切Ready，不能推論live-pitch rearm或特殊失衡動作。這次保留原final pose，不重作尾段或第二揮；hard reset是否可接受由Michael＋Julia實機判斷。Ownership、cutoff、fresh-edge規則、80→320→448 regression與真實／重建evidence統一記在 [Multi-Swing Intent S1](batting-contact.md#multi-swing-intent-s12026-09-18)，不新增第二份motion tuning。

@@ -294,3 +294,41 @@ Agent 自身 PowerShell execution 核對 main／clean baseline，fetch 後 HEAD�
 ## Follow-through Compression S1（2026-09-18）
 
 Michael 已確認 Timing Interaction S1 的極早輸入可用，但post-potential follow-through過長。本輪只在world commit＋190 ms之後壓縮原authored tail，A／Compact前綴與既有Timing Interaction／spatial／raw geometry不變；初始完成候選為＋240 ticks（1000 ms），約675 ms的major silhouette只作visual review target。Reference whiff僅為約略視覺時序，非逆向內部規格。Mapping／支撐／attachment／momentum、regression與evidence由 [batter-motion](batter-motion.md) 擁有。早揮完成後hold，投手／球繼續；仍一球一次，沒有multi-swing／rearm、correction、Contact Quality或Ball Response，待Michael＋Julia的1×human review。
+
+## Multi-Swing Intent S1（2026-09-18）
+
+**Follow-through Compression S1 已由 Michael 人工接受**；約 1.0 秒的 Normal swing 是目前 baseline。本節接續並取代前節「一球一次」與 pitch exit 後仍可接受新輸入的 lifecycle 描述，沒有更改 accepted motion、Timing Interaction、Spatial Authorization 或 physical solver。
+
+### Ownership 與重新出棒
+
+一個 pitch 擁有 `0..N SwingAttempt`，沒有 `max_swings=2`。每個 consumed attempt 各自保存 command／immutable aim snapshot、TimingInteraction、HitAuthorizationDecision、raw geometry、contact event、實際 searched interval、query／contact count 與 dispatch tick。`ManualSwingPreview` 只另外持有一筆 pending command 與 optional active index；latest getters 是既有 UI／診斷的唯讀 view，不是另一份 authoritative state。重置新球才清空歷史；後一次出棒不覆寫前一次。
+
+同時只有一個 active swing。Active 期間的 J 不 interrupt、不 buffer；完整 commit＋240 ticks 後清除 active 與 input armed 狀態。若下一個 simulation tick 仍嚴格早於 `ball_passage.exit_s`，**就在完成的同一 world tick，以既有 uncommitted preparation 路徑重新求 batter pose**。不是靜態 frame-1 Ready，不重設 world tick、投手或球；沒有 recovery clip、blend、IK 或 interpolation。這一刻不額外展示一格終點 hold；前一 tick 接近終點，完成 tick 直接顯示 preparation。若已關閉 live intent，則照原本方式持續 final hold。
+
+Rearm 的 simulation 判斷用 T＋1，避免 render backlog 改變 pose replay；實際 fresh edge 仍依原契約排在 **tick＋pending_ticks＋1**，必須以該 authoritative target 的秒數嚴格小於 passage exit 才能排入。等於／超過 exit 都是 `RejectedPitchClosed`，不是成功 timing gate，也沒有 clamp。當前固定球路 exit=2.002433563945 s，因此最後可 consumed tick 是480；481關閉。480仍能真的揮棒並得到 NoOverlapLate，active swing 可在 exit 後完成。舊600／816／820等輸入 fixture 本輪刻意改為 lifecycle rejection；其純 motion／potential 測試仍保留，432–496的歷史 offline geometry regressions 也保留。
+
+Held J 不會自動連揮，active 期間的按鍵不會留到下一次。完成後須觀察 release，再接受 fresh edge；focus loss／pause 取消 pending 並維持 held-key discipline。Tempo 在 start 時鎖定整球，各次 command 保留同一 A／B／finish Data。`NoSwing` 只代表整球 Complete 時 attempts 數為零；早揮空、rearm 或 latest NoContact 都不等於 NoSwing。
+
+### 每次 pipeline 與 regression
+
+每個 command consumed 時依自己的 C 計算 timing，再以自己的 aim snapshot 與既有 evaluation-plane pitch point 判定 spatial authorization；raw geometry 只搜尋該次 ball passage ∩ S(t−C)>0。RejectedSpatial＋Contact 仍可獨立觀察。75／125／190 ms、efficiency 積分／signed offset、±0.40 m slab、.26／.13 m ellipse、37／33 mm physical radii、continuous earliest-entry solver 與 post-plane presentation continuation 全部未改。
+
+核心 fixture：第一揮80，左側 aim，被 spatial 拒絕且 NoOverlapEarly／NoContact；320完成並回到同 tick preparation（release384前），第二揮448使用新的中央 aim。448–494逐 tick whole world pose、grip／barrel／tip與球位置和 fresh single448完全相同；第二次 timing、efficiency、offset、authorization、geometry、query count、dispatch tick及contact time／u／normal／relative velocity／radii皆逐值相同。Contact time仍 **1.9913564701 s**，efficiency約0.974447，offset約−1.166784 ms；第一揮的 snapshot／決策到整球 Complete 仍未變。新的 live aim 在排程第二揮後再移動，也不影響該 command。
+
+`multi_swing_test` 同時覆蓋 A／Compact、30／60／120 Hz與backlog、held／active press無buffer、focus／pause、cutoff、零揮，以及慢速測試球路自然容納四次出棒。正常448 Contact的finish688已在passage後，沒有需要另加 terminal-hit machinery 的重複候選。原 single-swing、protected-prefix、spatial independence與 solver tests 沒有放寬容差。
+
+### Human review 與 evidence
+
+Cached panel 增加「等待第一次出棒／揮棒中／可再次出棒／出棒機會已結束／出棒已排程」，保留 latest swing 的 timing、authorization與geometry；title有 `swings`、`active`、`rearmed`。暫停時不以「機會已結束」誤標，Paused由title表示。供應的 reference footage **只證明 pitch result 後硬切 Ready，沒有證明同一 live pitch 如何 rearm**，本輪是刻意的 hard live-pitch prototype，也沒有複製 off-balance result pose。
+
+實際 Release app smoke 已得到兩揮：第二次 consumed452，`swings=2 active=2`，Authorized＋Contact；另一次 early80在320後回 preparation，title／面板顯示可再次出棒。真實截圖 `second-contact.png`、`rearmed-live.png` 與title JSON在 ignored `build/multi-swing-s1/`；UI截圖與title讀取並非原子操作，不宣稱完全同 tick。App 已正常退出。
+
+同目錄 `multi-swing-1x-reconstructed.mp4` 是 **Native mesh／tick reconstruction 的離線近景render，非wall-time app capture**：Compact80→320 hard rearm→448，world0–816每8 ticks一格，30fps／103格，標示1×；pitcher／球不在render中，旁邊只有Native clock診斷。`rearm-phase-comparison.png`含80／319／320／321／448／478；已檢視比較圖，319→320手／棒明顯從頭旁終點跳回準備姿勢。影片已驗證decode fps／格數，未宣稱agent已連續1×自看。工具未提供可靠連續錄影API，因此沒有wall-time影片，不用離線圖替代實機smoke。
+
+人工重現：B Compact、R置中，Space起球後約0.3秒按J；約1.3秒看硬重置，放開J，再約1.85秒fresh J。以title實際consumed tick為準；OS手按不是exact448 replay。Michael＋Julia需判斷硬切是否刺眼、重新取得控制是否好玩、1秒rearm是否合適；本輪不替人判定。**沒有 recovery animation、Contact Correction、Contact Quality、Power或Ball Response**，沒有新hit VFX／SFX；停在本次human review。
+
+### 本輪建置與驗證紀錄
+
+Agent自身PowerShell execution核對workspace／clean main，fetch後與提交前再次fetch的HEAD／origin/main皆為 `de58971957be0a502abb7e449662f19d131ef479`。VS2022 x64／CMake／Ninja完整Debug與Release build通過；完整CTest **Debug 20/20（524.62 s）、Release 20/20（34.81 s）**。最後僅修正Paused的cached lifecycle annotation，兩組態再次完整build，並各重跑受影響contact_panel **1/1通過**（Debug6.38 s、Release0.41 s）；沒有重跑未受影響的長物理suite或放寬容差。正常遷移期間曾修正舊upper-end assertion及文字腳本encoding／standalone mesh-dump編譯定義，並非runner／sandbox故障。
+
+Ignored `build/multi-swing-s1/` 保存兩組態build／CTest logs、final-build／panel-ctest logs、Debug完整details、Native dump／render／encode scripts、frame CSV、影片decode metadata與實機截圖。Diff另確認IngameMotion／SwingTempo、TimingInteraction／HitAuthorization evaluator、staging Data、reference pitch／delivery與physical solver未變；沒有重新匯出官方motion。實機smoke是Release，未宣稱Debug GPU validation或hard reset手感已驗收。

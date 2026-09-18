@@ -19,6 +19,17 @@ struct SwingCommand {
     SwingTempoTiming tempo;
     // S0 has one fixed Normal mode. Replay also requires motion asset SHA/recipe.
 };
+// One consumed intent owns its decisions and raw event for the whole pitch lifetime.
+struct SwingAttempt {
+    SwingCommand command;
+    TimingInteraction timing;
+    HitAuthorizationDecision authorization;
+    ManualGeometry geometry=ManualGeometry::Pending;
+    std::optional<BatContact> contact;
+    std::optional<TemporalInterval> searched_interval;
+    unsigned contact_query_count=0,contact_count=0;
+    std::uint64_t contact_dispatch_tick=0;
+};
 struct ManualSwingPreview {
     ManualSwingPreview(const std::filesystem::path& directory,const BattingStaging& staging);
     const BattingStaging tuning; // Immutable startup Data retained with this attempt owner for replay.
@@ -30,16 +41,23 @@ struct ManualSwingPreview {
     SwingTempoTiming attempt_tempo;
     bool toggle_tempo();
     std::uint64_t tick=0,pending_ticks=0,arrival_tick=0;
-    std::optional<SwingCommand> pending,committed;
-    std::optional<HitAuthorizationDecision> authorization;
+    std::optional<SwingCommand> pending;
+    std::vector<SwingAttempt> attempts;
+    std::optional<std::size_t> active_attempt;
     const BattingInteractionPassage ball_passage;
-    std::optional<TimingInteraction> timing;
-    std::optional<TemporalInterval> searched_interval;
-    unsigned contact_query_count=0;
-    ManualGeometry geometry=ManualGeometry::Pending;
-    std::optional<BatContact> contact;
-    unsigned contact_count=0;
-    std::uint64_t contact_dispatch_tick=0;
+    // Read-only latest-attempt views; no second copy of per-swing truth.
+    const SwingAttempt* latest() const { return attempts.empty()?nullptr:&attempts.back(); }
+    const SwingCommand* committed() const { return latest()?&latest()->command:nullptr; }
+    const TimingInteraction* timing() const { return latest()?&latest()->timing:nullptr; }
+    const HitAuthorizationDecision* authorization() const { return latest()?&latest()->authorization:nullptr; }
+    const std::optional<BatContact>& contact() const { static const std::optional<BatContact> empty; return latest()?latest()->contact:empty; }
+    ManualGeometry geometry() const { return latest()?latest()->geometry:phase==PreviewPhase::Complete?ManualGeometry::NoSwing:ManualGeometry::Pending; }
+    unsigned contact_count() const { return latest()?latest()->contact_count:0; }
+    unsigned contact_query_count() const { return latest()?latest()->contact_query_count:0; }
+    std::uint64_t contact_dispatch_tick() const { return latest()?latest()->contact_dispatch_tick:0; }
+    const std::optional<TemporalInterval>& searched_interval() const { static const std::optional<TemporalInterval> empty; return latest()?latest()->searched_interval:empty; }
+    bool intent_live(std::uint64_t target) const { return phase==PreviewPhase::Playing&&double(target)/pitch_hz<ball_passage.exit_s; }
+    bool rearmed() const { return !attempts.empty()&&preparing&&!active_attempt&&!pending&&!paused&&intent_live(tick+pending_ticks+1); }
     const char* contact_state() const;
     const char* timing_state() const;
     void timing_diagnostic(char* buffer,std::size_t size) const;
@@ -60,6 +78,7 @@ struct ManualSwingPreview {
 private:
     std::uint64_t fractional_credit=0;
     bool armed=false;
+    bool preparing=true;
     const char* input_result="Waiting";
     engine::GlbPose contact_scratch;
     void query_contact();

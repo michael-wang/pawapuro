@@ -13,23 +13,23 @@ int main(int argc,char**argv){try{
     ManualSwingPreview p(d,s);p.next_tempo=SwingTempo::Original; // Explicit A regression baseline.
     const DirectX::XMFLOAT2 a{.1f,.8f},b{-.2f,.5f};
     p.input_boundary(true,true,true,a);require(!p.pending,"Ready must reject");p.start();
-    p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==1,"early input must queue immediately");until(p,1);require(p.committed&&p.committed->consumed_tick==1,"early input buffered/clamped");p.reset();p.start();
+    p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==1,"early input must queue immediately");until(p,1);require(p.committed()&&p.committed()->consumed_tick==1,"early input buffered/clamped");p.reset();p.start();
     until(p,431);p.input_boundary(true,false,true,a);require(!p.pending,"held cannot trigger");
     p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==432,"lower endpoint");
     p.input_boundary(false,false,true,b);p.input_boundary(true,true,true,b);require(p.pending->aim_center.x==a.x,"queued snapshot immutable");
-    until(p,432);require(p.committed&&p.committed->consumed_tick==432,"consume at recorded tick");
-    p.toggle_pause();const auto paused_tick=p.tick;p.advance(1'000'000'000);require(p.tick==paused_tick,"pause advances");p.single_step();require(p.tick==paused_tick+1&&p.committed,"step loses committed");
-    p.lose_input();p.toggle_pause();p.input_boundary(true,true,true,b);require(p.committed->aim_center.x==a.x,"committed snapshot changed");
+    until(p,432);require(p.committed()&&p.committed()->consumed_tick==432,"consume at recorded tick");
+    p.toggle_pause();const auto paused_tick=p.tick;p.advance(1'000'000'000);require(p.tick==paused_tick,"pause advances");p.single_step();require(p.tick==paused_tick+1&&p.committed(),"step loses committed");
+    p.lose_input();p.toggle_pause();p.input_boundary(true,true,true,b);require(p.committed()->aim_center.x==a.x,"committed snapshot changed");
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816,"early finish truncated");
-    p.start();require(!p.pending&&!p.committed&&!p.contact&&!p.contact_count&&p.geometry==ManualGeometry::Pending,"reset leaks command/result");until(p,495);p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);until(p,496);require(p.committed&&p.committed->consumed_tick==496,"upper endpoint");
+    p.start();require(!p.pending&&!p.committed()&&!p.contact()&&!p.contact_count()&&p.geometry()==ManualGeometry::Pending,"reset leaks command/result");until(p,479);p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);until(p,480);require(p.committed()&&p.committed()->consumed_tick==480,"upper endpoint");
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816,"late finish truncated");
-    p.start();until(p,496);p.input_boundary(false,false,true,a);require(p.geometry==ManualGeometry::Pending,"tick496 finalized NoSwing");p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==497,"late input rejected");p.lose_input();
-    while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816&&!p.committed&&!p.contact&&p.geometry==ManualGeometry::NoSwing,"Take completion");
+    p.start();until(p,496);p.input_boundary(false,false,true,a);require(p.geometry()==ManualGeometry::Pending,"tick496 finalized NoSwing");p.input_boundary(true,true,true,a);require(!p.pending,"post-exit input accepted");p.lose_input();
+    while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816&&!p.committed()&&!p.contact()&&p.geometry()==ManualGeometry::NoSwing,"Take completion");
     // Account old elapsed debt first; target after debt, never tick+1 while behind.
     p.start();until(p,420);p.advance(100'000'000);require(p.tick==436&&p.pending_ticks==8,"controlled catch-up setup");
     p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);require(p.pending&&p.pending->target_tick==445&&p.pending->backlog==8,"backlog target");
-    p.advance(0);require(p.tick==444&&!p.committed,"command must wait behind pre-boundary debt");
-    p.advance(4'166'667);require(p.committed&&p.committed->consumed_tick==445&&p.committed->backlog==8,"consume scheduled backlog command");
+    p.advance(0);require(p.tick==444&&!p.committed(),"command must wait behind pre-boundary debt");
+    p.advance(4'166'667);require(p.committed()&&p.committed()->consumed_tick==445&&p.committed()->backlog==8,"consume scheduled backlog command");
     p.reset();p.start();until(p,431);p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);
     p.lose_input();require(!p.pending,"focus/minimize must clear pending");p.input_boundary(true,true,true,a);require(!p.pending,"held after focus must release");
     p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);p.toggle_pause();require(!p.pending,"pause must clear pending");
@@ -38,17 +38,17 @@ int main(int argc,char**argv){try{
     p.reset();p.start();until(p,475);p.advance(100'000'000);
     require(p.tick==491&&p.pending_ticks==8,"outside-target backlog setup");
     p.input_boundary(false,false,true,a);p.input_boundary(true,true,true,a);
-    require(p.pending&&p.pending->target_tick==500,"late backlog command rejected");
+    require(!p.pending,"post-exit backlog target accepted");
     engine::GlbMatrix final{};std::optional<BatContact> replay_contact;
     for(unsigned hz:{30u,60u,120u}){
         p.reset();p.start();require(p.record_command(457,a),"recorded replay command");
         std::uint64_t elapsed=0;unsigned frame=0;
         while(p.phase==PreviewPhase::Playing){++frame;const auto next=static_cast<std::uint64_t>(frame)*1'000'000'000/hz;p.advance(next-elapsed);elapsed=next;}
-        require(p.tick==816&&p.committed->consumed_tick==457,"cadence replay result");
-        if(hz==30){final=p.batter.barrel_world;replay_contact=p.contact;}
+        require(p.tick==816&&p.committed()->consumed_tick==457,"cadence replay result");
+        if(hz==30){final=p.batter.barrel_world;replay_contact=p.contact();}
         else {require(final==p.batter.barrel_world,"cadence changes final pose");
-            require(bool(replay_contact)==bool(p.contact),"cadence changes contact presence");
-            if(p.contact)require(p.contact->sample.preview_time_s==replay_contact->sample.preview_time_s,"cadence changes contact time");}
+            require(bool(replay_contact)==bool(p.contact()),"cadence changes contact presence");
+            if(p.contact())require(p.contact()->sample.preview_time_s==replay_contact->sample.preview_time_s,"cadence changes contact time");}
     }
     p.reset();p.start();p.record_command(457,a);p.advance(3'000'000'000);while(p.pending_ticks)p.advance(0);
     while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);require(p.tick==816&&p.batter.barrel_world==final,"backlog replay result");
@@ -105,18 +105,19 @@ int main(int argc,char**argv){try{
         p.toggle_pause();p.record_command(c,a);until(p,c);p.toggle_pause();
         while(p.tick<c+manual_contact_window_ticks) {
             p.advance(100'000'000);const auto before=p.tick;p.single_step();require(p.tick==before+1,"contact step clock");
-            if(p.contact)require(p.contact->fractional_tick<=double(p.tick)+1e-9,"event dispatched early");
+            if(p.contact())require(p.contact()->fractional_tick<=double(p.tick)+1e-9,"event dispatched early");
         }
+        if(c>480){require(!p.committed()&&!p.pending,"closed replay accepted");if(expected)++contacts;continue;}
         std::optional<BatContact> temporal_expected;
-        if(p.timing->overlap)for(auto t=c;t<c+manual_contact_window_ticks&&!temporal_expected;++t){
-            const double lo=std::max(double(t)/240,p.timing->overlap->start_s),hi=std::min(double(t+1)/240,p.timing->overlap->end_s);
+        if(p.timing()->overlap)for(auto t=c;t<c+manual_contact_window_ticks&&!temporal_expected;++t){
+            const double lo=std::max(double(t)/240,p.timing()->overlap->start_s),hi=std::min(double(t+1)/240,p.timing()->overlap->end_s);
             if(lo<hi)temporal_expected=first_manual_contact(p.delivery.pitch.initial,release,p.batter,c,s.bat_contact,lo,hi,scratch);
         }
-        require(bool(p.contact)==bool(temporal_expected)&&p.contact_count==(temporal_expected?1u:0u),"runtime temporal query/result count mismatch");
-        require(p.geometry==(temporal_expected?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"pending result after window");
+        require(bool(p.contact())==bool(temporal_expected)&&p.contact_count()==(temporal_expected?1u:0u),"runtime temporal query/result count mismatch");
+        require(p.geometry()==(temporal_expected?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"pending result after window");
         if(expected)++contacts;
-        if(temporal_expected)require(std::abs(p.contact->sample.preview_time_s-temporal_expected->sample.preview_time_s)<1e-7,"runtime temporal entry differs");
-        for(unsigned k=0;k<4;++k)p.single_step();require(p.contact_count==(temporal_expected?1u:0u),"duplicate event");
+        if(temporal_expected)require(std::abs(p.contact()->sample.preview_time_s-temporal_expected->sample.preview_time_s)<1e-7,"runtime temporal entry differs");
+        for(unsigned k=0;k<4;++k)p.single_step();require(p.contact_count()==(temporal_expected?1u:0u),"duplicate event");
         std::cout<<"GEOMETRY commit="<<c<<" result="<<p.contact_state()<<" contact_tick="<<(expected?expected->fractional_tick:0)
             <<" closest_grid_m="<<closest<<" closest_tick="<<closest_tick<<" query=["<<c<<","<<c+manual_contact_window_ticks<<"]\n";
     }
@@ -131,12 +132,12 @@ int main(int argc,char**argv){try{
                 const auto next=static_cast<std::uint64_t>(++frame)*1'000'000'000/(hz?hz:60);
                 p.advance(next-elapsed);elapsed=next;
             }
-            if(hz==30){reference=p.contact;dispatch=p.contact_dispatch_tick;}
-            else {require(bool(reference)==bool(p.contact)&&dispatch==p.contact_dispatch_tick,"geometry replay dispatch differs");
-                if(reference)require(reference->sample.preview_time_s==p.contact->sample.preview_time_s,"geometry replay time differs");}
+            if(hz==30){reference=p.contact();dispatch=p.contact_dispatch_tick();}
+            else {require(bool(reference)==bool(p.contact())&&dispatch==p.contact_dispatch_tick(),"geometry replay dispatch differs");
+                if(reference)require(reference->sample.preview_time_s==p.contact()->sample.preview_time_s,"geometry replay time differs");}
         }
         if(reference) {
-            const double event=reference->sample.preview_time_s,lo=std::max(std::floor(event*240)/240,p.timing->overlap->start_s),hi=std::min((std::floor(event*240)+1)/240,p.timing->overlap->end_s),mid=(lo+hi)/2;
+            const double event=reference->sample.preview_time_s,lo=std::max(std::floor(event*240)/240,p.timing()->overlap->start_s),hi=std::min((std::floor(event*240)+1)/240,p.timing()->overlap->end_s),mid=(lo+hi)/2;
             auto split=first_manual_contact(p.delivery.pitch.initial,release,p.batter,c,s.bat_contact,lo,mid,scratch);
             if(!split)split=first_manual_contact(p.delivery.pitch.initial,release,p.batter,c,s.bat_contact,mid,hi,scratch);
             require(split&&std::abs(split->sample.preview_time_s-event)<1e-7,"interval split lost earliest entry");

@@ -21,7 +21,7 @@ int main(int argc,char**argv){try {
         };
         p.reset();p.next_tempo=SwingTempo::Compact;panel.append(drawn,p);require(drawn.size()==panel.vertex_count,"append capacity");check_annotation(0,1);check_annotation(3,5);check_annotation(4,7);
         for(bool authorized:{true,false})for(auto geometry:{ManualGeometry::Pending,ManualGeometry::Contact,ManualGeometry::NoContactInWindow}) {
-            p.authorization=HitAuthorizationDecision{authorized,{},{},{},authorized?0.f:2.f};p.geometry=geometry;
+            p.attempts.clear();p.attempts.push_back({{}, {}, HitAuthorizationDecision{authorized,{},{},{},authorized?0.f:2.f}});p.attempts.back().geometry=geometry;
             drawn.clear();panel.append(drawn,p);check_annotation(4,authorized?8:9);
             require(contact_panel_highlight(contact_panel_state(p))==(geometry==ManualGeometry::Contact?1:geometry==ManualGeometry::NoContactInWindow?2:-1),"authorization altered geometry row");
         }
@@ -34,6 +34,14 @@ int main(int argc,char**argv){try {
         p.toggle_tempo();drawn.clear();panel.append(drawn,p);check_annotation(0,1);check_annotation(1,2);check_annotation(3,10);
         p.reset();drawn.clear();panel.append(drawn,p);check_annotation(0,0);check_annotation(3,5);
 
+        p.reset();p.start();p.record_command(80,{});while(p.tick<80)p.advance(4'166'667);
+        drawn.clear();panel.append(drawn,p);check_annotation(5,14);
+        while(p.tick<320)p.advance(4'166'667);
+        drawn.clear();panel.append(drawn,p);check_annotation(5,13);
+        p.toggle_pause();drawn.clear();panel.append(drawn,p);check_annotation(5,6);
+        p.toggle_pause();drawn.clear();panel.append(drawn,p);check_annotation(5,13);
+        require(contact_panel_highlight(contact_panel_state(p))==2,"rearm lost latest raw result");
+        p.reset();
         for(unsigned index=0;index<7;++index) {
             const auto state=static_cast<ContactPanelState>(index);const auto& mesh=panel.variants[index];
             require(mesh.size()==panel.base_vertex_count,"variant capacity differs");
@@ -58,7 +66,7 @@ int main(int argc,char**argv){try {
             const auto tick=p.tick;const auto pose=p.batter.pose.world;const auto ball=p.delivery.pitch.current;
             const auto state=contact_panel_state(p);
             require(tick==p.tick&&pose==p.batter.pose.world&&ball.position_m.z==p.delivery.pitch.current.position_m.z,"UI mutated simulation");
-            if(p.committed&&p.geometry==ManualGeometry::Pending) {
+            if(p.committed()&&p.geometry()==ManualGeometry::Pending) {
                 require(state==ContactPanelState::Swinging,"swinging prompt");
                 p.toggle_pause();p.advance(100'000'000);
                 require(p.tick==tick&&contact_panel_state(p)==state,"pause changed panel state or time");
@@ -71,7 +79,7 @@ int main(int argc,char**argv){try {
         const auto result=contact_panel_state(p);p.advance(9'000'000'000);p.toggle_pause();
         require(contact_panel_state(p)==result,"final result did not persist");
         require(contact_panel_highlight(result)==(commit==0?0:commit==456?2:1),"wrong result row");
-        p.reset();require(contact_panel_state(p)==ContactPanelState::Ready&&!p.contact,"reset retained highlight");
+        p.reset();require(contact_panel_state(p)==ContactPanelState::Ready&&!p.contact(),"reset retained highlight");
     }
     std::cout<<"PASS panel: pending, three owner results, analytic extension, persistence/reset, 1080/1620 cached geometry\n";
     return 0;

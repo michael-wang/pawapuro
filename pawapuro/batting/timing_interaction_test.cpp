@@ -48,48 +48,45 @@ int main(int argc,char** argv){try {
         double sum=0;constexpr unsigned n=10000;
         for(unsigned k=0;k<n;++k)sum+=normal_swing_potential(ball.enter_s+(ball.exit_s-ball.enter_s)*(k+.5)/n-double(c)/240,curve);
         require(std::abs(sum/n-timing.efficiency)<1e-7,"potential integral mismatch");
+        if(c==600){p.reset();p.start();require(!p.record_command(c,aim),"post-passage lifecycle accepted");continue;} // Pure late potential above remains covered.
         for(unsigned hz:{30u,60u,120u,0u}) {
-            p.reset();p.start();require(p.record_command(c,aim)&&!p.timing,"queued timing computed early");
+            p.reset();p.start();require(p.record_command(c,aim)&&!p.timing(),"queued timing computed early");
             if(!hz){p.advance(5'000'000'000);while(p.pending_ticks)p.advance(0);}
             while(p.phase==PreviewPhase::Playing)p.advance(hz?1'000'000'000/hz:16'666'667);
-            require(p.committed->consumed_tick==c&&p.timing->efficiency==timing.efficiency&&p.timing->offset_ms==timing.offset_ms,"cadence changes decision");
+            require(p.committed()->consumed_tick==c&&p.timing()->efficiency==timing.efficiency&&p.timing()->offset_ms==timing.offset_ms,"cadence changes decision");
             require(p.tick==std::max(p.delivery.motion.end_tick,p.attempt_tempo.end_tick(c)),"completion truncates pitcher or batter");
-            if(!timing.overlap)require(p.contact_query_count==0&&!p.searched_interval&&!p.contact&&p.geometry==ManualGeometry::NoContactInWindow,"empty overlap queried ghost pitch");
+            if(!timing.overlap)require(p.contact_query_count()==0&&!p.searched_interval()&&!p.contact()&&p.geometry()==ManualGeometry::NoContactInWindow,"empty overlap queried ghost pitch");
             else {
-                require(p.contact_query_count>0&&p.searched_interval,"overlap never searched");
-                require(p.searched_interval->start_s>=timing.overlap->start_s&&p.searched_interval->end_s<=timing.overlap->end_s,"query escaped intersection");
-                require(std::abs(p.searched_interval->start_s-timing.overlap->start_s)<1e-14,"query skipped beginning");
-                if(!p.contact)require(std::abs(p.searched_interval->end_s-timing.overlap->end_s)<1e-14,"query stopped before end");
-                if(p.contact)require(normal_swing_potential(p.contact->sample.preview_time_s-double(c)/240,curve)>0,"contact at S=0");
+                require(p.contact_query_count()>0&&p.searched_interval(),"overlap never searched");
+                require(p.searched_interval()->start_s>=timing.overlap->start_s&&p.searched_interval()->end_s<=timing.overlap->end_s,"query escaped intersection");
+                require(std::abs(p.searched_interval()->start_s-timing.overlap->start_s)<1e-14,"query skipped beginning");
+                if(!p.contact())require(std::abs(p.searched_interval()->end_s-timing.overlap->end_s)<1e-14,"query stopped before end");
+                if(p.contact())require(normal_swing_potential(p.contact()->sample.preview_time_s-double(c)/240,curve)>0,"contact at S=0");
             }
         }
-        char info[640];p.timing_diagnostic(info,sizeof(info));std::cout<<"FIXTURE commit="<<c<<' '<<info<<" Geometry="<<p.contact_state()<<" queries="<<p.contact_query_count<<'\n';
+        char info[640];p.timing_diagnostic(info,sizeof(info));std::cout<<"FIXTURE commit="<<c<<' '<<info<<" Geometry="<<p.contact_state()<<" queries="<<p.contact_query_count()<<'\n';
     }
     // Fresh early J, no buffer/clamp; pause/focus/rearm and one swing remain input rules.
     p.reset();p.start();p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);
     require(p.pending&&p.pending->target_tick==1,"early J rejected/buffered");until(p,1);
-    require(p.committed->consumed_tick==1&&p.tick<p.delivery.motion.release_tick,"early commit not before release");
-    p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);require(!p.pending&&p.committed->consumed_tick==1,"second swing accepted");
-    until(p,100);require(p.delivery.ball_owner==BallOwner::Hand&&p.batter.tick==100&&p.contact_query_count==0,"early swing stopped pitcher or queried negative flight");
-    const auto saved=*p.timing;const auto query_count=p.contact_query_count;p.toggle_pause();p.advance(1'000'000'000);
-    require(p.tick==100&&p.timing->efficiency==saved.efficiency,"pause mutated timing");p.single_step();
-    require(p.tick==101&&p.timing->offset_ms==saved.offset_ms&&p.contact_query_count==query_count,"step recomputed timing");
+    require(p.committed()->consumed_tick==1&&p.tick<p.delivery.motion.release_tick,"early commit not before release");
+    p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);require(!p.pending&&p.committed()->consumed_tick==1,"second swing accepted");
+    until(p,100);require(p.delivery.ball_owner==BallOwner::Hand&&p.batter.tick==100&&p.contact_query_count()==0,"early swing stopped pitcher or queried negative flight");
+    const auto saved=*p.timing();const auto query_count=p.contact_query_count();p.toggle_pause();p.advance(1'000'000'000);
+    require(p.tick==100&&p.timing()->efficiency==saved.efficiency,"pause mutated timing");p.single_step();
+    require(p.tick==101&&p.timing()->offset_ms==saved.offset_ms&&p.contact_query_count()==query_count,"step recomputed timing");
     p.reset();p.start();p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);p.lose_input();
     p.input_boundary(true,true,true,aim);require(!p.pending,"focus loss rearmed held key");
     p.input_boundary(false,false,true,aim);p.toggle_pause();p.input_boundary(true,true,true,aim);require(!p.pending,"paused J accepted");
-    p.reset();p.start();until(p,600);require(p.geometry==ManualGeometry::Pending&&!p.timing,"NoSwing finalized before completion");
-    until(p,815);p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);until(p,816);
-    require(p.committed&&p.committed->consumed_tick==816&&p.phase==PreviewPhase::Playing,"last Playing boundary lost command");
-    while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);
-    p.reset();p.start();until(p,800);p.advance(100'000'000);
-    require(p.phase==PreviewPhase::Complete&&p.geometry==ManualGeometry::NoSwing,"Take completion");
-    // Debt can extend the recorded boundary beyond the uncommitted attempt finish; do not drop its command.
-    p.reset();p.start();until(p,790);p.advance(100'000'000); // 806, 8 debt ticks -> 815.
-    p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);require(p.pending->target_tick==815,"late backlog semantics");
-    p.advance(0);until(p,815);require(p.committed->consumed_tick==815,"backlog consumed wrong command");
-    p.reset();p.start();until(p,795);p.advance(100'000'000); // 811, 8 debt ticks -> 820.
-    p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);require(p.pending->target_tick==820,"post-finish backlog target");
-    p.advance(0);until(p,820);require(p.committed->consumed_tick==820,"completion discarded queued debt command");
+    p.reset();p.start();until(p,600);require(p.geometry()==ManualGeometry::Pending&&!p.timing(),"NoSwing finalized before completion");
+    p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);
+    require(!p.pending&&!p.committed(),"post-passage input accepted");
+    until(p,816);require(p.geometry()==ManualGeometry::NoSwing,"Take completion");
+    // Debt closes intent by its target time, even when the current tick precedes exit.
+    p.reset();p.start();until(p,450);p.advance(150'000'000);
+    require(p.tick==466&&p.pending_ticks==20,"cutoff debt fixture");
+    p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);
+    require(!p.pending&&!p.committed(),"backlogged post-exit target accepted");
     // Display shares the exact analytic contact trajectory throughout the slab, then freezes at its exit.
     p.reset();p.start();until(p,475);
     while(p.tick<483){p.advance(4'166'667);const double time=double(p.tick)/240;

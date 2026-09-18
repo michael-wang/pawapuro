@@ -34,32 +34,32 @@ int main(int argc,char** argv){try {
     ManualSwingPreview a(d,s),b(d,s);PlayerAim live(s);
     const auto predicted=predict_arrival(a.delivery.pitch).state.position_m;
     const DirectX::XMFLOAT2 point{predicted.x,predicted.y},outside{point.x+t.normal_radius_x_m*1.01f,point.y};
-    require(!a.authorization,"Ready decision");a.start();b.start();
+    require(!a.authorization(),"Ready decision");a.start();b.start();
     require(a.record_command(448,point)&&b.record_command(448,outside),"fixture commands");
-    require(!a.authorization&&!b.authorization,"queued decision too early");
-    until(a,447);until(b,447);require(!a.authorization&&!b.authorization,"pre-consumption decision");
+    require(!a.authorization()&&!b.authorization(),"queued decision too early");
+    until(a,447);until(b,447);require(!a.authorization()&&!b.authorization(),"pre-consumption decision");
     until(a,448);until(b,448);
-    require(a.authorization->authorized&&!b.authorization->authorized&&a.authorization->q==0,"448 authorization pair");
-    const auto saved_a=*a.authorization,saved_b=*b.authorization;
+    require(a.authorization()->authorized&&!b.authorization()->authorized&&a.authorization()->q==0,"448 authorization pair");
+    const auto saved_a=*a.authorization(),saved_b=*b.authorization();
     for(auto* p:{&a,&b}) {
-        p->toggle_pause();const auto saved=*p->authorization;const auto tick=p->tick;
+        p->toggle_pause();const auto saved=*p->authorization();const auto tick=p->tick;
         live.move(1,1,.05);p->input_boundary(false,false,true,live.center());p->advance(1'000'000'000);
-        require(p->tick==tick&&same(*p->authorization,saved),"pause/live aim changed decision");
-        p->single_step();require(p->tick==tick+1&&same(*p->authorization,saved),"step changed decision");p->toggle_pause();
+        require(p->tick==tick&&same(*p->authorization(),saved),"pause/live aim changed decision");
+        p->single_step();require(p->tick==tick+1&&same(*p->authorization(),saved),"step changed decision");p->toggle_pause();
     }
     while(a.phase==PreviewPhase::Playing) {
         a.advance(4'166'667);b.advance(4'166'667);
         require(a.tick==b.tick&&a.batter.pose.world==b.batter.pose.world&&a.batter.barrel_world==b.batter.barrel_world,"aim changed bat path");
         require(same(a.delivery.pitch.current.position_m,b.delivery.pitch.current.position_m)
             &&same(a.delivery.pitch.current.velocity_mps,b.delivery.pitch.current.velocity_mps),"aim changed ball path");
-        require(a.geometry==b.geometry&&bool(a.contact)==bool(b.contact),"aim changed geometry");
-        require(same(*a.authorization,saved_a)&&same(*b.authorization,saved_b),"decision mutated");
+        require(a.geometry()==b.geometry()&&bool(a.contact())==bool(b.contact()),"aim changed geometry");
+        require(same(*a.authorization(),saved_a)&&same(*b.authorization(),saved_b),"decision mutated");
     }
-    require(a.geometry==ManualGeometry::Contact&&b.geometry==ManualGeometry::Contact,"448 Compact must contact");
-    same_contact(*a.contact,*b.contact);const auto event=*a.contact;
+    require(a.geometry()==ManualGeometry::Contact&&b.geometry()==ManualGeometry::Contact,"448 Compact must contact");
+    same_contact(*a.contact(),*b.contact());const auto event=*a.contact();
     // Old S1 commit 441 contacted before the new slab front. Preserve that physical regression explicitly.
     a.start();a.record_command(441,point);until(a,505);
-    require(a.timing->overlap&&!a.contact&&a.geometry==ManualGeometry::NoContactInWindow,"old 441 temporal classification");
+    require(a.timing()->overlap&&!a.contact()&&a.geometry()==ManualGeometry::NoContactInWindow,"old 441 temporal classification");
     engine::GlbPose scratch;std::optional<BatContact> legacy;
     for(std::uint64_t tick=441;tick<505&&!legacy;++tick)legacy=first_manual_contact(a.delivery.pitch.initial,
         double(a.delivery.motion.release_tick)/240,a.batter,441,s.bat_contact,double(tick)/240,double(tick+1)/240,scratch,64,a.attempt_tempo);
@@ -71,29 +71,29 @@ int main(int argc,char** argv){try {
         <<" u="<<event.sample.approach.u<<" normal=("<<event.normal.x<<','<<event.normal.y<<','<<event.normal.z
         <<") relative_velocity=("<<event.relative_velocity.x<<','<<event.relative_velocity.y<<','<<event.relative_velocity.z<<"); exact equality\n";
     for(auto aim:{point,outside})for(std::uint64_t commit:{448ull,456ull})for(unsigned hz:{30u,60u,120u,0u}) {
-        a.start();require(!a.authorization,"new ball retained decision");a.record_command(commit,aim);
+        a.start();require(!a.authorization(),"new ball retained decision");a.record_command(commit,aim);
         if(!hz){a.advance(3'000'000'000);while(a.pending_ticks)a.advance(0);}
         while(a.phase==PreviewPhase::Playing)a.advance(hz?1'000'000'000/hz:16'666'667);
-        require(a.committed->consumed_tick==commit&&same(*a.authorization,authorize_normal_hit(aim,point,t)),"cadence changed consumed decision");
-        require(a.geometry==(commit==448?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"fixture geometry");
-        if(commit==448)same_contact(*a.contact,event);
+        require(a.committed()->consumed_tick==commit&&same(*a.authorization(),authorize_normal_hit(aim,point,t)),"cadence changed consumed decision");
+        require(a.geometry()==(commit==448?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"fixture geometry");
+        if(commit==448)same_contact(*a.contact(),event);
     }
     // Live controller changes after scheduling and after consumption cannot alter the saved command.
     a.start();live.recenter();const auto snapshot=live.center();a.record_command(448,snapshot);
-    live.move(1,0,.05);until(a,448);const auto decision=*a.authorization;
+    live.move(1,0,.05);until(a,448);const auto decision=*a.authorization();
     live.move(0,-1,.05);a.input_boundary(false,false,true,live.center());until(a,449);
-    require(same(a.committed->aim_center,snapshot)&&same(*a.authorization,decision),"live controller leaked into command");
-    a.reset();require(!a.authorization,"reset retained decision");
+    require(same(a.committed()->aim_center,snapshot)&&same(*a.authorization(),decision),"live controller leaked into command");
+    a.reset();require(!a.authorization(),"reset retained decision");
     // Existing boundary/backlog scheduling: 420 + 24 elapsed ticks schedules 445, never 437.
     a.start();until(a,420);a.advance(100'000'000);
     require(a.tick==436&&a.pending_ticks==8,"backlog fixture");
     a.input_boundary(false,false,true,point);a.input_boundary(true,true,true,point);
-    require(a.pending&&a.pending->target_tick==445&&!a.authorization,"backlog scheduling");
-    a.advance(0);require(a.tick==444&&!a.authorization,"decision consumed old debt");until(a,445);
-    require(a.committed->consumed_tick==445&&a.authorization->q==0,"backlog consumption");
-    require(same(*a.authorization,authorize_normal_hit(point,point,t)),"backlog pitch truth");
+    require(a.pending&&a.pending->target_tick==445&&!a.authorization(),"backlog scheduling");
+    a.advance(0);require(a.tick==444&&!a.authorization(),"decision consumed old debt");until(a,445);
+    require(a.committed()->consumed_tick==445&&a.authorization()->q==0,"backlog consumption");
+    require(same(*a.authorization(),authorize_normal_hit(point,point,t)),"backlog pitch truth");
     a.reset();a.start();while(a.phase==PreviewPhase::Playing)a.advance(16'666'667);
-    require(!a.authorization&&a.geometry==ManualGeometry::NoSwing,"Take authorization");
+    require(!a.authorization()&&a.geometry()==ManualGeometry::NoSwing,"Take authorization");
     std::cout<<"PASS Normal S1: boundary/signs, immutable snapshot, pause/step/reset, 30/60/120 Hz/backlog, physical invariance; Compact 456 Authorized + NoContactInWindow\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

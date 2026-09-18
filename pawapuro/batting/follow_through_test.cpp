@@ -46,25 +46,25 @@ int main(int argc,char** argv){try {
         }
         std::cout<<(mode==SwingTempo::Original?"A":"B")<<" boundary_sample_offset="<<candidate.sample_tick(45.6,0)
             <<" sample_400ms="<<candidate.sample_tick(96,0)<<" sample_675ms="<<candidate.sample_tick(162,0)<<" finish="<<candidate.end_tick(0)<<'\n';
-        for(std::uint64_t c:{96ull,432ull,433ull,448ull,456ull,460ull,600ull}) {
+        for(std::uint64_t c:{96ull,432ull,433ull,448ull,456ull,460ull}) {
             p.reset();baseline.reset();p.next_tempo=baseline.next_tempo=mode;p.start();baseline.start();
             baseline.attempt_tempo.tail_finish_ticks=0; // Accepted 892e7b4 motion, no runtime switch.
             const auto pt=predict_arrival(p.delivery.pitch).state.position_m;const DirectX::XMFLOAT2 aim{pt.x,pt.y};
             p.record_command(c,aim);baseline.record_command(c,aim);
             until(p,c+46);until(baseline,c+46);
-            require(p.timing->state==baseline.timing->state&&p.timing->efficiency==baseline.timing->efficiency&&p.timing->offset_ms==baseline.timing->offset_ms,"timing changed");
-            require(p.authorization->authorized==baseline.authorization->authorized&&p.authorization->q==baseline.authorization->q,"spatial changed");
-            require(p.geometry==baseline.geometry&&bool(p.contact)==bool(baseline.contact),"geometry changed");
-            if(p.contact){const auto& a=*p.contact;const auto& b=*baseline.contact;
+            require(p.timing()->state==baseline.timing()->state&&p.timing()->efficiency==baseline.timing()->efficiency&&p.timing()->offset_ms==baseline.timing()->offset_ms,"timing changed");
+            require(p.authorization()->authorized==baseline.authorization()->authorized&&p.authorization()->q==baseline.authorization()->q,"spatial changed");
+            require(p.geometry()==baseline.geometry()&&bool(p.contact())==bool(baseline.contact()),"geometry changed");
+            if(p.contact()){const auto& a=*p.contact();const auto& b=*baseline.contact();
                 require(a.sample.preview_time_s==b.sample.preview_time_s&&a.sample.approach.u==b.sample.approach.u&&same(a.normal,b.normal)&&same(a.relative_velocity,b.relative_velocity),"contact event changed");}
-            if(mode==SwingTempo::Compact&&c==448)require(p.contact&&std::abs(p.contact->sample.preview_time_s-1.9913564701)<1e-10,"448 baseline event lost");
+            if(mode==SwingTempo::Compact&&c==448)require(p.contact()&&std::abs(p.contact()->sample.preview_time_s-1.9913564701)<1e-10,"448 baseline event lost");
         }
     }
     p.reset();p.start();p.record_command(96,{});until(p,336);
-    require(p.batter.complete()&&p.phase==PreviewPhase::Playing&&p.delivery.ball_owner==BallOwner::Hand,"early finish stopped delivery");
-    const auto held=p.batter.pose.world;const auto grip=p.batter.grip_world;
-    until(p,480);require(p.batter.pose.world==held&&p.batter.grip_world==grip&&p.delivery.pitch.phase==PitchPhase::Complete,"final hold or continuing pitch changed");
-    p.input_boundary(false,false,true,{});p.input_boundary(true,true,true,{});require(!p.pending&&p.committed->consumed_tick==96,"second swing enabled");
+    require(p.rearmed()&&p.phase==PreviewPhase::Playing&&p.delivery.ball_owner==BallOwner::Hand,"early finish stopped delivery/rearm");
+    engine::GlbPose prep;p.batter.sample(336,std::nullopt,prep);require(prep.world==p.batter.pose.world,"rearm preparation mismatch");
+    until(p,480);require(p.delivery.pitch.phase==PitchPhase::Complete,"continuing pitch changed");
+    p.input_boundary(false,false,true,{});p.input_boundary(true,true,true,{});require(!p.pending&&p.committed()->consumed_tick==96,"post-exit swing enabled");
     engine::GlbPose cadence_pose;std::uint64_t final_tick=0;
     for(unsigned hz:{30u,60u,120u,0u}) {
         p.reset();p.start();p.record_command(448,{});

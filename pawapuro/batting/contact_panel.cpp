@@ -6,14 +6,14 @@
 #include <stdexcept>
 namespace pawapuro {
 ContactPanelState contact_panel_state(const ManualSwingPreview& p) {
-    switch(p.geometry) {
+    switch(p.geometry()) {
     case ManualGeometry::NoSwing:return ContactPanelState::NoSwing;
     case ManualGeometry::NoContactInWindow:return ContactPanelState::NoContact;
     case ManualGeometry::Contact:
-        return p.contact && p.contact->sample.ball.position_m.z<p.delivery.pitch.evaluation_plane_z
+        return p.contact() && p.contact()->sample.ball.position_m.z<p.delivery.pitch.evaluation_plane_z
             ? ContactPanelState::ExtendedContact : ContactPanelState::Contact;
     default:return p.phase==PreviewPhase::Ready ? ContactPanelState::Ready
-        : p.committed ? ContactPanelState::Swinging : ContactPanelState::Waiting;
+        : p.committed() ? ContactPanelState::Swinging : ContactPanelState::Waiting;
     }
 }
 int contact_panel_highlight(ContactPanelState state) {
@@ -65,14 +65,14 @@ TextMask raster(const wchar_t* text,int size) {
 ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     if(!width||!height)throw std::runtime_error("Contact panel needs client pixels");
     const float scale=float(height)/1080;
-    const wchar_t* texts[]={L"本球結果",L"按 Space 開始",L"等待出棒",L"揮棒中",
+    const wchar_t* texts[]={L"本球／最近出棒結果",L"按 Space 開始",L"等待出棒",L"揮棒中",
         contact_panel_labels[0],contact_panel_labels[1],contact_panel_labels[2],
         L"接觸測試：只檢查時機重疊區間，",L"尚未實作擊球後的球路。",
         L"接觸在評估面之後；",L"實球顯示前進至互動區後緣。",L"A 原節奏",L"B 快出棒",L"下一球：A 原節奏",L"下一球：B 快出棒",
         L"T：下一球前切換",L"揮棒時機：等待",
         L"瞄準授權：等待",L"瞄準授權：通過",L"瞄準授權：超出範圍",
-        L"揮棒時機：無重疊（早）",L"揮棒時機：有重疊",L"揮棒時機：無重疊（晚）"};
-    std::array<TextMask,23> masks;
+        L"揮棒時機：無重疊（早）",L"揮棒時機：有重疊",L"揮棒時機：無重疊（晚）",L"可再次出棒",L"揮棒中",L"出棒機會已結束",L"出棒已排程",L"等待第一次出棒"};
+    std::array<TextMask,28> masks;
     for(unsigned i=0;i<masks.size();++i)masks[i]=raster(texts[i],static_cast<int>(std::lround((i==0?30:i>=4&&i<=6?28:20)*scale)));
     for(unsigned variant=0;variant<variants.size()+annotations.size();++variant) {
         auto& v=variant<7?variants[variant]:annotations[variant-7];const auto state=static_cast<ContactPanelState>(variant);
@@ -90,12 +90,13 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
             const unsigned index=variant-7;
             if(index<6)text(11+index,42,index<2?394.f:index<4?420.f:index==4?446.f:474.f,white);
             if(index>=7&&index<10)text(17+index-7,42,510,bright);
-            if(index>=10)text(20+index-10,42,474,bright);
+            if(index>=10&&index<13)text(20+index-10,42,474,bright);
+            if(index>=13)text(23+index-13,42,76,bright);
             annotation_vertex_count=std::max(annotation_vertex_count,static_cast<unsigned>(v.size()));
             continue;
         }
         quad(24,24,540,526,dark);text(0,42,34,white);
-        if(variant<3)text(1+variant,42,76,white);
+        if(variant<1)text(1+variant,42,76,white);
         for(unsigned row=0;row<3;++row) {
             const float y=110+46*float(row);const bool active=int(row)==selected;
             if(active) {
@@ -111,7 +112,7 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     base_vertex_count=vertex_count;
     for(auto& v:variants)v.resize(base_vertex_count);
     for(auto& v:annotations)v.resize(annotation_vertex_count);
-    vertex_count=base_vertex_count+5*annotation_vertex_count;
+    vertex_count=base_vertex_count+6*annotation_vertex_count;
     std::fprintf(stderr,"Contact panel: cached fixed Chinese text, seven variants, %u vertices; no per-frame rasterization\n",vertex_count);
 }
 void ContactResultPanel::append(std::vector<engine::Vertex>& target,const ManualSwingPreview& p) const {
@@ -120,7 +121,10 @@ void ContactResultPanel::append(std::vector<engine::Vertex>& target,const Manual
     const auto mode=p.phase==PreviewPhase::Ready?p.next_tempo:p.attempt_tempo.mode;
     add(mode==SwingTempo::Original?0:1);
     add(p.phase==PreviewPhase::Complete?(p.next_tempo==SwingTempo::Original?2:3):6);
-    add(4);add(!p.timing?5:p.timing->state==SwingTimingState::Early?10:p.timing->state==SwingTimingState::Overlap?11:12);
-    add(!p.authorization?7:p.authorization->authorized?8:9);
+    add(4);add(!p.timing()?5:p.timing()->state==SwingTimingState::Early?10:p.timing()->state==SwingTimingState::Overlap?11:12);
+    add(!p.authorization()?7:p.authorization()->authorized?8:9);
+    add(p.phase==PreviewPhase::Ready||p.paused?6:p.active_attempt?14:p.pending?16:p.rearmed()?13:
+        p.phase==PreviewPhase::Playing&&p.intent_live(p.tick+p.pending_ticks+1)&&!p.latest()?17:
+        p.latest()||p.phase==PreviewPhase::Playing?15:6);
 }
 }

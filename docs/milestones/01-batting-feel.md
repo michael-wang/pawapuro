@@ -229,3 +229,5 @@ Hit Authorization S1 已實作最小 Normal spatial gate 與獨立 in-game 授�
 Hit Authorization S1 已獲 human acceptance。Timing Interaction S1 已移除舊 development input domain、延伸具體 Normal motion，加入 trajectory-derived Z slab／swing potential 與 temporal intersection query；契約、數值 fixtures、presentation continuation 與實機 evidence 限制見 [batting-contact](../design/batting-contact.md)。本輪停在 Michael＋Julia review；follow-through 長度調整延後，M1 未完成，沒有進入 correction／Contact Quality／Power／Ball Response。
 
 Follow-through Compression S1 將post-potential尾段重排至約1秒完整完成，保留world＋190 ms前綴與Timing Interaction S1，仍一球一次；動作契約、技術檢查與review evidence見 [batter-motion](../design/batter-motion.md)。停在Michael＋Julia的1×human review，尚未授權multi-swing，M1未完成。
+
+Follow-through Compression S1 已由Michael接受為Normal baseline。Multi-Swing Intent S1加入同pitch的獨立SwingAttempts、完整finish後的live硬rearm與passage-exit新intent截止；不改motion／timing／spatial／physical tuning。Ownership、regression與human review evidence見 [batting-contact](../design/batting-contact.md)，hard reset手感待Michael＋Julia review，M1未完成，沒有進入recovery animation／correction／Contact Quality／Power／Ball Response。
