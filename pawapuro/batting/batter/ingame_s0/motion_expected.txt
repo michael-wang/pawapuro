@@ -1,4 +1,4 @@
-# Gate B saved-source world matrices, glTF basis; source 9e37b73e8419e721b885326e06ba3b185fbd11168da77184a13e2b07d6961ea6
+# Gate B saved-source world matrices, glTF basis; source c54c32f84fb9da3d54800685cd514bd6b1fc7e49abc5c0e156f08c3da068d32e
 Take 0 0 root 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
 Take 0 0 pelvis 1 0 0 0 0 1 -3.42285453e-08 0 0 3.42285453e-08 1 0 0 0.529999971 0 1
 Take 0 0 chest 1 0 0 0 0 1 -3.42285453e-08 0 0 3.42285453e-08 1 0 0 0.929999888 3.55271368e-15 1

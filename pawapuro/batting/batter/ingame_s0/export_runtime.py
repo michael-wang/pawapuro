@@ -8,7 +8,7 @@ from mathutils import Matrix
 D=Path(__file__).resolve().parent
 source=D/'batter_ingame_s0.blend'
 sha=hashlib.sha256(source.read_bytes()).hexdigest()
-assert sha=='9e37b73e8419e721b885326e06ba3b185fbd11168da77184a13e2b07d6961ea6'
+assert sha=='c54c32f84fb9da3d54800685cd514bd6b1fc7e49abc5c0e156f08c3da068d32e'
 bpy.ops.wm.open_mainfile(filepath=str(source))
 C=Matrix(((1,0,0,0),(0,0,1,0),(0,-1,0,0),(0,0,0,1)))
 # Independent expected matrices come from saved baked actions, never from Native/formulas.
@@ -48,6 +48,8 @@ entry_frames = 6
 velocity_epsilon_frames = 0.01
 commit_first_tick = 432
 commit_last_tick = 496
+# These identify the saved Gate B regression domain, not runtime input eligibility.
+# Native early-entry support now bounds remaining plant duration to six frames.
 # Remaining descent interpolates Gate B's two unfinished-support entries.
 # At/after authoring frame 117 the existing planted foot is retained.
 plant_duration_knots = [[109.0, 6.0], [115.0, 3.0], [117.0, 0.0]]

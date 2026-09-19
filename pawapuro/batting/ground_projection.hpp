@@ -5,9 +5,9 @@ namespace pawapuro {
 // Review aid only: current XZ projection, never a landing prediction or collider.
 inline constexpr unsigned ground_projection_segments=32;
 inline constexpr unsigned ground_projection_vertex_count=3*ground_projection_segments;
-inline constexpr float ground_projection_radius_m=.35f;
+inline constexpr float ground_projection_radius_m=.18f;
 inline constexpr float ground_projection_y_m=.02f;
-inline constexpr DirectX::XMFLOAT3 ground_projection_color{1,.1f,1};
+inline constexpr DirectX::XMFLOAT3 ground_projection_color{.72f,.74f,.76f};
 inline void append_ground_projection(std::vector<engine::Vertex>& target,const ManualSwingPreview& preview) {
     if(!preview.flight){target.insert(target.end(),ground_projection_vertex_count,{});return;}
     auto center=preview.flight->sample(double(preview.tick)/pitch_hz).position_m;

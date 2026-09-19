@@ -1,8 +1,8 @@
 schema_version = 1
-source_sha256 = "9e37b73e8419e721b885326e06ba3b185fbd11168da77184a13e2b07d6961ea6"
-glb_sha256 = "4290988292f4cf766f1ac1de28e032bbf56fa4cc2d01756dfc35c07f332d56af"
+source_sha256 = "c54c32f84fb9da3d54800685cd514bd6b1fc7e49abc5c0e156f08c3da068d32e"
+glb_sha256 = "d67ea88abe00f45eb3291b5ebe1731c47e2d882ec16dbd169ccc76ccf2da6783"
 # Exporter identity uses UTF-8 without BOM and normalized LF, independent of checkout EOL.
-exporter_sha256 = "12153147b467e6b05d82302dbde218471a2d5ba6726d5bb0b571a13f3954d43e"
+exporter_sha256 = "c397d9756bcd934d02839d3d34cf42097d5436770ddbdea48e2f889ceae24cc7"
 blender_version = "4.5.13 LTS"
 recipe = "gate-b-world-residual-v1"
 source_frames = 225

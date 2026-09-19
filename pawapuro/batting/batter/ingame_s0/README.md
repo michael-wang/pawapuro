@@ -47,7 +47,7 @@ Space 開始／完成後下一球；Arrows 移動 live aim、R recenter；J 新�
 blender --background --factory-startup --python-exit-code 1 --python pawapuro/batting/batter/ingame_s0/export_runtime.py
 ```
 
-[export_runtime.py](export_runtime.py) 只開啟 saved `batter_ingame_s0.blend`，不 save、不呼叫 generator。Source SHA256 必須為 `9e37b73e8419e721b885326e06ba3b185fbd11168da77184a13e2b07d6961ea6`；原三檔與 Gate B source bytes 均保留。
+[export_runtime.py](export_runtime.py) 只開啟 saved `batter_ingame_s0.blend`，不 save、不呼叫 generator。目前 palette-only revision 的 Source SHA256 為 `c54c32f84fb9da3d54800685cd514bd6b1fc7e49abc5c0e156f08c3da068d32e`。原 Gate B motion／geometry 保持不變；authoring palette 與非 COLOR_0 byte 比對由 [batting-contact](../../../../docs/design/batting-contact.md#authored-character-palettemarker-polish-s1) 記錄。
 
 - `motion.glb`：單一 `ingame_source` clip，取自 saved source 內 `AcceptedReference_swing_L_READ_ONLY_COPY`；相同 mesh／rig／weights。不是三個案例選片，也不是每個 tick 一支完整動畫。
 - `motion.toml`：saved source／GLB／exporter SHA256、Blender 版本與 `gate-b-world-residual-v1` 配方契約。CMake 複製 GLB／TOML 到 exe 旁的 `batting/batter/ingame_s0/`，新 clone 不依賴 ignored JSON 或 authoring script。

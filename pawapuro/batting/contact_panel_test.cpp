@@ -36,9 +36,9 @@ int main(int argc,char** argv){try {
             if(!p.flight){require(v.position.x==0&&v.position.y==0&&v.position.z==0,"hidden marker");continue;}
             const auto ball=p.flight->sample(double(p.tick)/pitch_hz).position_m;
             require(v.position.y==ground_projection_y_m,"marker ground height");
-            require(v.color.x==1&&v.color.y==.1f&&v.color.z==1,"marker magenta");
+            require(v.color.x==.72f&&v.color.y==.74f&&v.color.z==.76f,"marker grey-white");
             if(i%3==0)require(v.position.x==ball.x&&v.position.z==ball.z,"current ball XZ projection");
-            else require(std::abs(std::hypot(v.position.x-ball.x,v.position.z-ball.z)-.35f)<1e-5,"marker radius");
+            else require(std::abs(std::hypot(v.position.x-ball.x,v.position.z-ball.z)-.18f)<1e-5,"marker radius");
         }
         require(p.tick==tick&&batting_info(p)==info,"marker mutated state");
     };

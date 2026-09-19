@@ -100,6 +100,8 @@ int main(int argc,char** argv)
         const std::size_t limbs[]{index("forearm_R"),index("hand_R"),index("forearm_L"),index("hand_L")};
         for (motion.tick=0;motion.tick<=motion.end_tick;++motion.tick) {
             motion.evaluate();
+            for(std::size_t i=0;i<motion.skinned.size();++i)
+                require(std::memcmp(&motion.skinned[i].color,&motion.asset.primitives[0].bind_vertices[i].color,sizeof(XMFLOAT3))==0,"palette changed across pitcher poses");
             require(motion.triangles.size()==11808,"dynamic count changed");
             for (std::size_t i=0;i<motion.skinned.size();++i)
                 require(std::memcmp(&motion.skinned[i].color,&asset.primitives.front().bind_vertices[i].color,sizeof(XMFLOAT3))==0,"color changed");

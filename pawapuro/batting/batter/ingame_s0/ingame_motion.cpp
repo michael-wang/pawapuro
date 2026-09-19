@@ -43,7 +43,7 @@ IngameMotion::IngameMotion(const std::filesystem::path& d,const BattingStaging& 
 {
     const auto meta=toml::parse_file((d/"motion.toml").string());
     if(meta["schema_version"].value<int>()!=1 || meta["glb_sha256"].value<std::string>()!=asset.sha256
-        || meta["source_sha256"].value<std::string>()!="9e37b73e8419e721b885326e06ba3b185fbd11168da77184a13e2b07d6961ea6"
+        || meta["source_sha256"].value<std::string>()!="c54c32f84fb9da3d54800685cd514bd6b1fc7e49abc5c0e156f08c3da068d32e"
         || meta["entry_frames"].value<int>()!=6 || meta["velocity_epsilon_frames"].value<double>()!=.01
         || meta["source_frames"].value<int>()!=225 || meta["source_fps"].value<int>()!=60
         || meta["commit_first_tick"].value<int>()!=432 || meta["commit_last_tick"].value<int>()!=496

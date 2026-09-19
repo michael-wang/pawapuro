@@ -1,6 +1,6 @@
 # Throwing Arm Whip v1A candidate; human timing review pending; game local (-x,z,-y).
-# source_sha256 f6e437cf18aece5bdde97069e4f9ef3ec5ee3d0151c99e90cd31bfaca2a923f2
-# glb_sha256 98a126e42de3e5b4a1856cf56454bee196144dbc6620e0bc28dcc771b4450a9e
+# source_sha256 5a9491398656b56492329c585dc63ef2fc56882fa2a6f784e143794318973844
+# glb_sha256 f4bf6f77a51e5c6a3296f412939c8458186eba8ddf1e7dabed50d74ceb2b6570
 # sample: tick, grip XYZ, bounds min XYZ / max XYZ; point: selected source vertex XYZ
 sample 0 -0.689502656 1.28155601 -0.000882013701 -0.885947108 0 -1.0051626 0.674516976 2.56514978 0.621613681
 point 0.0744515657 0.722750008 -0.422236383

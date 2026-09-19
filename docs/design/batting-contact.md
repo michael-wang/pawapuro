@@ -696,3 +696,11 @@ Full Debug／Release build 成功，CTest 各 23/23（242.84 s／14.23 s），�
 Central Contact Basin 與 quality-weighted Trajectory S1 已通過人類驗收。打擊資訊新增「擊球初速」，於 Gameplay Contact 派送後顯示 BallResponse 初速乘以 3.6 的 km/h（一位小數）；它不是即時球速，飛行與結果保留期間固定，Space 清除。飛行時間、飛行距離、最大高度仍是原有玩家回饋。
 
 新增亮洋紅色、半徑 0.35 m 的地面投影圓盤，作為開發／閱讀輔助，不是真實陰影、落點預測或碰撞物。它只在 outgoing flight 存在時顯示，讀取當前 sample 的 X/Z，Y 固定於地面上方 0.02 m；首次觸地後隨既有 sample 停留，Space 後隱藏。32 個三角形維持固定 96 頂點，不新增每幀配置或 Engine API。標記沒有 gameplay authority；Ball Response、飛行與既有四項資訊定義均不變。
+
+## Authored Character Palette＋Marker Polish S1
+
+Runtime COLOR_0 不是服裝語意：舊投手鞋與眼睛共色，打者還有烘焙明暗。因此 palette 留在 authoring；`create_sample.py` 將鞋與眼睛的指派分開，投手衣／帽／鞋 base RGB 為 (0.06, 0.17, 0.32)，打者為 (0.72, 0.08, 0.10)。眼睛、膚色、褲子、手套、球棒與原衣襟保留；打者沿用 refine_sample 的 normal-based 明暗公式及 BYTE_COLOR 量化，沒有 runtime 推測或 remap。
+
+`revise_authored_palette.py` 使用 generator 的語意建構 witness，先核對完整 polygon topology，再只修改已存 `.blend` 的目標色彩；不複製 generator 的 geometry／rig／animation。使用原 exporter 匯出投手、ingame batter；static batter 同步更新以保持既有 mesh 一致性回歸。`validate_authored_palette.py build/authored-palette-s1` 核對 before／after GLB JSON 與所有非 COLOR_0 BIN bytes 完全相同、最終色群符合 authoring，以及 5,304 組 motion expected samples 不變（只更新來源 SHA 註解）。正式 GLB／source SHA 在各資產 TOML 維護。
+
+地面投影原洋紅色與 0.35 m 半徑經人類檢視過於搶眼；新版候選為 RGB (0.72, 0.74, 0.76)、半徑 0.18 m。Y=0.02 m、32 segments／96 vertices、XZ 跟隨與 lifetime 均不變；仍只是 development/readability aid，沒有 gameplay authority。

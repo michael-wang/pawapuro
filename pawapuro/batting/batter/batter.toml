@@ -1,9 +1,9 @@
 # Derived from saved Blender source. Export never saves or regenerates the source.
 schema_version = 1
 source = "batter.blend"
-source_sha256 = "74e31d2558970ec1bdf012b7a0071ba71ead516673e65782e31320b81daa2245"
+source_sha256 = "e8085b5bcde0ac98fd90b616c6bab258c0ddcb185f40ca0b06b7482b6c45cf5a"
 glb = "batter.glb"
-glb_sha256 = "6977f690c0aad047518882db310246893f6bab4537f71261b0c423d6a343bcf2"
+glb_sha256 = "d5ec26c3cc2d607b8bd8b1b891aaa5cf1c92eb9a03585f6b40a113f7d8ba623d"
 blender_version = "4.5.13 LTS"
 status = "authoring candidate; runtime and collision unimplemented"
 [space]

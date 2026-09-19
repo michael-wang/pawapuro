@@ -52,7 +52,8 @@ def main(output):
         if parent:bone.parent=rig.data.edit_bones[parent]
         bone.use_deform=name not in ('root','bat_barrel','bat_tip')
     bpy.ops.object.mode_set(mode='OBJECT');rig.show_in_front=True;rig.data.display_type='STICK'
-    skin=(.97,.74,.51,1);purple=(.65,.36,.73,1);navy=(.16,.19,.24,1);pants=(.76,.80,.86,1);sole=(.48,.52,.58,1);wood=(.94,.68,.27,1)
+    skin=(.97,.74,.51,1);purple=(.72,.08,.10,1);navy=(.16,.19,.24,1);pants=(.76,.80,.86,1);sole=(.48,.52,.58,1);wood=(.94,.68,.27,1)
+    shoes=(.72,.08,.10,1) # Separate from the dark eye palette.
     V=[];F=[];C=[];W=[]
     def vertex(p,c,w):V.append(tuple(bv(p)));C.append(c);W.append(w);return len(V)-1
     def quad(a,b,c,d):F.extend([(a,c,b),(a,d,c)])
@@ -86,11 +87,11 @@ def main(output):
         for level,rad in [(0,.96),(.023,1),(.044,.98),(.088,.89),(.128,.60),(.1377,.06)]:
             for i in range(24):
                 a=i*2*math.pi/24;front=math.cos(a);width=.27*(1-.18*max(-front,0));x=-.08-.40*rad*front;zz=z+width*rad*math.sin(a)
-                y=level*(1-.32*max(front,0));footids[name].append(vertex((x,y,zz),sole if level<=.023 else navy,{name:1}))
+                y=level*(1-.32*max(front,0));footids[name].append(vertex((x,y,zz),shoes,{name:1}))
         for j in range(5):
             for i in range(24):quad(start+j*24+i,start+j*24+(i+1)%24,start+(j+1)*24+(i+1)%24,start+(j+1)*24+i)
         for j in [0,5]:
-            center=vertex((-.08,[0,.1377][j==5],z),sole if j==0 else navy,{name:1});footids[name].append(center)
+            center=vertex((-.08,[0,.1377][j==5],z),shoes,{name:1});footids[name].append(center)
             for i in range(24):F.append((center,start+j*24+(i+1)%24,start+j*24+i) if j==0 else (center,start+j*24+i,start+j*24+(i+1)%24))
     for side in ['R','L']:
         pts=armrest[side];start=len(V);names=[f'arm_{side}_{i}' for i in range(3)]+[f'hand_{side}']

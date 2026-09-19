@@ -94,7 +94,8 @@ def main():
     rig.data.display_type = "STICK"
 
     vertices, faces, colors, weights = [], [], [], []
-    blue = (.22, .48, .78, 1)
+    blue = (.06, .17, .32, 1) # Shirt/cap uniform palette.
+    shoes = (.06, .17, .32, 1)
     skin = (.97, .74, .51, 1)
     navy = (.16, .19, .24, 1)
     pants = (.76, .80, .86, 1)
@@ -159,8 +160,8 @@ def main():
     for sign in (-1,1):
         ellipsoid((sign*.075*h*head_scale,(.75+.03*head_scale)*h,-.202*h*head_scale),
                   (.025*h,.032*h,.015*h),navy,"head",12,6)
-    ellipsoid(rest["foot_R"][0],(foot_rx,foot_ry,foot_rz),navy,"foot_R")
-    ellipsoid(rest["foot_L"][0],(foot_rx,foot_ry,foot_rz),navy,"foot_L")
+    ellipsoid(rest["foot_R"][0],(foot_rx,foot_ry,foot_rz),shoes,"foot_R")
+    ellipsoid(rest["foot_L"][0],(foot_rx,foot_ry,foot_rz),shoes,"foot_L")
     ellipsoid(rest["hand_R"][0],(hand_radius,)*3,skin,"hand_R")
     ellipsoid(rest["hand_L"][0],(.09*h,.10*h,.07*h),glove,"hand_L")
 

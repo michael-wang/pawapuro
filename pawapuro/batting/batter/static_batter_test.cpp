@@ -22,7 +22,7 @@ int main(int argc,char** argv)
         const auto staging=pawapuro::load_batting_staging(argv[2]);
         const auto asset=engine::read_mesh_glb(source);
         require(asset.primitives.size()==2 && asset.nodes.size()==20 && asset.joints.size()==17,"shared asset contract");
-        require(asset.sha256=="6977f690c0aad047518882db310246893f6bab4537f71261b0c423d6a343bcf2","accepted asset changed");
+        require(asset.sha256=="d5ec26c3cc2d607b8bd8b1b891aaa5cf1c92eb9a03585f6b40a113f7d8ba623d","accepted asset changed");
         const auto batter=pawapuro::load_static_batter(source,staging);
         require(batter.vertices.size()==14304,"combined expanded count");
         check_near(batter.local_min,{-.519f,0,-.795799673f}); check_near(batter.local_max,{.468f,2.182591915f,.698f});

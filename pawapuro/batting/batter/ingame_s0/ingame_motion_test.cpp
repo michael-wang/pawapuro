@@ -21,6 +21,11 @@ int main(int argc,char** argv) {
                 for(unsigned k=0;k<4;++k)if(a.weights[k]!=b.weights[k] || (a.weights[k]>0&&motion.asset.nodes[motion.asset.joints[a.joints[k]]].name!=baseline.nodes[baseline.joints[b.joints[k]]].name))throw std::runtime_error("protected skin weights changed");
             }
         }
+        for(const std::uint64_t tick:{0ull,384ull,478ull,550ull,688ull}) {
+            motion.evaluate_tick(tick,tick<448?std::nullopt:std::optional<std::uint64_t>(448));
+            for(std::size_t m=0;m<motion.skinned.size();++m)for(std::size_t i=0;i<motion.skinned[m].size();++i)
+                if(std::memcmp(&motion.skinned[m][i].color,&motion.asset.primitives[m].bind_vertices[i].color,sizeof(DirectX::XMFLOAT3)))throw std::runtime_error("palette changed across batter poses");
+        }
         std::ifstream f(d/"batter/ingame_s0/motion_expected.txt");if(!f)throw std::runtime_error("missing saved-source fixtures");
         engine::GlbPose scratch;std::string line,worst;std::string last_case,integer_worst;double case_max=0,integer_max=0;double max_error=0;unsigned count=0;
         while(std::getline(f,line)) {if(line.empty()||line[0]=='#')continue;std::istringstream row(line);std::string name,bone;std::uint64_t c;double tick;row>>name>>c>>tick>>bone;
