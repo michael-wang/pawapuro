@@ -65,7 +65,7 @@ void ManualSwingPreview::dispatch_gameplay_contact() {
     auto& a=attempts[*active_attempt];
     if(!a.response||double(tick)/pitch_hz<a.response->contact_time_s)return;
     a.gameplay=GameplayResult::Contact;a.gameplay_dispatch_tick=tick;
-    flight.emplace(*a.response,tuning.bat_contact.ball_radius_m);pending.reset();armed=false;
+    flight.emplace(*a.response,tuning.gameplay_ball.radius_m);pending.reset();armed=false;
     const auto& r=*a.response;const auto& auth=a.authorization;
     std::fprintf(stderr,"GameplayContact attempt=%zu commit=%llu dispatch_tick=%llu efficiency=%.9f offset_ms=%+.9f ex=%.9g ey=%.9g q=%.9g spatial=%.9g energy=%.9g Power=%d Trajectory=%d effective_s=%.12f speed_mps=%.9g speed_kmh=%.9g longitudinal_deg=%.9g spray_deg=%.9g origin=(%.9g,%.9g,%.9g) ground_s=%.12f RawOverlap=%s (diagnostic only)\n",
         *active_attempt+1,a.command.consumed_tick,tick,a.timing.efficiency,a.timing.offset_ms,auth.normalized_error.x,auth.normalized_error.y,auth.q,
@@ -121,7 +121,7 @@ bool ManualSwingPreview::step_tick() {
         auto command=*pending;pending.reset();command.consumed_tick=tick;
         const auto point=predict_arrival(delivery.pitch).state.position_m;
         attempts.push_back({command,timing_interaction(double(tick)/pitch_hz,ball_passage,tuning.swing_phase_potential),
-            authorize_normal_hit(command.aim_center,{point.x,point.y},normal_authorization_region(tuning))});
+            authorize_normal_hit(command.aim_center,{point.x,point.y},normal_authorization_region(tuning),tuning.gameplay_ball)});
         auto& attempt=attempts.back();
         attempt.response=ball_response(attempt.timing,attempt.authorization,tuning.batter_profile,tuning.ball_response,
             delivery.pitch.initial,double(delivery.motion.release_tick)/pitch_hz);

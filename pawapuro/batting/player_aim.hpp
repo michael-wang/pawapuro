@@ -20,6 +20,7 @@ public:
 private:
     PlayerAimTuning tuning;
     HitAuthorizationTuning authorization;
+    GameplayBallTuning gameplay_ball;
     DirectX::XMFLOAT2 center_m{};
     float half_width,bottom,top,plane_z,visual_z;
 };

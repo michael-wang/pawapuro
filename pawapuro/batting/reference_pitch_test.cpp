@@ -34,6 +34,31 @@ int main(int argc, char** argv)
     try {
         require(argc == 2, "Expected authored staging path");
         fixture_staging = load_batting_staging(argv[1]);
+        // One gameplay radius drives the sphere, both cue footprints and BallAid.
+        for(float radius:{.085f,.1f}) {
+            auto s=fixture_staging;s.gameplay_ball.radius_m=radius;
+            const auto position=predict_arrival(fixture()).state.position_m;
+            constexpr float aspect=16.f/9;
+            const auto scene=make_batting_reference(s,position,aspect,{});
+            for(unsigned i=scene.ball_vertex_start;i<scene.overlay_vertex_start;++i) {
+                const auto p=scene.vertices[i].position;
+                require(std::abs(std::hypot(p.x-s.release_position_m.x,p.y-s.release_position_m.y,p.z-s.release_position_m.z)-radius)<1e-6f,"world baseball radius differs from gameplay Data");
+            }
+            const auto forward=DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&s.camera_target_m),DirectX::XMLoadFloat3(&s.camera_position_m));
+            const auto right=DirectX::XMVector3Normalize(DirectX::XMVector3Cross(DirectX::XMVectorSet(0,1,0,0),forward));
+            DirectX::XMFLOAT3 edge;
+            DirectX::XMStoreFloat3(&edge,DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&position),DirectX::XMVectorScale(right,radius)));
+            const auto center=project_batting_point(s,position,aspect);
+            const float projected_radius=std::abs(project_batting_point(s,edge,aspect).x-center.x);
+            for(const auto* cue:{&scene.arrival_baseball,&scene.arrival_ring}) {
+                float extent=0;for(const auto& v:*cue)extent=std::max(extent,std::abs(v.position.x-center.x));
+                require(std::abs(extent-projected_radius)<1e-6f,"arrival footprint differs from gameplay Data");
+            }
+            std::vector<engine::Vertex> aid;
+            append_ball_readability(aid,s,position,PitchPhase::InFlight,true,1920,1080);
+            float extent=0;for(const auto& v:aid)extent=std::max(extent,std::abs(v.position.x-center.x));
+            require(std::abs(extent-(std::max(5.f,projected_radius*960)+2)/960)<1e-6f,"BallAid radius derivation changed");
+        }
         // Pixel constants scale with height; projected radius must not be scaled twice.
         for (auto position:{fixture_staging.release_position_m,predict_arrival(fixture()).state.position_m}) {
             std::vector<engine::Vertex> a,b;

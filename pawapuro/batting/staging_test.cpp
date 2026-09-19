@@ -13,7 +13,7 @@ std::array<float, 47> values(const pawapuro::BattingStaging& s)
         s.camera_position_m.x, s.camera_position_m.y, s.camera_position_m.z,
         s.camera_target_m.x, s.camera_target_m.y, s.camera_target_m.z, s.vertical_fov_degrees,
         s.release_position_m.x, s.release_position_m.y, s.release_position_m.z,
-        s.ball_marker_radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m, s.mound_height_m,
+        s.gameplay_ball.radius_m, s.grass_half_width_m, s.grass_end_z_m, s.mound_radius_m, s.mound_top_radius_m, s.home_dirt_radius_m, s.mound_visual_dirt_radius_m, s.mound_height_m,
         s.reference_velocity_mps.x, s.reference_velocity_mps.y, s.reference_velocity_mps.z, s.strike_zone_width_m, s.strike_zone_bottom_m, s.strike_zone_top_m,
         s.pitcher_blockout_position_m.x, s.pitcher_blockout_position_m.y, s.pitcher_blockout_position_m.z, s.pitcher_blockout_height_m,
         s.batter_blockout_position_m.x, s.batter_blockout_position_m.y, s.batter_blockout_position_m.z, s.batter_blockout_height_m, s.blockout_head_scale, s.blockout_foot_planar_scale, s.blockout_foot_height_scale, s.blockout_hand_scale, s.blockout_bat_thickness_scale,s.bat_contact.ball_radius_m,s.bat_contact.bat_radius_m,s.hit_authorization.normal_radius_x_m,s.hit_authorization.normal_radius_y_m,s.player_aim.cursor_speed_mps};
@@ -96,8 +96,12 @@ int main(int argc, char** argv)
             throw std::runtime_error("Character style overrides were not loaded.");
         write("[bat_contact]\nball_radius_m=0.04\nbat_radius_m=0.03\n");
         const auto contact=pawapuro::load_batting_staging(fixture);
-        if(contact.bat_contact.ball_radius_m!=.04f || contact.bat_contact.bat_radius_m!=.03f || contact.ball_marker_radius_m!=defaults.ball_marker_radius_m)
-            throw std::runtime_error("Gameplay envelope override mixed with visual radius.");
+        if(contact.bat_contact.ball_radius_m!=.04f || contact.bat_contact.bat_radius_m!=.03f || contact.gameplay_ball.radius_m!=defaults.gameplay_ball.radius_m)
+            throw std::runtime_error("Raw diagnostic envelope mixed with gameplay ball radius.");
+        write("[gameplay_ball]\nradius_m=0.1\n");
+        const auto gameplay_ball=pawapuro::load_batting_staging(fixture);
+        if(gameplay_ball.gameplay_ball.radius_m!=.1f||gameplay_ball.bat_contact.ball_radius_m!=.037f)
+            throw std::runtime_error("Gameplay ball override changed raw diagnostic radius.");
         write("[hit_authorization]\nnormal_radius_x_m=0.2\nnormal_radius_y_m=0.1\n[player_aim]\ncursor_speed_mps=0.5\n");
         const auto aim=pawapuro::load_batting_staging(fixture);
         if(aim.hit_authorization.normal_radius_x_m!=.2f||aim.hit_authorization.normal_radius_y_m!=.1f||aim.player_aim.cursor_speed_mps!=.5f)
@@ -189,7 +193,15 @@ int main(int argc, char** argv)
             {"[camera]\nfvo = 40\n", "camera.fvo"},
             {"camera = 3\n", "camera must be a table"},
             {"[unknown]\n", "Unknown staging key"},
-            {"[release]\nball_marker_radius_m = -1\n", "release.ball_marker_radius_m"},
+            {"[gameplay_ball]\nradius_m = -1\n", "gameplay_ball.radius_m"},
+            {"[gameplay_ball]\nradius_m = 0\n", "gameplay_ball.radius_m"},
+            {"[gameplay_ball]\nradius_m = 0.201\n", "gameplay_ball.radius_m"},
+            {"[gameplay_ball]\nradius_m = nan\n", "gameplay_ball.radius_m"},
+            {"[gameplay_ball]\nradius_m = inf\n", "gameplay_ball.radius_m"},
+            {"[gameplay_ball]\nradius_m = '0.085'\n", "gameplay_ball.radius_m"},
+            {"[gameplay_ball]\nunknown = 1\n", "gameplay_ball.unknown"},
+            {"gameplay_ball = 0.085\n", "gameplay_ball"},
+            {"[release]\nball_marker_radius_m = 0.085\n", "release.ball_marker_radius_m"},
             {"[release]\nposition_m = [-0.65, 0, 16.8]\n", "release.position_m[1]"},
             {"[field]\ngrass_end_z_m = 35\n", "field.grass_end_z_m"},
             {"[field]\ngrass_half_width_m = 1000\n", "field.grass_half_width_m"},

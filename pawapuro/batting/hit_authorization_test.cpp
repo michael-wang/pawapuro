@@ -20,20 +20,41 @@ void until(ManualSwingPreview& p,std::uint64_t tick){while(p.tick<tick)p.advance
 int main(int argc,char** argv){try {
     require(argc==2,"expected batting directory");const std::filesystem::path d=argv[1];
     const auto s=load_batting_staging(d/"staging.toml");const auto t=s.hit_authorization;
-    const auto center=authorize_normal_hit({0,0},{0,0},t);
+    require(s.gameplay_ball.radius_m==.085f&&s.bat_contact.ball_radius_m==.037f&&s.bat_contact.bat_radius_m==.033f,"separate ball geometry Data");
+    require(t.normal_radius_x_m+s.gameplay_ball.radius_m==.345f&&t.normal_radius_y_m+s.gameplay_ball.radius_m==.215f,"Contact75 axis reach");
+    const auto center=authorize_normal_hit({0,0},{0,0},t,s.gameplay_ball);
     require(center.authorized&&same(center.error,{0,0})&&same(center.normalized_error,{0,0})&&center.q==0,"center");
-    for(auto axis:{DirectX::XMFLOAT2{t.normal_radius_x_m,0},{0,t.normal_radius_y_m}}) {
-        const auto edge=authorize_normal_hit({0,0},axis,t);
+    for(auto axis:{DirectX::XMFLOAT2{(t.normal_radius_x_m+s.gameplay_ball.radius_m),0},{0,(t.normal_radius_y_m+s.gameplay_ball.radius_m)}}) {
+        const auto edge=authorize_normal_hit({0,0},axis,t,s.gameplay_ball);
         require(edge.authorized&&edge.q==1,"closed exact boundary");
-        const auto outside=authorize_normal_hit({0,0},{axis.x*1.001f,axis.y*1.001f},t);
-        require(!outside.authorized&&outside.q>1,"outside");
-        const auto negative=authorize_normal_hit({0,0},{-axis.x,-axis.y},t);
-        require(negative.q==edge.q&&negative.error.x==-edge.error.x&&negative.error.y==-edge.error.y
+        const auto outside=authorize_normal_hit({0,0},{axis.x*1.001f,axis.y*1.001f},t,s.gameplay_ball);
+        require(!outside.authorized&&outside.q==1,"outside");
+        require(!authorize_normal_hit({0,0},{-axis.x*1.001f,-axis.y*1.001f},t,s.gameplay_ball).authorized,"negative axis outside");
+        const auto negative=authorize_normal_hit({0,0},{-axis.x,-axis.y},t,s.gameplay_ball);
+        require(negative.authorized&&negative.q==edge.q&&negative.error.x==-edge.error.x&&negative.error.y==-edge.error.y
             &&negative.normalized_error.x==-edge.normalized_error.x&&negative.normalized_error.y==-edge.normalized_error.y,"signed intent");
+    }
+    // Binary-exact noncircular ellipse: E=(64,27)/256, outward normal=(3,4)/5.
+    // P=E+r*n=(67,31)/256 is an exact diagonal tangency, not an expanded ellipse.
+    const HitAuthorizationTuning ellipse{80.f/256,45.f/256};
+    const GameplayBallTuning ball{5.f/256};
+    for(float sx:{-1.f,1.f})for(float sy:{-1.f,1.f}) {
+        const DirectX::XMFLOAT2 tangent{sx*67.f/256,sy*31.f/256};
+        const auto edge=authorize_normal_hit({0,0},tangent,ellipse,ball);
+        const float raw=edge.normalized_error.x*edge.normalized_error.x+edge.normalized_error.y*edge.normalized_error.y;
+        require(edge.authorized&&raw>1&&edge.q==1,"diagonal closed tangency/quality separation");
+        require(spatial_transfer(edge.q,s.ball_response)==spatial_transfer(1,s.ball_response),"diagonal edge transfer");
+        require(!authorize_normal_hit({0,0},{tangent.x+sx*.00006f,tangent.y+sy*.00008f},ellipse,ball).authorized,"diagonal outward gap");
+        require(authorize_normal_hit({0,0},{tangent.x-sx*.00006f,tangent.y-sy*.00008f},ellipse,ball).authorized,"diagonal inward overlap");
+    }
+    require(!authorize_normal_hit({0,0},{1,1},t,s.gameplay_ball).authorized,"clear gap");
+    for(float ey:{-.9f,.9f}) {
+        const auto skin=authorize_normal_hit({0,0},{0,ey*(t.normal_radius_y_m+s.gameplay_ball.radius_m)},t,s.gameplay_ball);
+        require(skin.authorized&&std::abs(skin.error.y)>t.normal_radius_y_m&&std::abs(skin.normalized_error.y-ey)<1e-6f,"skin overlap rejected outside old ellipse");
     }
     ManualSwingPreview a(d,s),b(d,s);PlayerAim live(s);
     const auto predicted=predict_arrival(a.delivery.pitch).state.position_m;
-    const DirectX::XMFLOAT2 point{predicted.x,predicted.y},outside{point.x+t.normal_radius_x_m*1.01f,point.y};
+    const DirectX::XMFLOAT2 point{predicted.x,predicted.y},outside{point.x+(t.normal_radius_x_m+s.gameplay_ball.radius_m)*1.01f,point.y};
     require(!a.authorization(),"Ready decision");a.start();b.start();
     require(a.record_command(448,point)&&b.record_command(448,outside),"fixture commands");
     require(!a.authorization()&&!b.authorization(),"queued decision too early");
@@ -74,7 +95,7 @@ int main(int argc,char** argv){try {
         a.start();require(!a.authorization(),"new ball retained decision");a.record_command(commit,aim);
         if(!hz){a.advance(3'000'000'000);while(a.pending_ticks)a.advance(0);}
         while(a.phase==PreviewPhase::Playing)a.advance(hz?1'000'000'000/hz:16'666'667);
-        require(a.committed()->consumed_tick==commit&&same(*a.authorization(),authorize_normal_hit(aim,point,t)),"cadence changed consumed decision");
+        require(a.committed()->consumed_tick==commit&&same(*a.authorization(),authorize_normal_hit(aim,point,t,s.gameplay_ball)),"cadence changed consumed decision");
         require(a.geometry()==(commit==448?ManualGeometry::Contact:ManualGeometry::NoContactInWindow),"fixture geometry");
         if(commit==448)same_contact(*a.contact(),event);
     }
@@ -91,7 +112,7 @@ int main(int argc,char** argv){try {
     require(a.pending&&a.pending->target_tick==445&&!a.authorization(),"backlog scheduling");
     a.advance(0);require(a.tick==444&&!a.authorization(),"decision consumed old debt");until(a,445);
     require(a.committed()->consumed_tick==445&&a.authorization()->q==0,"backlog consumption");
-    require(same(*a.authorization(),authorize_normal_hit(point,point,t)),"backlog pitch truth");
+    require(same(*a.authorization(),authorize_normal_hit(point,point,t,s.gameplay_ball)),"backlog pitch truth");
     a.reset();a.start();while(a.phase==PreviewPhase::Playing)a.advance(16'666'667);
     require(!a.authorization()&&a.geometry()==ManualGeometry::NoSwing,"Take authorization");
     std::cout<<"PASS Normal S1: boundary/signs, immutable snapshot, pause/step/reset, 30/60/120 Hz/backlog, physical invariance; Compact 456 Authorized + NoContactInWindow\n";

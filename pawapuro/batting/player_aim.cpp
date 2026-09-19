@@ -5,13 +5,14 @@
 #include <stdexcept>
 
 namespace pawapuro {
-PlayerAim::PlayerAim(const BattingStaging& s):tuning(s.player_aim),authorization(normal_authorization_region(s)),half_width(s.strike_zone_width_m/2),
+PlayerAim::PlayerAim(const BattingStaging& s):tuning(s.player_aim),authorization(normal_authorization_region(s)),gameplay_ball(s.gameplay_ball),half_width(s.strike_zone_width_m/2),
     bottom(s.strike_zone_bottom_m),top(s.strike_zone_top_m),plane_z(s.strike_zone_plane_z()),
     visual_z(plane_z-0.002f) // Fixed camera is on -Z; rendering only, never aim truth.
 {
     if (!std::isfinite(half_width)||half_width<=0||!std::isfinite(bottom)||!std::isfinite(top)||top<=bottom||
         !std::isfinite(authorization.normal_radius_x_m)||authorization.normal_radius_x_m<=0||authorization.normal_radius_x_m>=2*half_width||
         !std::isfinite(authorization.normal_radius_y_m)||authorization.normal_radius_y_m<=0||authorization.normal_radius_y_m>=top-bottom||
+        !std::isfinite(gameplay_ball.radius_m)||gameplay_ball.radius_m<=0||
         !std::isfinite(tuning.cursor_speed_mps)||tuning.cursor_speed_mps<=0)
         throw std::runtime_error("Invalid PlayerAim tuning/zone.");
     recenter();
@@ -27,7 +28,7 @@ void PlayerAim::move(float x,float y,double elapsed_s) {
     center_m.y=std::clamp(center_m.y+y*distance,bottom,top);
 }
 AimDiagnostic PlayerAim::diagnostic(DirectX::XMFLOAT3 p) const {
-    const auto a=authorize_normal_hit(center_m,{p.x,p.y},authorization);
+    const auto a=authorize_normal_hit(center_m,{p.x,p.y},authorization,gameplay_ball);
     return {a.error.x,a.error.y,a.normalized_error.x,a.normalized_error.y,a.q};
 }
 void PlayerAim::append_triangles(std::vector<engine::Vertex>& v) const {

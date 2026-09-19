@@ -16,7 +16,7 @@ void compare(const SwingAttempt& a,const SwingAttempt& b){
 }
 int main(int argc,char** argv){try{
  require(argc==2,"expected batting directory");const std::filesystem::path d=argv[1];const auto s=load_batting_staging(d/"staging.toml");
- ManualSwingPreview p(d,s),fresh(d,s);PlayerAim aim(s);for(int n=0;n<10;++n)aim.move(-1,0,.05);const auto first_aim=aim.center();
+ ManualSwingPreview p(d,s),fresh(d,s);PlayerAim aim(s);for(int n=0;n<10;++n)aim.move(-1,1,.05);const auto first_aim=aim.center();
  p.start();fresh.start();require(p.record_command(80,first_aim),"early command");aim.recenter();const auto center=aim.center();fresh.record_command(448,center);
  until(p,80);const auto saved=p.attempts[0];require(saved.timing.state==SwingTimingState::Early&&saved.geometry==ManualGeometry::NoContactInWindow&&!saved.authorization.authorized,"early rejected-spatial fixture");
  until(p,319);until(fresh,319);p.input_boundary(false,false,true,center);p.input_boundary(true,true,true,center);require(!p.pending&&p.attempts.size()==1,"active press buffered");

@@ -307,7 +307,7 @@ def main():
         for c in list(ball.users_collection): c.objects.unlink(ball)
         helpers.objects.link(ball); ball.data.materials.append(material)
         return ball
-    ball=helper_sphere("HeldBall_AUTHORING_ONLY",data["release"]["ball_marker_radius_m"],simple_material("BallPreview",(.93,.9,.77)))
+    ball=helper_sphere("HeldBall_AUTHORING_ONLY",data["gameplay_ball"]["radius_m"],simple_material("BallPreview",(.93,.9,.77)))
     constraint=ball.constraints.new("COPY_LOCATION"); constraint.target=rig; constraint.subtarget="grip"
     for f,hidden in ((1,False),(91,False),(92,True),(151,True)):
         ball.hide_render=hidden; ball.hide_viewport=hidden

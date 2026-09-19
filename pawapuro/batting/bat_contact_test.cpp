@@ -54,7 +54,7 @@ int main(int argc,char** argv) {
     require(c->sample.preview_time_s<minimum.minimum.preview_time_s && c->sample.approach.u==0 && minimum.minimum.approach.u==0,"endpoint / minimum relationship changed");
     require(!search(p,{.020f,.020f},64),"smaller artificial envelope should be NoContact");
     const auto larger=search(p,{.040f,.040f},64);require(larger && larger->sample.preview_time_s<c->sample.preview_time_s,"larger envelope did not enter earlier");
-    auto visual=staging;visual.ball_marker_radius_m=.15f;BattingPreview different_visual(argv[1],visual);
+    auto visual=staging;visual.gameplay_ball.radius_m=.15f;BattingPreview different_visual(argv[1],visual);
     require(signature(*search(different_visual,visual.bat_contact,64))==signature(*b),"visual marker affected gameplay contact");
     const auto entry_tick=static_cast<std::uint64_t>(std::ceil(b->fractional_tick));
     // Compare every mutable physics sample and both animation poses to callers

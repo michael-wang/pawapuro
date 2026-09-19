@@ -27,17 +27,18 @@ int main(int argc,char** argv) {
     aim.recenter();require(aim.center().x==center.x&&aim.center().y==center.y,"recenter");
     aim.move(1,0,50);require(close_enough(aim.center().x,s.player_aim.cursor_speed_mps*.05f),"large frame gap cap");
     aim.recenter();aim.move(1,1,-1);aim.move(1,0,std::numeric_limits<double>::infinity());require(aim.center().x==center.x&&aim.center().y==center.y,"invalid dt moved aim");
-    const auto d=aim.diagnostic({center.x+.13f,center.y-.13f,s.strike_zone_plane_z()});
-    require(close_enough(d.dx,.13f)&&close_enough(d.dy,-.13f)&&close_enough(d.ex,.5f)&&close_enough(d.ey,-1)&&close_enough(d.q,1.25f),"signed diagnostic normalization/q");
+    const auto d=aim.diagnostic({center.x+.1725f,center.y-.215f,s.strike_zone_plane_z()});
+    require(close_enough(d.dx,.1725f)&&close_enough(d.dy,-.215f)&&close_enough(d.ex,.5f)&&close_enough(d.ey,-1)&&close_enough(d.q,1.f),"signed diagnostic normalization/q");
     const auto project=[&](DirectX::XMFLOAT2 p){return project_batting_point(s,{p.x,p.y,s.strike_zone_plane_z()},16.f/9);};
     const auto pc=project(center);aim.move(1,0,.02);require(project(aim.center()).x>pc.x,"screen Right mapping");
     aim.recenter();aim.move(0,1,.02);require(1-project(aim.center()).y<1-pc.y,"screen Up pixel mapping");
     for(float bad:{0.f,-1.f,std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()}) {
-        for(int field=0;field<3;++field) {
+        for(int field=0;field<4;++field) {
             auto invalid=s;
             if(field==0)invalid.hit_authorization.normal_radius_x_m=bad;
             if(field==1)invalid.hit_authorization.normal_radius_y_m=bad;
             if(field==2)invalid.player_aim.cursor_speed_mps=bad;
+            if(field==3)invalid.gameplay_ball.radius_m=bad;
             bool rejected=false;try{PlayerAim test(invalid);}catch(const std::runtime_error&){rejected=true;}
             require(rejected,"invalid tuning accepted");
         }

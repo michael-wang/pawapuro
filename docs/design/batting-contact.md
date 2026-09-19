@@ -564,3 +564,25 @@ Regression覆蓋七anchors／midpoints／clamp、line-drive band、±.9轉向、
 Release實機已取得中央Contact：actual consumed tick444，未移aim時title normalized ey顯示0.0000、longitudinal +0.000°、speed41.121 m/s、spray+9.603°，paused tick495可見向前飛球與retained baseball／live reticle。`build/vertical-contact-direction-s0/center-contact.png`與同名JSON是真實app擷取，不是offline render。嘗試偏心操作時computer-use偵測到使用者輸入／前景切換，停止進一步搶焦點；本輪沒有可靠取得ground／fly／backward偏心實機圖，依授權以Native table／backward replay提供精確anchors證據，未從pixels推算ey。人工review可R置中後將live aim y調到約.84（ey≈−.5）、.71（ey≈+.5）、.8985（ey≈−.95）或.6515（ey≈+.95），以dispatch log實際ey為準；Space後約1.87秒J，極端球可能迅速離開camera，本輪不解決camera可視性。
 
 驗證：agent核對HEAD／origin/main與pull --ff-only、提交前fetch均為542d496fc93b8181ae10923ba23511b7219508be，無後續accepted work。完整Debug／Release build通過，完整CTest **Debug22/22（238.77 s）、Release22/22（22.81 s）**。首次編譯因新增test區域變數ideal遮蔽既有名稱而觸發C4456／WX，已改名，未關warning或放寬容差。兩組態response CSV逐byte一致；build／CTest與initial compile logs在同一evidence目錄。沒有Trajectory multiplier、bounce／rolling／spin／drag、foul logic、spray tuning、timing UI、panel cleanup、step controls或animation變更。停止等待Michael＋Julia review。
+
+## Pawapuro Gameplay Ball Geometry S1（2026-09-19）
+
+Vertical Contact Direction S0 的部分實機結果方向合理，但極端接觸測試揭露更早一層的 spatial authority 錯誤：畫面上的球仍與 reticle 重疊，球心卻已在 ellipse 外而被拒絕。Michael 決定 Pawapuro 的核心是 **reticle ellipse 與 gameplay ball disc 的 shape overlap**，不是球心 containment。
+
+Startup Data 現由 `GameplayBallTuning`／`[gameplay_ball].radius_m=0.085` 擁有；移除舊 `release.ball_marker_radius_m`，沒有 alias。Loader 要求 finite number、[0.001,0.2] m，拒絕錯型別、未知 key 與超界；此範圍是輸入 guard。Incoming／outgoing world baseball、Filled Baseball／Ring footprint、BallAid 的投影半徑、Spatial Authorization 與 outgoing ground-center height 共用同一 Data。BallAid 原有 screen-space readability floor／stroke 仍只是呈現，沒有額外授權半徑。這是 Pawapuro gameplay baseball，不宣稱物理寫實；raw sphere/capsule diagnostic 仍用 ball **0.037 m**、bat **0.033 m**，不准許也不否決 Gameplay Contact。
+
+授權計算使用 immutable command aim 與既有 deterministic evaluation-plane pitch point。球心在 ellipse 內直接重疊；外部則以 closest point 的 Lagrange multiplier 單調方程做固定 80 次 double bisection，檢查距離平方是否 ≤ rb²。Axis 使用同一 float axis reach 包含切點；無 fuzzy gameplay epsilon，無 expanded-ellipse 近似。Regression 的非圓形 diagonal fixture 使用 binary-exact a=80/256、b=45/256、rb=5/256，ellipse point=(64,27)/256、outward unit normal=(3,4)/5、circle center=(67,31)/256：精確相切授權，沿 normal 外移有間隙則拒絕。
+
+Signed error 仍為 pitch−aim；改用 `ex=dx/(rx+rb)`、`ey=dy/(ry+rb)`。因此純垂直 ey−1／+1 是上半部／下半部 skin tangency，仍授權。**Authorization 與 q 是分開概念**：`q=clamp(ex²+ey²,0,1)` 僅供 SpatialTransfer；diagonal overlap 的 q_raw 可以超過 1，並飽和為 edge quality，不能拿 q 拒絕。
+
+Contact 仍只以既有 scale 改 rx／ry，不改 rb。Michael Contact75 的 rx=.26、ry=.13、rb=.085 m；horizontal／vertical axis reach=.345／.215 m。Contact0／120 scale endpoints 不變，同 normalized error 的 q／SpatialTransfer 相同；同 absolute offset 在較大 reticle 中 normalized error 較小。PlayerAim live title diagnostics 與 committed authorization 用同一函式。
+
+七個 Vertical Contact Direction S0 angles 完全未調整；新 fixture 從實際 overlap normalization 產生 ey≈±.9，球心已在舊 ellipse 外仍可 Gameplay Contact。Ground hold 改為 gameplay radius .085 m，故 first-ground time 有意提前；仍 gravity-only、第一次落地即 hold，沒有 bounce／rolling。Timing、Power、SpatialTransfer 函式、spray、effective contact time／origin、multi-swing 與 live aim lifecycle 不變。
+
+Previous Pitch Arrival Marker 在 Miss／NoSwing 後的 lifetime，以及 backward ball 的 behind-camera BallAid crash，明確留待各自後續 slice；本輪未修。等待 Michael＋Julia 重新實機 review overlap 與極端方向，不把七個候選角度視為已完成調校。
+
+Deterministic fixtures：Contact75 axis reaches .345／.215 m；diagonal exact tangent 四象限均授權，沿 outward normal 外移 0.0001 m 均拒絕，q_raw>1 仍 q=1／edge transfer。Compact448、dy=±0.193499982357 m 的 consumed ey=±0.899999916553 均 Authorized／Gameplay Contact，角度約−103.999961853／+95.9999694824°，未改任何方向 anchor。中央448的ground world time由2.381208861459改為2.368434295259 s，held y=.085；raw contact time仍1.991356470102 s，u／normal／relative velocity與同tick拒絕aim fixture精確一致。舊multi-swing拒絕fixture的純左移.325 m現在合理重疊，故改成左上方明確分離；未改原回歸比較或tolerance。
+
+實機證據：Release consumed tick444 的中央Contact已保存於 ignored `build/gameplay-ball-geometry-s1/center-contact.png`／JSON。Michael手動調整live aim後，agent以同一位置開始下一球並出棒；`lower-half-skin-contact.png`／JSON記錄實際aim y=.5909、error.y=.1841、ey≈+.8565、q≈.7335、Spatial:Authorized／Gameplay:Contact、longitudinal≈+81.195°。球心確在舊ry=.13之外，Filled Baseball仍與ellipse邊緣重疊；此為實機擷取，不是offline render。其後Computer Use被使用者實體Escape停止，未再操作視窗；未取得上半部偏心實機圖，精確兩側以Native fixtures為據。人工可沿用retained cue，把aim y調到約.5815／.9685（ey≈+.9／−.9），Space後約1.85秒J，以實際consumed diagnostics為準；不從pixels估算ey。
+
+驗證：HEAD／origin/main與兩次同步確認皆為143d3848149c8b3b524d43de51210be5276b9308，沒有後續accepted work。Full Debug／Release build成功；full CTest **Debug22/22（244.65 s）、Release22/22（18.60 s）**。Initial Debug僅上述舊拒絕fixture失敗，改成確實分離的aim後完整重跑通過，沒有放寬tolerance。兩組態production response table SHA-256皆為`B8702EF2F545E0EB69E331FD84DA9E39A6AE680493FA99C486E039B87789C37B`；logs／CSV／實機截圖都在ignored `build/gameplay-ball-geometry-s1/`，不提交generated evidence。沒有修改七個方向角、Trajectory、spray、physical solver、renderer、Previous Pitch Marker lifetime或backward-camera crash。停止等待Michael＋Julia review。

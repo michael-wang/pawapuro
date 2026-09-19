@@ -10,7 +10,9 @@ inline constexpr float rubber_distance_m = 18.4404f;
 inline constexpr float mound_center_z_m = rubber_distance_m - 0.4572f;
 
 // Startup-only snapshot. Profile fields are required; other missing keys use defaults.
+// Raw physical diagnostic radii; never grant or veto gameplay contact.
 struct BatContactEnvelope { float ball_radius_m=0.037f,bat_radius_m=0.033f; };
+struct GameplayBallTuning { float radius_m=0.085f; };
 struct HitAuthorizationTuning { float normal_radius_x_m=0.26f, normal_radius_y_m=0.13f; };
 struct PlayerAimTuning { float cursor_speed_mps=0.65f; };
 struct BattingInteractionTuning { float half_depth_m=0.40f; };
@@ -40,7 +42,7 @@ struct BattingStaging {
     // Single authoritative gameplay zone; rendering consumes these same rule values.
     float strike_zone_width_m = 0.8636f;
     float strike_zone_bottom_m = 0.5f, strike_zone_top_m = 1.45f;
-    float ball_marker_radius_m = 0.085f;
+    GameplayBallTuning gameplay_ball;
     float grass_half_width_m = 85;
     float grass_end_z_m = 140;
     float home_dirt_radius_m = 2.8f;

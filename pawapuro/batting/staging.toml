@@ -15,8 +15,10 @@ vertical_fov_degrees = 36.0
 [release]
 # Right-handed pitcher releases to catcher-view left of the centre axis.
 position_m = [-0.65, 2.05, 16.8]
-# Intentionally enlarged visual marker, not a physical baseball radius.
-ball_marker_radius_m = 0.085
+
+[gameplay_ball]
+# Pawapuro gameplay baseball radius: presentation, authorization and ground hold.
+radius_m = 0.085
 
 # Gravity-only fixture, approximately 150 km/h; not a tuned pitch model.
 # Centre (slot 5) fixture: retain Z speed; solve X/Y for the zone centre with fixed-tick crossing interpolation.
@@ -66,8 +68,8 @@ foot_height_scale = 0.9
 hand_scale = 1.3
 bat_thickness_scale = 1.25
 
-# First gameplay envelope candidate; reality is a consultant, not a permanent rule.
-# Independent of the enlarged visual ball marker and rendered bat thickness.
+# Raw physical diagnostic radii, independent of gameplay ball and rendered bat thickness.
+# These neither grant nor veto Gameplay Contact.
 [bat_contact]
 ball_radius_m = 0.037
 bat_radius_m = 0.033

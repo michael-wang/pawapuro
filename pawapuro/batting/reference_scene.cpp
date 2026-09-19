@@ -18,8 +18,8 @@ void append_ball_readability(std::vector<engine::Vertex>& vertices, const Battin
     const auto forward = XMVectorSubtract(XMLoadFloat3(&staging.camera_target_m), XMLoadFloat3(&staging.camera_position_m));
     const auto right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0,1,0,0), forward));
     XMFLOAT3 edge;
-    XMStoreFloat3(&edge, XMVectorAdd(XMLoadFloat3(&center), XMVectorScale(right, staging.ball_marker_radius_m)));
-    // Follow the existing visual radius, with a small screen-space readability floor.
+    XMStoreFloat3(&edge, XMVectorAdd(XMLoadFloat3(&center), XMVectorScale(right, staging.gameplay_ball.radius_m)));
+    // Follow the gameplay ball radius, with a small screen-space readability floor.
     const float pixel_scale=h/1080.0f;
     const float radius = std::max(5.0f*pixel_scale, std::abs(project_batting_point(staging, edge, aspect).x-p.x)*w/2);
     const auto band = [&](float inner, float outer, XMFLOAT3 color) {
@@ -159,8 +159,8 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     const auto ball_point = [&](int latitude, int longitude) -> XMFLOAT3 {
         const float a = XM_PI * static_cast<float>(latitude) / 8;
         const float b = XM_2PI * static_cast<float>(longitude) / 16;
-        return {release.x + staging.ball_marker_radius_m * std::sin(a) * std::cos(b),
-            release.y + staging.ball_marker_radius_m * std::cos(a), release.z + staging.ball_marker_radius_m * std::sin(a) * std::sin(b)};
+        return {release.x + staging.gameplay_ball.radius_m * std::sin(a) * std::cos(b),
+            release.y + staging.gameplay_ball.radius_m * std::cos(a), release.z + staging.gameplay_ball.radius_m * std::sin(a) * std::sin(b)};
     };
     for (int lat = 0; lat < 8; ++lat) {
         const float shade = 0.65f + 0.35f * (1 - static_cast<float>(lat) / 8);
@@ -200,7 +200,7 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
     const auto camera_right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), forward));
     XMFLOAT3 edge_position;
     XMStoreFloat3(&edge_position, XMVectorAdd(XMLoadFloat3(&predicted_position),
-        XMVectorScale(camera_right, staging.ball_marker_radius_m)));
+        XMVectorScale(camera_right, staging.gameplay_ball.radius_m)));
     const auto edge = project_batting_point(staging, edge_position, aspect);
     const float radius = std::abs(edge.x - p.x);
     const float inner_radius = std::max(0.0f, radius - stroke_x);
