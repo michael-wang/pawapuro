@@ -1,6 +1,7 @@
 #include "manual_swing.hpp"
 #include "player_aim.hpp"
 #include "contact_review.hpp"
+#include "review_fixture.hpp"
 #include <fstream>
 #include <cstring>
 #include <iomanip>
@@ -227,7 +228,7 @@ int main(int argc,char** argv){try{
  p.toggle_pause();require(!p.start()&&p.paused&&p.tick==477,"pre-contact pause enabled restart");
  p.reset();p.start();p.record_command(80,center);until(90);require(p.gameplay_result()==GameplayResult::Miss&&!p.start()&&p.tick==90,"miss enabled restart");
  until(320);require(p.rearmed()&&!p.start()&&p.tick==320,"rearmed miss enabled restart");
- p.record_command(448,center);until(478);require(p.attempts.size()==2&&p.flight&&!p.intent_live(479),"second contact did not close intent");clean_restart();
+ p.record_command(448,center);until(478);require(p.delivery.pitch.phase==PitchPhase::InFlight&&batting_practice_pitch_marker_visible(p),"pre-plane contact interrupted cue");require(p.attempts.size()==2&&p.flight&&!p.intent_live(479),"second contact did not close intent");clean_restart();
  p.reset();p.start();p.record_command(448,{center.x+(region.normal_radius_x_m+s.gameplay_ball.radius_m)*1.01f,center.y});until(481);
  require(p.contact()&&!p.flight&&!p.start()&&p.tick==481,"raw overlap authorized restart");
  std::cout<<"PASS result hold, pre-contact rejection, airborne/follow-through/ground/Complete restart and clean tick-zero lifecycle\n";
@@ -240,8 +241,8 @@ int main(int argc,char** argv){try{
  const auto* cue_storage=cue.data();const auto cue_capacity=cue.capacity();
  const auto check_cue=[&]{
   const auto phase=p.delivery.pitch.phase;
-  const bool visible=contact_review_arrival_visible(p);
-  require(visible==(arrival_cue_visible(phase)||p.gameplay_result()==GameplayResult::Contact),"cue lifecycle changed");
+  const bool visible=batting_practice_pitch_marker_visible(p);
+  require(visible==(phase!=PitchPhase::Ready),"cue lifecycle changed");
   for(auto style:{ArrivalCueStyle::Baseball,ArrivalCueStyle::Ring}) {
    cue.clear();append_arrival_cue(cue,scene,visible,style);
    require(cue.size()==arrival_cue_vertex_count&&cue.data()==cue_storage&&cue.capacity()==cue_capacity,"cue count/allocation changed");
@@ -257,13 +258,17 @@ int main(int argc,char** argv){try{
  const auto check_live=[&]{render_review();std::vector<engine::Vertex> expected;live.append_triangles(expected);
   require(review.size()==expected.size()&&std::memcmp(review.data(),expected.data(),expected.size()*sizeof(engine::Vertex))==0,"reticle did not follow live aim");};
  check_live(); // Spatial miss, despite raw Contact.
- p.reset();check_live();p.start();check_live();until(384);check_live();
- require(contact_review_arrival_visible(p),"normal release cue hidden");
- finish(p);require(p.gameplay_result()==GameplayResult::NoSwing&&!contact_review_arrival_visible(p),"take persisted cue");check_live();
- p.start();p.record_command(80,{center.x+.3f,center.y});until(80);check_live();until(320);check_live();
+ p.reset();require(!batting_practice_pitch_marker_visible(p),"Ready marker revealed");check_live();p.start();check_live();until(383);require(!batting_practice_pitch_marker_visible(p),"pre-release marker revealed");until(384);check_live();
+ require(batting_practice_pitch_marker_visible(p),"normal release cue hidden");
+ finish(p);require(p.gameplay_result()==GameplayResult::NoSwing&&p.delivery.pitch.phase==PitchPhase::Complete&&batting_practice_pitch_marker_visible(p),"take lost previous pitch marker");check_live();
+ const auto take_tick=p.tick;
+ for(unsigned n=0;n<10;++n){p.advance(60'000'000'000);require(p.tick==take_tick&&batting_practice_pitch_marker_visible(p),"take hold lost marker");check_live();}
+ p.start();require(!batting_practice_pitch_marker_visible(p),"take Space retained marker");p.record_command(80,{center.x+.3f,center.y});until(80);check_live();
+ require(!batting_practice_pitch_marker_visible(p),"early miss revealed pitch before release");until(320);check_live();
+ require(p.rearmed()&&!batting_practice_pitch_marker_visible(p),"rearm revealed pitch before release");until(384);require(batting_practice_pitch_marker_visible(p),"multi-swing normal release hidden");
  const DirectX::XMFLOAT2 review_aim{center.x-(region.normal_radius_x_m+s.gameplay_ball.radius_m)*.5f,center.y-(region.normal_radius_y_m+s.gameplay_ball.radius_m)*.5f};
  p.record_command(448,review_aim);until(477);require(p.latest()->response&&!p.flight,"planned review fixture");check_live();
- until(478);require(p.attempts.size()==2&&p.gameplay_result()==GameplayResult::Contact,"second contact fixture");render_review();
+ until(478);require(p.delivery.pitch.phase==PitchPhase::InFlight&&batting_practice_pitch_marker_visible(p),"pre-plane contact interrupted cue");require(p.attempts.size()==2&&p.gameplay_result()==GameplayResult::Contact,"second contact fixture");render_review();
  std::vector<engine::Vertex> committed_geometry;live.append_triangles_at(committed_geometry,p.latest()->command.aim_center);
  check_live();
  require(std::memcmp(review.data(),committed_geometry.data(),review.size()*sizeof(engine::Vertex))!=0,"contact substituted historical aim for live reticle");
@@ -276,7 +281,7 @@ int main(int argc,char** argv){try{
  std::vector<unsigned char> immutable(sizeof(SwingAttempt));std::memcpy(immutable.data(),p.latest(),immutable.size());
  const auto control_flight=*p.flight;
  const auto check_history=[&]{check_live();
-  require(contact_review_arrival_visible(p),"dispatched contact lost cue");
+  require(batting_practice_pitch_marker_visible(p),"dispatched contact lost cue");
   require(std::memcmp(immutable.data(),p.latest(),immutable.size())==0,"live aim mutated committed truth");
   for(double time:{double(p.tick)/240,2.2,3.,4.,control_flight.ground_s,control_flight.ground_s+10}) {
    const auto expected=control_flight.sample(time),observed=p.flight->sample(time);
@@ -296,18 +301,44 @@ int main(int argc,char** argv){try{
  const auto adjusted=live.center();
  require(p.start(),"review Space restart");check_live();
  require(live.center().x==adjusted.x&&live.center().y==adjusted.y,"Space reset adjusted live aim");
- require(!p.latest()&&!p.flight&&!contact_review_arrival_visible(p),"old review retained after Space");
+ require(!p.latest()&&!p.flight&&!batting_practice_pitch_marker_visible(p),"old review retained after Space");
  p.input_boundary(false,false,true,live.center());until(447);p.input_boundary(true,true,true,live.center());until(448);
  require(p.attempts.size()==1&&p.latest()->command.aim_center.x==adjusted.x&&p.latest()->command.aim_center.y==adjusted.y,"next input did not snapshot adjusted aim");
  finish(p);p.start();
  // First-ground hold can precede overall completion; both selected cue styles still persist.
  p.record_command(433,center);until(735);
- require(p.phase==PreviewPhase::Playing&&p.flight&&p.flight->complete(double(p.tick)/240)&&contact_review_arrival_visible(p),"ground-before-completion cue fixture");check_cue();
+ require(p.phase==PreviewPhase::Playing&&p.flight&&p.flight->complete(double(p.tick)/240)&&batting_practice_pitch_marker_visible(p),"ground-before-completion cue fixture");check_cue();
  live.move(-1,-1,.05);live.recenter();const auto recentered=live.center();p.start();check_live();
  require(live.center().x==recentered.x&&live.center().y==recentered.y,"Space undid post-contact R");
  p.record_command(80,live.center());finish(p);
- require(p.gameplay_result()==GameplayResult::Miss&&!contact_review_arrival_visible(p),"miss persisted cue");check_live();
+ require(p.gameplay_result()==GameplayResult::Miss&&batting_practice_pitch_marker_visible(p),"miss lost previous pitch marker");check_live();
  std::cout<<"PASS live aim: immutable second attempt and flight control; Space preserves adjusted/R aim; next command snapshots it; exact cue prediction/authorization/actual arrival; both cue styles through flight/follow-through/ground/Complete; reset/miss/take; fixed 210 reticle + 636 cue vertices and stable allocation\n";
+ // Exact CLI fixture intents use the same production practice marker policy as main.
+ static_assert(arrival_cue_vertex_count==636);
+ for(const BattingReviewFixture fixture:{BattingReviewFixture{448,0,0},{448,.6f,1},{80,0,0},{480,0,0}}) {
+  p.reset();require(fixture.start(p,live),"practice fixture start");
+  require(!batting_practice_pitch_marker_visible(p),"fixture reset revealed marker");check_cue();
+  while(p.phase==PreviewPhase::Playing) {
+   p.advance(4'166'667);
+   if(p.tick<p.delivery.motion.release_tick)require(!batting_practice_pitch_marker_visible(p),"fixture early reveal");
+   else require(batting_practice_pitch_marker_visible(p),"released fixture lost marker");
+   check_cue();
+  }
+  fixture.verify(*p.latest());
+  const bool contact=fixture.commit_tick==448&&fixture.ex==0;
+  require(p.gameplay_result()==(contact?GameplayResult::Contact:GameplayResult::Miss),"practice fixture outcome");
+  if(fixture.ex!=0)require(!p.authorization()->authorized,"spatial miss fixture became authorized");
+  if(fixture.commit_tick==80||fixture.commit_tick==480)require(!p.timing()->overlap,"timing miss fixture gained overlap");
+  require(p.delivery.pitch.phase==PitchPhase::Complete&&batting_practice_pitch_marker_visible(p),"fixture previous pitch marker hidden");
+  const auto arrival=p.delivery.pitch.arrival_at_plane();
+  require(same(arrival.state.position_m,cue_prediction.state.position_m),"practice marker prediction/actual diverged");
+  const auto held=p.tick;
+  for(unsigned n=0;n<10;++n){live.move(1,-1,.05);p.advance(60'000'000'000);require(p.tick==held&&batting_practice_pitch_marker_visible(p),"fixture hold lost marker");check_live();}
+  const auto next_aim=live.center();require(p.start(),"practice Space restart");
+  require(p.delivery.pitch.phase==PitchPhase::Ready&&!batting_practice_pitch_marker_visible(p),"Space did not clear previous marker");
+  require(live.center().x==next_aim.x&&live.center().y==next_aim.y,"practice reset changed live aim");check_live();
+ }
+ std::cout<<"PASS practice marker: Ready/pre-release hidden; Contact/spatial miss/early+late timing miss/take persist; early rearm and second Contact; live aim; Space reset; both cached styles, exact prediction/actual, fixed 636 vertices and stable storage\n";
  // Finite, bounded startup response Data; no silent clamping or unknown keys.
  std::filesystem::create_directories(temp);const auto path=temp/"candidate.toml";
  const std::string profile_text="[batter_profile]\ndisplay_name='Michael'\ncontact=75\npower=85\ntrajectory=3\n";

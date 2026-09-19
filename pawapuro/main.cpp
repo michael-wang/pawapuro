@@ -197,7 +197,7 @@ int main(int argc, char** argv)
             if(!fixture)preview.input_boundary(swing_held,swing_edge,eligible,ac);
             const auto ad=aim.diagnostic(prediction.state.position_m);
             const auto ball_phase=preview.flight?(preview.flight->complete(double(preview.tick)/pawapuro::pitch_hz)?pawapuro::PitchPhase::Complete:pawapuro::PitchPhase::InFlight):delivery.pitch.phase;
-            const bool cue_visible=pawapuro::contact_review_arrival_visible(preview);
+            const bool cue_visible=pawapuro::batting_practice_pitch_marker_visible(preview);
             char aim_error[160]="Hidden";
             if (cue_visible) std::snprintf(aim_error,sizeof(aim_error),"error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f",ad.dx,ad.dy,ad.ex,ad.ey,ad.q);
             char temporal[640];preview.timing_diagnostic(temporal,sizeof(temporal));

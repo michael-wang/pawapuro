@@ -620,3 +620,21 @@ Previous Pitch Marker、BallResponse／vertical anchors、Trajectory、spray、c
 Release CLI 實機證據在 ignored `build/batting-review-fixture-s0/`：`center.png`、`lower.png`、`upper.png`、`center-replay.png` 與同名 JSON，對應 `center-desktop.log`／`lower-desktop.log`／`upper-desktop.log`。三者都 consumed448、ex=0；actual ey 分別 0／+0.899999917／−0.899999917，與 requested 0／±0.9 相差不到 1e−6。後兩者 authorized，longitudinal 約 +95.9999695／−103.999962°，velocity Z 約 −3.30796504／−7.65601301 m/s。截圖是實際 Release app 的 spatial relation／結果，非 offline reconstruction；沒有人工瞄準或 J 計時。中央以 OS Space 重播，request／consumption、response、dispatch、Complete 四組 log 逐行相同；Native regression 另比較不同 cadence 的 flight samples 與重播清除 debt。圖像不作精確 ey 或短暫初始飛行方向的量測依據，以 committed log 為數值權威。
 
 驗證：full Debug／Release build 成功；full CTest Debug **23/23（254.05 s）**、Release **23/23（19.08 s）**。最後拒絕 malformed `+-1` 的 parser 補強另經 Debug 重建及 focused fixture **1/1（35.62 s）**；Release 全量已包含此補強。初次新測試誤把 `single_step()` 的 completion 回傳值當作步進成功，修正為驗證實際 tick，未改 simulation 或 tolerance。開始同步與提交前 fetch 均確認 HEAD／origin/main 為 2653e6f9d440caac4a70aeaacdd01f0c48a1a423，沒有後續 accepted work。
+
+## Batting Practice Previous Pitch Marker S1（2026-09-20）
+
+Batting Review Fixture S0 已通過 Julia architecture／workflow review。Previous Pitch Marker 是目前 Batting Practice 的正式 gameplay feedback，不再只是 Contact-only debug review：同一 Filled Baseball（或 V 切換的 Ring）在飛行中是 Current Pitch Arrival Cue，進入 evaluation plane 後是 Previous Pitch Arrival Marker。
+
+`batting_practice_pitch_marker_visible` 只看 incoming pitch lifecycle：Ready 隱藏，InFlight／Complete 顯示。因此從既有 release reveal 起連續保留，經過 arrival、結果演出、Preview Complete 與無限 hold，直到 Space 成功 reset/start 下一球。Contact／spatial miss／timing miss／NoSwing、raw geometry 與 SwingAttempt 數量均不決定 lifetime；commit80 或提前 rearm 不會在 release 前洩漏球路。Contact 在 plane crossing 前 dispatch 時 cue 本來已 InFlight 可見，不需新 transition event。
+
+Live PlayerAim 仍可在 normal mode 的結果畫面移動／R 置中，與固定 marker 比較；調整後的 aim 依既有契約保留到 Space 下一球。沒有 frozen／ghost reticle。Marker 不存入 SwingAttempt，也沒有第二份歷史位置或 baseball geometry。
+
+目前 deterministic fixed ReferencePitch 的 startup prediction 與 `arrival_at_plane()` 完全相等，並與 authorization pitch point 相同，保留 exact regression。這是**目前固定軌跡**的契約；未來若 startup prediction 後可改變軌跡，必須重新處理 positional truth，讓 Previous Pitch Marker 反映 actual arrival，不能默認預測仍正確。本輪不預建未來系統。
+
+繼續使用原 cached cue 與固定 636 vertices，隱藏時為 degenerate geometry；Filled Baseball／Ring lifetime 相同，reserved append storage 不變。沒有 multi-pitch history、fade、timer、trail，也未修改 BallResponse、authorization、fixture math／CLI、BallAid、camera、reticle、panel、timing UI 或 step controls。
+
+Regression 延伸既有 BallResponse／live-aim integration：Ready／tick383 隱藏，release tick384 顯示；commit80、rearm320 仍不提前 reveal；第二次 Contact 在 tick478、incoming 仍 InFlight 時連續可見。Contact flight／ground／Complete、NoSwing take，以及真實 fixture `448 0 0`、`448 0.6 1`（RejectedSpatial）、`80 0 0`／`480 0 0`（NoOverlapEarly／Late）均保留 marker；result hold 重複 advance、移動 live aim 不改 cached cue；Space 清除。Both styles byte-equal 原 cached geometry、636 vertices／storage address／capacity 穩定，prediction／actual／authorization equality 保持原 exact 檢查。
+
+Release 實機證據在 ignored `build/previous-pitch-marker-s1/`：`contact.png/.json` 使用 `--batting-fixture 448 0 0`；`spatial-miss.png/.json` 使用 `--batting-fixture 448 0.6 1`；`timing-miss.png/.json` 使用 `--batting-fixture 80 0 0`。三者 Complete tick816 皆 Filled Baseball Visible。沒有 Michael 瞄準或 J timing。Space replay 的 `space-reset-title.json` 直接觀測新球 tick2、swings0、owner Hand、No launch、ArrivalCue Hidden；capture image 較晚已顯示後續幀，故沒有把該圖當作 Ready 證據。Ready 隱藏的精確時點另由 Native regression 驗證；NoSwing 也只用正常 start／不排 command 的 Native path，不新增 CLI。
+
+驗證：full Debug／Release build 成功；full CTest Debug **23/23（246.81 s）**、Release **23/23（18.39 s）**，未修改容差。開始 pull 與提交前 fetch 均確認 HEAD／origin/main=df8b9cb3fe029b21818eeaa922500edc1e898d2e，沒有後續 accepted work。Production diff 僅 practice visibility policy 與 main 的 helper 名稱；既有 simulation、fixture、renderer 與 Data 未變。
