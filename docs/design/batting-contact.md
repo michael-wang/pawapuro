@@ -674,3 +674,19 @@ P 暫停語意不變；Playing 且暫停時，`.` 推進 1 個 authoritative sim
 靜態中文與有限數字字元在 startup 快取；每幀只格式化 stack buffer 並組合固定數量 glyph triangles，無 per-frame GDI rasterization 或新增 heap allocation。沒有通用 font/UI/statistics framework、ground projection marker、timing graph，也沒有 Ball Response／flight 調參。
 
 驗證：full Debug／Release build 成功，CTest 各 23/23（248.84 s／14.87 s）。新版 panel test 涵蓋中心／fly Contact、空間 Miss、early timing Miss、NoSwing、Space、analytic apex、first-hit freeze、1080／1620 固定 geometry／stable reserved storage；既有 gameplay／fixture 回歸未改容差。Release 實機證據在 ignored `build/batting-info-window-s1/`：`contact.jpg`（448/0/0：-1.2 ms、0.38 s、16.7 m、0.7 m）、`miss.jpg`（80/0/0：太早 -1534.5 ms、三項 flight 為 --）、`reset.jpg`（Space 後 tick14 paused、新球四欄 --），各附 title JSON。未要求人工精確輸入。
+
+## Central Contact Basin + Quality-Weighted Trajectory S1
+
+「阿搭力」是 timing 與 spatial contact **一起**接近最佳，不等於 ey=0，也不新增 Perfect／Good／Bad 或 Atari HUD label。目前 fixed pitch 的 deterministic reference 為 `448 / 0 / 0`（q=0，240 Hz 下接近 peak）。前次未提交的 +8°／全額 Trajectory prototype 已還原至 e104346，ignored evidence 保留；本輪是重新實作的九-anchor 候選。
+
+固定 Native ey anchors 為 `[-1,-.75,-.5,-.25,0,.25,.5,.75,1]`，startup base degrees 為 `[-150,-35,-15,3,8,15,25,45,130]`，維持 ordinary piecewise linear interpolation。新增 ±.25 anchors 擴大中央 line-drive basin，沒有 discrete 分類。Base 零點由 -.5→-.25 段插值自然得到 `ey = -.5 + .25*(15/18) = -7/24 ≈ -.2916666667`，不另寫 threshold。Loader 嚴格要求九個 finite [-180,180] 數值，舊七值陣列拒絕。
+
+Trajectory 僅在 base `0 < theta < 90°` 生效；其他 ground／flat／vertical／backward angle 原樣返回，不按 ey 正負判斷。T1–T4 authored slope multipliers 為 `[.8,1,1.2,1.4]`（恰四個 finite [0.1,4] 值，不 clamp）。直接用 authoritative `q`：expression=`1-q`，effective=`1+(1-q)*(authored-1)`，final=`atan(tan(base)*effective)`（內部 radians）。不使用 SpatialTransfer 當 weight，不加固定角度；q=0 完整表達 trait、q=1 中性。Ground／backward topology 仍由 ey 決定，Power 仍是 exit-speed authority，Contact／SpatialTransfer／timing／spray／launch origin 不變。
+
+Perfect contact 不必是最高／最遠的一球；目前 gravity-only vacuum distance 不是 long-ball balance，不能用它反推 contact 調參。稍低於球心的 contact 可能產生 backspin、延長飛行，是未來方向；略早 timing 可能有利 home-run contact 僅為尚未釐清的假說。本輪沒有 spin／backspin／Magnus／drag、timing bonus／early reward、home-run classification、spray tuning、bounce／rolling、ground projection marker、timing diagram 或 panel redesign。
+
+實作回歸直接使用 BattingReviewFixture 經 record_command／正常 preview lifecycle 消費 commit448，指定的八種中心鄰域 cases 與補充 ey=-.5／-.4／-.2／+.9 均驗證 requested/actual ey、authorization、q、base/final，完整 replay／backlog 的 flight metrics 字串完全一致。Ignored `build/central-contact-basin-s1/central-basin-table.csv` 是 production 計算的 review evidence；effective_multiplier 欄列出 q 權重候選值，但 base 不在 (0,90) 時**不套用**，final 保留 base。T1–T4 在 base8／25／45、q0／.25／.5625／1 的公式／range 與 ground/backward invariance 都有測試。原 step test 改成距 completion 剩三 ticks 才做末次 10-step，以保留 early-stop coverage，不依賴舊 flight duration 的除十餘數；未改 step implementation 或容差。
+
+Michael T3 Atari 實值：9.57279682159°、44.3308830261 m/s、1.59265146611 s、69.6205019108 m、max ball-bottom height 3.46712970734 m。Slight upper ey=-.25：3.56116890907°、0.749366066449 s、33.0591722644 m、1.08037614822 m；slight lower ey=+.25：17.6505279541°、2.78430506422 s、117.276847485 m、9.8542881012 m。原 timing efficiency／offset、速度、spray／effective time／origin 均由 regression 保留；距離差不是平衡結論。
+
+Full Debug／Release build 成功，CTest 各 23/23（242.84 s／14.23 s），沒有放寬既有 tolerances。Release 僅擷取三種指定 fixture：`448 0 0`、`448 0 -0.25`、`448 0 +0.25`；ignored `build/central-contact-basin-s1/center.jpg`、`upper.jpg`、`lower.jpg` 均顯示真正 app 的 Complete／Batting Info metrics，各附 title JSON 與 app log。沒有要求 Michael 人工精確輸入。

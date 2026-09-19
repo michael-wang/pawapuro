@@ -68,7 +68,7 @@ int main(int argc,char** argv){try{
   const auto a=run(c);if(c==80||c==480){require(!a.response&&!p.flight&&a.gameplay==GameplayResult::Miss,"no-overlap launched");continue;}
   require(a.response&&p.flight&&a.gameplay==GameplayResult::Contact,"authorized overlap failed to launch");const auto& r=*a.response;
   if(c==456)require(a.geometry==ManualGeometry::NoContactInWindow&&!a.contact,"456 raw-NoContact premise changed");
-  if(c==448){require(a.contact&&r.temporal_transfer>.97f&&r.spatial_transfer==1&&close_enough(r.longitudinal_angle_deg,0)&&std::abs(r.spray_angle_deg)<1,"peak fixture");peak=r;}
+  if(c==448){require(a.contact&&r.temporal_transfer>.97f&&r.spatial_transfer==1&&r.longitudinal_angle_deg==trajectory_airborne_angle(8,0,3,s.ball_response)&&std::abs(r.spray_angle_deg)<1,"peak fixture");peak=r;}
   if(c==433)require(r.spray_angle_deg>0&&r.launch_velocity_mps.x>0,"left-handed early pull sign");
   if(c==460)require(r.spray_angle_deg<0&&r.launch_velocity_mps.x<0,"late opposite sign");
   require(r.launch_velocity_mps.z>0&&r.contact_time_s==std::clamp(a.timing.peak_s,a.timing.overlap->start_s,a.timing.overlap->end_s),"effective time/center field");
@@ -96,34 +96,61 @@ int main(int argc,char** argv){try{
   const auto auth=authorize_normal_hit({0,-ey*(region.normal_radius_y_m+s.gameplay_ball.radius_m)},{0,0},region,s.gameplay_ball);
   return *ball_response(t,auth,b,s.ball_response,p.delivery.pitch.initial,1.6);
  };
- const std::array<float,7> anchors{-1,-.75f,-.5f,0,.5f,.75f,1},angles{-150,-35,-15,0,25,45,130};
- require(s.ball_response.vertical_contact_longitudinal_degrees==angles,"authored S0 anchor candidate");
+ const std::array<float,9> anchors{-1,-.75f,-.5f,-.25f,0,.25f,.5f,.75f,1},angles{-150,-35,-15,3,8,15,25,45,130};
+ require(s.ball_response.vertical_contact_longitudinal_degrees==angles,"authored central basin candidate");
  for(std::size_t i=0;i<anchors.size();++i){
   require(vertical_contact_longitudinal_angle(anchors[i],s.ball_response)==angles[i],"exact vertical anchor");
   if(i)require(vertical_contact_longitudinal_angle((anchors[i]+anchors[i-1])/2,s.ball_response)==(angles[i]+angles[i-1])/2,"linear midpoint");
  }
  require(vertical_contact_longitudinal_angle(-2,s.ball_response)==-150&&vertical_contact_longitudinal_angle(2,s.ball_response)==130,"defensive ey clamp");
- require(close_enough(vertical_contact_longitudinal_angle(-.1f,s.ball_response),-3)&&vertical_contact_longitudinal_angle(0,s.ball_response)==0&&close_enough(vertical_contact_longitudinal_angle(.1f,s.ball_response),5),"line-drive neighborhood");
+ require(close_enough(vertical_contact_longitudinal_angle(-.1f,s.ball_response),6)&&vertical_contact_longitudinal_angle(0,s.ball_response)==8&&close_enough(vertical_contact_longitudinal_angle(.1f,s.ball_response),10.8),"line-drive neighborhood");
  // Human-found upper-half contact previously became an airborne +10.112 degrees.
  const auto upper_half_bug=vertical_response(-.412f,0);
- require(close_enough(upper_half_bug.longitudinal_angle_deg,-12.36)&&upper_half_bug.launch_velocity_mps.y<0&&upper_half_bug.launch_velocity_mps.z>0,"human ey=-0.412 grounder regression");
+ const float bug_reach=region.normal_radius_y_m+s.gameplay_ball.radius_m;
+ const float bug_ey=(-.412f*bug_reach)/bug_reach;
+ require(close_enough(upper_half_bug.longitudinal_angle_deg,std::lerp(-15.f,3.f,(bug_ey+.5f)/.25f))&&upper_half_bug.launch_velocity_mps.y<0&&upper_half_bug.launch_velocity_mps.z>0,"human ey=-0.412 grounder regression");
  for(float ey:{-1.f,-.9f,-.75f,-.5f,-.1f,0.f,.1f,.5f,.75f,.9f,1.f}) {
   const auto response=vertical_response(ey,0),paired=vertical_response(-ey,0);
   require(response.exit_speed_mps==paired.exit_speed_mps&&response.spatial_transfer==paired.spatial_transfer,"equal-q speed changed");
   for(double offset:{-30.,0.,30.}) {
    const auto r=vertical_response(ey,offset);const auto v=r.launch_velocity_mps;
-   require((std::abs(ey)>=.9f?v.z<0:v.z>0)&&(ey<0?v.y<0:ey>0?v.y>0:v.y==0),"vertical direction topology");
+   require((std::abs(ey)>=.9f?v.z<0:v.z>0)&&(vertical_contact_longitudinal_angle(ey,s.ball_response)<0?v.y<0:v.y>0),"vertical direction topology");
    require(offset<0?v.x>0:offset>0?v.x<0:v.x==0,"backward topology reversed timing lateral sign");
    require(close_enough(std::sqrt(double(v.x)*v.x+double(v.y)*v.y+double(v.z)*v.z),r.exit_speed_mps,1e-5),"direction not unit length");
    require(r.exit_speed_mps==response.exit_speed_mps&&r.longitudinal_angle_deg==response.longitudinal_angle_deg,"spray altered vertical/speed");
-   for(int tr=1;tr<=4;++tr){const auto neutral=vertical_response(ey,offset,tr);
-    require(same(neutral.launch_velocity_mps,v)&&neutral.exit_speed_mps==r.exit_speed_mps,"temporary S0 Trajectory neutrality");}
+   for(int tr=1;tr<=4;++tr){const auto modulated=vertical_response(ey,offset,tr);
+    require(modulated.exit_speed_mps==r.exit_speed_mps&&modulated.spatial_transfer==r.spatial_transfer&&modulated.temporal_transfer==r.temporal_transfer&&modulated.energy_transfer==r.energy_transfer&&modulated.spray_angle_deg==r.spray_angle_deg&&modulated.contact_time_s==r.contact_time_s&&same(modulated.launch_position_m,r.launch_position_m),"Trajectory changed non-direction response");
+    require((modulated.launch_velocity_mps.z>0)==(v.z>0),"Trajectory flipped forward/back family");
+    const float base=vertical_contact_longitudinal_angle(ey,s.ball_response);
+    if(base<=0||base>=90)require(same(modulated.launch_velocity_mps,v),"Trajectory rescued ground/backward family");}
    const auto stronger=vertical_response(ey,offset,3,120);
    require(stronger.exit_speed_mps>r.exit_speed_mps&&stronger.longitudinal_angle_deg==r.longitudinal_angle_deg&&stronger.spray_angle_deg==r.spray_angle_deg,"Power changed direction");
   }
   const auto& r=response;const auto& tuning=s.ball_response;
   const float expected_ideal=std::lerp(tuning.ideal_exit_speed_min_mps,tuning.ideal_exit_speed_max_mps,85.f/120);
   require(r.temporal_transfer==static_cast<float>(a.timing.efficiency)&&r.energy_transfer==r.temporal_transfer*r.spatial_transfer&&r.exit_speed_mps==expected_ideal*(tuning.minimum_exit_speed_factor+(1-tuning.minimum_exit_speed_factor)*std::sqrt(r.energy_transfer))&&r.contact_time_s==a.response->contact_time_s&&same(r.launch_position_m,a.response->launch_position_m),"direction changed quality/speed/effective time/origin");
+ }
+ { // Concrete q-weighted slope candidate, independent formula and strict eligibility.
+ require(s.ball_response.trajectory_airborne_slope_multiplier==std::array<float,4>{.8f,1.f,1.2f,1.4f},"authored slope Data");
+ require(BallResponseTuning{}.vertical_contact_longitudinal_degrees==angles&&BallResponseTuning{}.trajectory_airborne_slope_multiplier==s.ball_response.trajectory_airborne_slope_multiplier,"default/authored mismatch");
+ for(float base:{8.f,25.f,45.f})for(float q:{0.f,.25f,.5625f,1.f})for(int tr=1;tr<=4;++tr){
+  const float effective=1+(1-q)*(s.ball_response.trajectory_airborne_slope_multiplier[tr-1]-1);
+  const float expected=DirectX::XMConvertToDegrees(std::atan(std::tan(DirectX::XMConvertToRadians(base))*effective));
+  const float actual=trajectory_airborne_angle(base,q,tr,s.ball_response);
+  require(actual==expected&&actual>0&&actual<90,"q-weighted slope formula/range");
+ }
+ for(float base:{-150.f,-15.f,0.f,90.f,130.f})for(float q:{0.f,.5f,1.f})for(int tr=1;tr<=4;++tr)
+  require(trajectory_airborne_angle(base,q,tr,s.ball_response)==base,"ineligible family changed");
+ for(float ey:{-1.f,-.5f,1.f})for(int tr=1;tr<=4;++tr)
+  require(vertical_response(ey,0,tr).longitudinal_angle_deg==vertical_contact_longitudinal_angle(ey,s.ball_response),"ground/backward production invariance");
+ const double zero=-.5+(.25*(15./18.));
+ require(close_enough(zero,-7./24.,1e-15)&&close_enough(vertical_contact_longitudinal_angle(float(zero),s.ball_response),0),"base zero crossing");
+ require(vertical_contact_longitudinal_angle(float(zero)-1e-5f,s.ball_response)<0&&vertical_contact_longitudinal_angle(float(zero)+1e-5f,s.ball_response)>0,"crossing neighborhood");
+ // Authoritative e104346 center response had angle zero; preserve every other field.
+ auto baseline=s.ball_response;baseline.vertical_contact_longitudinal_degrees[4]=0;
+ const auto old=*ball_response(a.timing,a.authorization,s.batter_profile,baseline,p.delivery.pitch.initial,1.6);
+ require(peak.exit_speed_mps==old.exit_speed_mps&&peak.spray_angle_deg==old.spray_angle_deg&&peak.contact_time_s==old.contact_time_s&&same(peak.launch_position_m,old.launch_position_m)&&peak.temporal_transfer==old.temporal_transfer&&peak.spatial_transfer==old.spatial_transfer&&peak.energy_transfer==old.energy_transfer,"Atari non-direction regression");
+ require(peak.exit_speed_mps==44.3308830261f&&peak.spray_angle_deg==.628268182278f&&close_enough(a.timing.efficiency,.974447238051,1e-12)&&close_enough(a.timing.offset_ms,-1.16678376993,1e-9),"pre-change Atari values");
  }
  // Backward flight uses the same analytic sampler and render/backlog clock contract.
  const DirectX::XMFLOAT2 backward_aim{center.x,center.y-.95f*(region.normal_radius_y_m+s.gameplay_ball.radius_m)};
@@ -167,7 +194,7 @@ int main(int argc,char** argv){try{
  auto power=ball_response(a.timing,a.authorization,profile,s.ball_response,p.delivery.pitch.initial,1.6);
  require(power->exit_speed_mps>peak.exit_speed_mps&&power->longitudinal_angle_deg==peak.longitudinal_angle_deg&&power->spray_angle_deg==peak.spray_angle_deg,"Power independence");
  profile=s.batter_profile;profile.trajectory=4;auto trajectory=ball_response(a.timing,a.authorization,profile,s.ball_response,p.delivery.pitch.initial,1.6);
- require(trajectory->longitudinal_angle_deg==0&&trajectory->exit_speed_mps==peak.exit_speed_mps&&trajectory->spray_angle_deg==peak.spray_angle_deg,"Trajectory independence");
+ require(trajectory->longitudinal_angle_deg>peak.longitudinal_angle_deg&&trajectory->exit_speed_mps==peak.exit_speed_mps&&trajectory->spray_angle_deg==peak.spray_angle_deg,"Trajectory independence");
  // Any strictly positive overlap qualifies; there is no hidden efficiency threshold.
  auto tiny=a.timing;tiny.efficiency=1e-12;require(ball_response(tiny,a.authorization,profile,s.ball_response,p.delivery.pitch.initial,1.6).has_value(),"tiny match rejected");
  p.reset();p.start();p.record_command(448,center);while(p.tick<477)p.advance(4'166'667);
@@ -343,14 +370,37 @@ int main(int argc,char** argv){try{
   require(live.center().x==next_aim.x&&live.center().y==next_aim.y,"practice reset changed live aim");check_live();
  }
  std::cout<<"PASS practice marker: Ready/pre-release hidden; Contact/spatial miss/early+late timing miss/take persist; early rearm and second Contact; live aim; Space reset; both cached styles, exact prediction/actual, fixed 636 vertices and stable storage\n";
+ // Review evidence from exact fixture input, not authored response outputs.
+ const auto basin_row=[&](float requested){
+  const auto& attempt=*p.latest();const auto& h=attempt.authorization;const auto& response=*attempt.response;const auto& flight=*p.flight;
+  require(attempt.command.consumed_tick==448&&h.authorized&&h.normalized_error.x==0&&close_enough(h.normalized_error.y,requested)&&close_enough(h.q,h.normalized_error.y*h.normalized_error.y),"basin fixture intent/q");
+  const float base=vertical_contact_longitudinal_angle(h.normalized_error.y,s.ball_response);
+  const float expression=1-h.q,effective=1+expression*(s.ball_response.trajectory_airborne_slope_multiplier[2]-1);
+  const float expected=base>0&&base<90?DirectX::XMConvertToDegrees(std::atan(std::tan(DirectX::XMConvertToRadians(base))*effective)):base;
+  require(response.longitudinal_angle_deg==expected,"fixture base/final mismatch");
+  const auto ground=flight.sample(flight.ground_s).position_m;
+  const double air=flight.ground_s-flight.start_s,apex=std::clamp(-double(flight.initial.velocity_mps.y)/earth_gravity_mps2,0.,air);
+  const double distance=std::hypot(double(ground.x)-flight.initial.position_m.x,double(ground.z)-flight.initial.position_m.z);
+  const double height=flight.sample(flight.start_s+apex).position_m.y-flight.ground_height_m;
+  std::ostringstream row;row<<std::setprecision(12)<<requested<<','<<h.normalized_error.y<<','<<h.q<<','<<base<<','<<expression<<','<<effective<<','<<response.longitudinal_angle_deg<<','<<response.exit_speed_mps<<','<<air<<','<<distance<<','<<height<<','<<(response.launch_velocity_mps.z>0?"Forward":"Backward")<<'\n';return row.str();
+ };
+ std::ostringstream basin;basin<<"requested_ey,actual_ey,q,base_deg,expression,effective_multiplier,final_deg,speed_mps,flight_s,distance_m,max_bottom_height_m,direction\n";
+ for(float ey:{-.5f,-.4f,-.3f,-.25f,-.2f,-.1f,0.f,.1f,.25f,.5f,.75f,.9f}){
+  const BattingReviewFixture fixture{448,0,ey};p.reset();require(fixture.start(p,live),"basin fixture start");finish(p);fixture.verify(*p.latest());
+  const auto first=basin_row(ey);require(fixture.start(p,live),"basin fixture replay");
+  while(p.phase==PreviewPhase::Playing)p.advance(100'000'000);
+  fixture.verify(*p.latest());require(first==basin_row(ey),"basin replay/backlog metrics changed");basin<<first;
+ }
+ {std::ofstream output(temp/"central-basin-table.csv");output<<basin.str();require(bool(output),"basin evidence write");}
+ std::cout<<"CENTRAL BASIN\n"<<basin.str();
  // Finite, bounded startup response Data; no silent clamping or unknown keys.
  std::filesystem::create_directories(temp);const auto path=temp/"candidate.toml";
  const std::string profile_text="[batter_profile]\ndisplay_name='Michael'\ncontact=75\npower=85\ntrajectory=3\n";
- for(const char* bad:{"ideal_exit_speed_min_mps=0","ideal_exit_speed_max_mps=101","ideal_exit_speed_min_mps=60","spatial_edge_transfer=-0.1","spatial_edge_transfer=1.1","minimum_exit_speed_factor=nan","minimum_exit_speed_factor=2","vertical_aim_bias_degrees=inf","vertical_aim_bias_degrees=-1","max_spray_degrees=81","full_spray_offset_ms=0","full_spray_offset_ms='65'","vertical_contact_longitudinal_degrees=[8,14,20]","vertical_contact_longitudinal_degrees=[8,14,20,26,30]","vertical_contact_longitudinal_degrees=[8,14,nan,26]","vertical_contact_longitudinal_degrees=[8,14,20,51]","vertical_contact_longitudinal_degrees=[8,14,20,'26']","vertical_contact_longitudinal_degrees=1","vertical_contact_longitudinal_degrees=[-181,-35,-15,0,25,45,130]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,181]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,nan]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,inf]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,'130']","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,130,150]","trajectory_launch_degrees=[8,14,20,26]","unknown=1"}){
+ for(const char* bad:{"ideal_exit_speed_min_mps=0","ideal_exit_speed_max_mps=101","ideal_exit_speed_min_mps=60","spatial_edge_transfer=-0.1","spatial_edge_transfer=1.1","minimum_exit_speed_factor=nan","minimum_exit_speed_factor=2","vertical_aim_bias_degrees=inf","vertical_aim_bias_degrees=-1","max_spray_degrees=81","full_spray_offset_ms=0","full_spray_offset_ms='65'","vertical_contact_longitudinal_degrees=[8,14,20]","vertical_contact_longitudinal_degrees=[8,14,20,26,30]","vertical_contact_longitudinal_degrees=[8,14,nan,26]","vertical_contact_longitudinal_degrees=[8,14,20,51]","vertical_contact_longitudinal_degrees=[8,14,20,'26']","vertical_contact_longitudinal_degrees=1","vertical_contact_longitudinal_degrees=[-181,-35,-15,0,25,45,130]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,181]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,nan]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,inf]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,'130']","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,130,150]","trajectory_launch_degrees=[8,14,20,26]","vertical_contact_longitudinal_degrees=[-150,-35,-15,0,25,45,130]","vertical_contact_longitudinal_degrees=[-181,-35,-15,3,8,15,25,45,130]","vertical_contact_longitudinal_degrees=[-150,-35,-15,3,8,15,25,45,181]","vertical_contact_longitudinal_degrees=[-150,-35,-15,3,nan,15,25,45,130]","vertical_contact_longitudinal_degrees=[-150,-35,-15,3,inf,15,25,45,130]","vertical_contact_longitudinal_degrees=[-150,-35,-15,3,'8',15,25,45,130]","trajectory_airborne_slope_multiplier=[]","trajectory_airborne_slope_multiplier=[1,1,1]","trajectory_airborne_slope_multiplier=[1,1,1,1,1]","trajectory_airborne_slope_multiplier=1","trajectory_airborne_slope_multiplier=[0,1,1,1]","trajectory_airborne_slope_multiplier=[-1,1,1,1]","trajectory_airborne_slope_multiplier=[5,1,1,1]","trajectory_airborne_slope_multiplier=[nan,1,1,1]","trajectory_airborne_slope_multiplier=[inf,1,1,1]","trajectory_airborne_slope_multiplier=[1,1,1,'1']","unknown=1"}){
   {std::ofstream out(path);out<<profile_text<<"[ball_response]\n"<<bad<<'\n';}
   bool failed=false;try{(void)load_batting_staging(path);}catch(const std::runtime_error& e){failed=std::string(e.what()).find("ball_response")!=std::string::npos;}require(failed,"bad response Data accepted");
  }
- {std::ofstream out(path);out<<profile_text<<"[ball_response]\nideal_exit_speed_min_mps=25\nideal_exit_speed_max_mps=60\nvertical_contact_longitudinal_degrees=[-180,-40,-10,0,20,50,180]\n";}
- const auto tuned=load_batting_staging(path);require(tuned.ball_response.ideal_exit_speed_min_mps==25&&tuned.ball_response.vertical_contact_longitudinal_degrees[2]==-10,"valid response override ignored");std::filesystem::remove(path);
+ {std::ofstream out(path);out<<profile_text<<"[ball_response]\nideal_exit_speed_min_mps=25\nideal_exit_speed_max_mps=60\nvertical_contact_longitudinal_degrees=[-180,-40,-10,2,9,16,20,50,180]\ntrajectory_airborne_slope_multiplier=[0.5,1,2,3]\n";}
+ const auto tuned=load_batting_staging(path);require(tuned.ball_response.ideal_exit_speed_min_mps==25&&tuned.ball_response.vertical_contact_longitudinal_degrees[2]==-10&&tuned.ball_response.trajectory_airborne_slope_multiplier==std::array<float,4>{.5f,1,2,3},"valid response override ignored");std::filesystem::remove(path);
  std::cout<<"PASS gameplay authority, normalized response, handed spray, deterministic launch/ground and two-swing lifecycle\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

@@ -85,6 +85,9 @@ int main(int argc,char** argv){try{
     preview.step_ticks(1);singles.single_step();require(preview.tick==1&&singles.tick==1,"one-step changed");
     bool release_crossed=false,commit_crossed=false,contact_crossed=false,stopped_short=false;
     while(preview.phase==PreviewPhase::Playing){
+        // Exercise a short final batch independently of tuned flight duration.
+        if(preview.flight&&preview.tick+10>=preview.completion_tick())
+            while(preview.tick+3<preview.completion_tick()){preview.single_step();singles.single_step();}
         const auto before=preview.tick;
         const bool completed=preview.step_ticks(10);bool single_completed=false;
         for(unsigned i=0;i<10;++i)single_completed=singles.single_step()||single_completed;

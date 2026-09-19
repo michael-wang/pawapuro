@@ -66,7 +66,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
                 if (prefix == "ball_response.") only_keys(fields, {"ideal_exit_speed_min_mps", "ideal_exit_speed_max_mps",
-                    "spatial_edge_transfer", "minimum_exit_speed_factor", "vertical_contact_longitudinal_degrees",
+                    "spatial_edge_transfer", "minimum_exit_speed_factor", "vertical_contact_longitudinal_degrees", "trajectory_airborne_slope_multiplier",
                     "max_spray_degrees", "full_spray_offset_ms"}, prefix);
                 if (prefix == "batter_profile.") only_keys(fields, {"display_name", "contact", "power", "trajectory"}, prefix);
                 if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks", "normal_finish_ticks"}, prefix);
@@ -186,8 +186,13 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         response.full_spray_offset_ms=number(table,"ball_response.full_spray_offset_ms",response.full_spray_offset_ms,1,500);
         if(const auto node=table.at_path("ball_response.vertical_contact_longitudinal_degrees")) {
             const auto* values=node.as_array();
-            if(!values||values->size()!=7)throw std::runtime_error("ball_response.vertical_contact_longitudinal_degrees must contain exactly seven numbers.");
-            for(std::size_t i=0;i<7;++i)response.vertical_contact_longitudinal_degrees[i]=checked_number(*values->get(i),"ball_response.vertical_contact_longitudinal_degrees",-180,180);
+            if(!values||values->size()!=9)throw std::runtime_error("ball_response.vertical_contact_longitudinal_degrees must contain exactly nine numbers.");
+            for(std::size_t i=0;i<9;++i)response.vertical_contact_longitudinal_degrees[i]=checked_number(*values->get(i),"ball_response.vertical_contact_longitudinal_degrees",-180,180);
+        }
+        if(const auto node=table.at_path("ball_response.trajectory_airborne_slope_multiplier")) {
+            const auto* values=node.as_array();
+            if(!values||values->size()!=4)throw std::runtime_error("ball_response.trajectory_airborne_slope_multiplier must contain exactly four numbers.");
+            for(std::size_t i=0;i<4;++i)response.trajectory_airborne_slope_multiplier[i]=checked_number(*values->get(i),"ball_response.trajectory_airborne_slope_multiplier",.1f,4.f);
         }
         std::fprintf(stderr, "Staging loaded: %s | owner: pawapuro/batting/staging.cpp | right_handed_pitcher_vs_left_handed_batter\n",
             source.c_str());

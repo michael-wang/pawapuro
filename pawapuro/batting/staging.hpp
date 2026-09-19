@@ -20,7 +20,8 @@ struct SwingPhasePotentialTuning { float normal_start_ms=75,normal_peak_ms=125,n
 struct BallResponseTuning {
     float ideal_exit_speed_min_mps=20,ideal_exit_speed_max_mps=55;
     float spatial_edge_transfer=.35f,minimum_exit_speed_factor=.20f;
-    std::array<float,7> vertical_contact_longitudinal_degrees{-150,-35,-15,0,25,45,130};
+    std::array<float,9> vertical_contact_longitudinal_degrees{-150,-35,-15,3,8,15,25,45,130};
+    std::array<float,4> trajectory_airborne_slope_multiplier{.8f,1.f,1.2f,1.4f};
     float max_spray_degrees=35,full_spray_offset_ms=65;
 };
 struct BattingStaging {
