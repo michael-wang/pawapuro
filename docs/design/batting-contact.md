@@ -712,3 +712,13 @@ Runtime COLOR_0 不是服裝語意：舊投手鞋與眼睛共色，打者還有�
 BattedBallFlight 使用同一 world clock，預算 first hit（ground_s／first_hit_s）、second_ground_s 與 stop_s；sample 直接解析各段，不做逐 tick 物理積分。Complete 等待 stop 及原動畫完成；Space 仍可隨時於 Contact 後重開。資訊欄飛行時間／距離／最大高度只描述首次觸地以前，初速不變；小灰白地面投影與世界球繼續跟隨反彈／滑行直到停止。
 
 初速 Y >= 0 的球完全保留原首次觸地即停語意。只有平地、一次反彈，沒有 mound／terrain 碰撞、旋轉／spin、多次跳動、材質差異或空氣阻力；Ball Response 角度、Power、Trajectory、timing 與 spray 均未調整。
+
+## Continuous Ground Ball Response S1
+
+人類 review 拒絕未提交的 0.05 m bounce cutoff：低而快的 hop 仍有 gameplay 意義，不能用高度門檻切成 bounce → roll。初始 vy<0 的球首次觸地後，垂直與水平是並行的解析分量，不是互斥 phase。
+
+候選 Data：rebound_vertical_ratio=0.35、first_impact_horizontal_retention=0.85、ground_horizontal_deceleration_mps2=5.5。僅首次 impact 保留一次水平速度；之後 XZ 固定方向、連續等減速，後續 bounce 不再扣水平乘數。此減速度代表有效 gameplay ground-response dissipation，不宣稱球在空中承受字面上的 Coulomb friction。
+
+垂直 u_k=u1*e^k、duration_k=2*u_k/g、apex_k=u_k²/(2g)；無限幾何反彈序列在 first_ground_s+(2*u1/g)/(1-e) 收斂。用對數定位弧段，精確可表示邊界屬於下一個 outgoing arc；只在數學 settle time 後固定 Y／vy，沒有高度或 tick cutoff。水平在 first_ground_s+initial_ground_speed/deceleration 停止，overall stop 取兩者最大值；沒有反彈清單、固定跳數、GroundBall／Chopper 分類或 ey 特判。
+
+Batting Info 仍只計首次觸地前的時間／距離／最高高度與初速；空中球維持原首次觸地 hold。限制：平地、無 mound／地面凹凸、無旋轉／spin、無草地泥土地表差異。未來地面不平可能讓微小 hop 更重要，但本輪不加入 terrain randomness，也不額外調整水平距離或 Ball Response。

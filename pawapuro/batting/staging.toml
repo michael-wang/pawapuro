@@ -114,6 +114,6 @@ max_spray_degrees = 35.0
 full_spray_offset_ms = 65.0
 
 [ground_ball_response]
-rebound_vertical_ratio = 0.25
-impact_horizontal_retention = 0.70
-roll_deceleration_mps2 = 10.0
+rebound_vertical_ratio = 0.35
+first_impact_horizontal_retention = 0.85
+ground_horizontal_deceleration_mps2 = 5.5

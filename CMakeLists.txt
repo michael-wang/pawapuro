@@ -138,7 +138,7 @@ if(BUILD_TESTING)
     target_include_directories(hit_authorization_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(hit_authorization_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
     add_test(NAME hit_authorization COMMAND hit_authorization_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting")
-    add_executable(contact_panel_test pawapuro/batting/contact_panel_test.cpp pawapuro/batting/contact_panel.cpp pawapuro/batting/startup_text.cpp
+    add_executable(contact_panel_test pawapuro/batting/reference_scene.cpp pawapuro/batting/contact_panel_test.cpp pawapuro/batting/contact_panel.cpp pawapuro/batting/startup_text.cpp
         pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/manual_swing.cpp
         pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp
         pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)

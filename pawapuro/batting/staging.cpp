@@ -78,7 +78,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (prefix == "bat_contact.") only_keys(fields, {"ball_radius_m", "bat_radius_m"}, prefix);
                 if (prefix == "camera.") only_keys(fields, {"preset", "position_m", "target_m", "vertical_fov_degrees"}, prefix);
                 if (prefix == "release.") only_keys(fields, {"position_m"}, prefix);
-                if (prefix == "ground_ball_response.") only_keys(fields, {"rebound_vertical_ratio", "impact_horizontal_retention", "roll_deceleration_mps2"}, prefix);
+                if (prefix == "ground_ball_response.") only_keys(fields, {"rebound_vertical_ratio", "first_impact_horizontal_retention", "ground_horizontal_deceleration_mps2"}, prefix);
                 if (prefix == "gameplay_ball.") only_keys(fields, {"radius_m"}, prefix);
                 if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m", "home_dirt_radius_m"}, prefix);
                 if (prefix == "reference_pitch.") only_keys(fields, {"initial_velocity_mps"}, prefix);
@@ -178,10 +178,10 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.batter_profile.trajectory=ability("batter_profile.trajectory",1,4);
         auto& ground=candidate.ground_ball_response;
         ground.rebound_vertical_ratio=number(table,"ground_ball_response.rebound_vertical_ratio",ground.rebound_vertical_ratio,0,1);
-        ground.impact_horizontal_retention=number(table,"ground_ball_response.impact_horizontal_retention",ground.impact_horizontal_retention,0,1);
-        ground.roll_deceleration_mps2=number(table,"ground_ball_response.roll_deceleration_mps2",ground.roll_deceleration_mps2,0,1000);
-        if(ground.impact_horizontal_retention<=0||ground.roll_deceleration_mps2<=0)
-            throw std::runtime_error("ground_ball_response retention and deceleration must be positive.");
+        ground.first_impact_horizontal_retention=number(table,"ground_ball_response.first_impact_horizontal_retention",ground.first_impact_horizontal_retention,0,1);
+        ground.ground_horizontal_deceleration_mps2=number(table,"ground_ball_response.ground_horizontal_deceleration_mps2",ground.ground_horizontal_deceleration_mps2,0,1000);
+        if(ground.rebound_vertical_ratio<=0||ground.rebound_vertical_ratio>=1||ground.first_impact_horizontal_retention<=0||ground.ground_horizontal_deceleration_mps2<=0)
+            throw std::runtime_error("ground_ball_response requires 0 < rebound < 1 and positive retention and deceleration.");
         auto& response=candidate.ball_response;
         response.ideal_exit_speed_min_mps=number(table,"ball_response.ideal_exit_speed_min_mps",response.ideal_exit_speed_min_mps,1,100);
         response.ideal_exit_speed_max_mps=number(table,"ball_response.ideal_exit_speed_max_mps",response.ideal_exit_speed_max_mps,1,100);

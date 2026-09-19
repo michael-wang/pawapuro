@@ -1,6 +1,7 @@
 #include "contact_panel.hpp"
 #include "review_fixture.hpp"
 #include "ground_projection.hpp"
+#include "reference_scene.hpp"
 #include <cmath>
 #include <cstring>
 #include <iostream>
@@ -12,7 +13,8 @@ void require(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
 void ground_response_checks(ManualSwingPreview& p) {
     const auto same=[](auto a,auto b){return a.x==b.x&&a.y==b.y&&a.z==b.z;};
     const auto distance=[](auto a,auto b){return std::hypot(double(a.x)-b.x,double(a.z)-b.z);};
-    double high=0,low=0;
+    const double g=-double(earth_gravity_mps2);
+    std::array<double,2> high{},low{};
     for(float ey:{-.75f,-.5f,-1.f,0.f,.25f,.5f,.75f}) {
         std::string control;
         for(unsigned fps:{30u,60u,120u,1u}) {
@@ -21,12 +23,9 @@ void ground_response_checks(ManualSwingPreview& p) {
             while(p.phase==PreviewPhase::Playing)p.advance(1'000'000'000ull/fps);
             require(p.flight.has_value(),"ground fixture Contact");fixture.verify(*p.latest());
             const auto f=*p.flight;const auto r=*p.latest()->response;
-            std::ostringstream signature;signature<<std::setprecision(17)<<p.tick<<','<<f.ground_s<<','<<f.second_ground_s<<','<<f.stop_s;
-            for(double t:{f.start_s,f.ground_s,(f.ground_s+f.second_ground_s)/2,f.second_ground_s,(f.second_ground_s+f.stop_s)/2,f.stop_s,f.stop_s+10}) {
-                const auto b=f.sample(t);signature<<','<<b.position_m.x<<','<<b.position_m.y<<','<<b.position_m.z<<','<<b.velocity_mps.x<<','<<b.velocity_mps.y<<','<<b.velocity_mps.z;
-            }
-            if(control.empty())control=signature.str();else require(control==signature.str(),"30/60/120/backlog piecewise determinism");
-            const double g=-double(earth_gravity_mps2);
+            std::ostringstream signature;signature<<std::setprecision(17)<<p.tick<<','<<f.ground_s<<','<<f.rebound_settle_s<<','<<f.horizontal_stop_s<<','<<f.stop_s;
+            const auto record=[&](double t){const auto b=f.sample(t);signature<<','<<t<<','<<b.position_m.x<<','<<b.position_m.y<<','<<b.position_m.z<<','<<b.velocity_mps.x<<','<<b.velocity_mps.y<<','<<b.velocity_mps.z;};
+            for(double t:{f.start_s,f.ground_s,f.rebound_settle_s,f.horizontal_stop_s,f.stop_s,f.stop_s+10})record(t);
             const double legacy_ground=f.start_s+(double(r.launch_velocity_mps.y)+std::sqrt(double(r.launch_velocity_mps.y)*r.launch_velocity_mps.y+2*g*std::max(0.,double(r.launch_position_m.y)-f.ground_height_m)))/g;
             require(f.ground_s==legacy_ground,"first impact time changed");
             if(r.launch_velocity_mps.y>=0) {
@@ -35,39 +34,83 @@ void ground_response_checks(ManualSwingPreview& p) {
                     const double time=f.start_s+(legacy_ground-f.start_s)*i/80.;
                     auto old=sample_reference_pitch(f.initial,std::clamp(time,f.start_s,legacy_ground)-f.start_s);
                     if(time>=legacy_ground){old.position_m.y=f.ground_height_m;old.velocity_mps={};}
-                    require(same(f.sample(time).position_m,old.position_m)&&same(f.sample(time).velocity_mps,old.velocity_mps),"airborne baseline sample changed");
+                    require(same(f.sample(time).position_m,old.position_m)&&same(f.sample(time).velocity_mps,old.velocity_mps),"airborne baseline sample changed");record(time);
                 }
-                continue;
+            }else {
+                const auto impact=sample_reference_pitch(f.initial,f.ground_s-f.start_s);
+                require(distance(impact.position_m,f.first_ground.position_m)==0&&f.first_ground.position_m.y==f.ground_height_m,"first impact continuity");
+                require(f.first_ground.velocity_mps.x==impact.velocity_mps.x*.85f&&f.first_ground.velocity_mps.z==impact.velocity_mps.z*.85f,"one-time horizontal retention");
+                require(f.first_rebound_vy==-double(impact.velocity_mps.y)*double(.35f),"first rebound ratio");
+                require(f.rebound_duration==(2*f.first_rebound_vy/g)/(1-double(.35f))&&f.rebound_settle_s==f.ground_s+f.rebound_duration,"infinite geometric settle");
+                double previous_apex=0,previous_u=0,previous_duration=0;
+                for(unsigned k=0;k<6;++k) {
+                    const double u=f.rebound_launch_speed(k),start=f.rebound_start_s(k),end=f.rebound_start_s(k+1),duration=2*u/g,apex=u*u/(2*g);
+                    if(k){require(std::abs(u/previous_u-f.rebound_ratio)<1e-14&&std::abs(apex/previous_apex-f.rebound_ratio*f.rebound_ratio)<1e-14&&std::abs(duration/previous_duration-f.rebound_ratio)<1e-14,"geometric ratios");}
+                    require(std::abs((end-start)-duration)<1e-14,"arc duration");
+                    const auto top=f.sample((start+end)/2);
+                    require(std::abs(double(top.position_m.y)-f.ground_height_m-apex)<1e-5&&std::abs(top.velocity_mps.y)<1e-5,"analytic apex");
+                    if(k>=2)require(apex<.05&&top.position_m.y>f.ground_height_m,"low hops were discarded");
+                    const auto boundary=f.sample(start);
+                    require(boundary.position_m.y==f.ground_height_m&&boundary.velocity_mps.y==static_cast<float>(u),"exact impact uses outgoing arc");
+                    for(double t:{std::nextafter(start,-INFINITY),start,std::nextafter(start,INFINITY)}) {
+                        const auto v=f.sample(t);record(t);
+                        require(std::isfinite(v.position_m.y)&&v.position_m.y>=f.ground_height_m,"impact finite/nonpenetrating");
+                        require(distance(v.position_m,boundary.position_m)<1e-5&&std::abs(v.position_m.y-boundary.position_m.y)<1e-5,"impact position continuity");
+                        if(k>0)require(std::abs(v.velocity_mps.x-boundary.velocity_mps.x)<1e-5&&std::abs(v.velocity_mps.z-boundary.velocity_mps.z)<1e-5,"later impact horizontal discontinuity");
+                    }
+                    const double t=start-f.ground_s,expected=std::max(0.,f.ground_speed-f.ground_deceleration*t);
+                    require(std::abs(std::hypot(double(boundary.velocity_mps.x),double(boundary.velocity_mps.z))-expected)<1e-5,"later impact multiplied horizontal speed");
+                    if(k<2){if(ey==-.75f)high[k]=apex;if(ey==-.5f)low[k]=apex;}
+                    if(fps==30)std::cout<<std::setprecision(12)<<"REBOUND ey="<<ey<<" index="<<k<<" start_elapsed="<<start-f.start_s<<" end_elapsed="<<end-f.start_s<<" vy="<<u<<" apex="<<apex<<'\n';
+                    previous_apex=apex;previous_u=u;previous_duration=duration;
+                }
+                require(f.horizontal_stop_s==f.ground_s+f.ground_speed/f.ground_deceleration&&f.stop_s==std::max(f.horizontal_stop_s,f.rebound_settle_s),"component stop times");
+                double previous=f.ground_speed;
+                for(unsigned i=0;i<=200;++i) {
+                    const double time=f.ground_s+(f.stop_s-f.ground_s)*i/200.;const auto b=f.sample(time);record(time);
+                    const double speed=std::hypot(double(b.velocity_mps.x),double(b.velocity_mps.z));
+                    require(speed<=previous+1e-6&&b.position_m.y>=f.ground_height_m,"continuous ground deceleration");previous=speed;
+                    require(b.velocity_mps.z*f.first_ground.velocity_mps.z>=0,"horizontal reversal");
+                }
+                const auto stopped=f.sample(f.stop_s),horizontal=f.sample(f.horizontal_stop_s);
+                require(horizontal.velocity_mps.x==0&&horizontal.velocity_mps.z==0&&distance(horizontal.position_m,stopped.position_m)==0,"horizontal stop hold");
+                const double displacement=f.ground_speed*f.ground_speed/(2*f.ground_deceleration);
+                require(horizontal.position_m.x==f.first_ground.position_m.x+static_cast<float>(f.first_ground.velocity_mps.x/f.ground_speed*displacement)&&horizontal.position_m.z==f.first_ground.position_m.z+static_cast<float>(f.first_ground.velocity_mps.z/f.ground_speed*displacement),"analytic horizontal stop position");
+                for(double t:{std::nextafter(f.rebound_settle_s,-INFINITY),f.rebound_settle_s,std::nextafter(f.rebound_settle_s,INFINITY),f.stop_s+100}) {
+                    const auto v=f.sample(t);require(std::isfinite(v.position_m.y)&&v.position_m.y>=f.ground_height_m,"settle boundary finite");
+                    if(t>=f.rebound_settle_s)require(v.position_m.y==f.ground_height_m&&v.velocity_mps.y==0,"vertical settle exact");
+                }
+                require(!f.complete(std::nextafter(f.stop_s,-INFINITY))&&f.complete(f.stop_s)&&same(stopped.velocity_mps,DirectX::XMFLOAT3{})&&same(stopped.position_m,f.sample(f.stop_s+100).position_m),"complete/indefinite hold");
+                // Also exercise horizontal stop before the rebound train settles.
+                auto fast=p.tuning.ground_ball_response;fast.ground_horizontal_deceleration_mps2=1000;
+                const BattedBallFlight in_place(r,f.ground_height_m,fast);
+                require(in_place.horizontal_stop_s<in_place.rebound_settle_s&&!in_place.complete(in_place.horizontal_stop_s),"remaining in-place rebounds");
+                const auto moving_y=in_place.sample((in_place.horizontal_stop_s+in_place.rebound_settle_s)/2);
+                require(moving_y.velocity_mps.x==0&&moving_y.velocity_mps.z==0&&moving_y.position_m.y>f.ground_height_m,"independent vertical/horizontal components");
+                if(ey==-1){
+                    std::vector<engine::Vertex> aid;aid.reserve(ball_readability_vertex_count);const auto storage=aid.data();
+                    for(unsigned i=0;i<=100;++i){
+                        const auto b=f.sample(f.start_s+(f.stop_s-f.start_s)*i/100.);require(b.velocity_mps.z<=0,"backward lost sign");
+                        aid.clear();append_ball_readability(aid,p.tuning,b.position_m,PitchPhase::InFlight,true,1920,1080);
+                        require(aid.size()==ball_readability_vertex_count&&aid.data()==storage,"backward aid fixed allocation");
+                        for(const auto& v:aid)require(std::isfinite(v.position.x)&&std::isfinite(v.position.y),"backward aid invalid projection");
+                    }
+                }
+                if(fps==30)std::cout<<std::setprecision(12)<<"GROUND ey="<<ey<<" speed="<<r.exit_speed_mps<<" angle="<<r.longitudinal_angle_deg<<" first_elapsed="<<f.ground_s-f.start_s<<" first_distance="<<distance(impact.position_m,f.initial.position_m)<<" impact_vy="<<impact.velocity_mps.y<<" rebound_vy="<<f.first_rebound_vy<<" settle_elapsed="<<f.rebound_settle_s-f.start_s<<" ground_speed="<<f.ground_speed<<" horizontal_stop_elapsed="<<f.horizontal_stop_s-f.start_s<<" stop_elapsed="<<f.stop_s-f.start_s<<" final_distance="<<distance(stopped.position_m,f.initial.position_m)<<'\n';
             }
-            const auto impact=sample_reference_pitch(f.initial,f.ground_s-f.start_s);
-            require(distance(impact.position_m,f.rebound.position_m)==0&&f.rebound.position_m.y==f.ground_height_m,"first position continuity");
-            require(f.rebound.velocity_mps.y==-impact.velocity_mps.y*.25f&&f.rebound.velocity_mps.y>0&&f.rebound.velocity_mps.x==impact.velocity_mps.x*.7f&&f.rebound.velocity_mps.z==impact.velocity_mps.z*.7f,"first rebound velocity");
-            const auto second=sample_reference_pitch(f.rebound,f.second_ground_s-f.ground_s);
-            require(distance(second.position_m,f.roll.position_m)==0&&f.roll.position_m.y==f.ground_height_m&&f.roll.velocity_mps.y==0,"second position continuity");
-            require(f.roll.velocity_mps.x==second.velocity_mps.x*.7f&&f.roll.velocity_mps.z==second.velocity_mps.z*.7f,"second retention");
-            double previous=f.roll_speed;
-            for(unsigned i=0;i<=100;++i) {
-                const auto b=f.sample(f.second_ground_s+(f.stop_s-f.second_ground_s)*i/100.);
-                const double speed=std::hypot(double(b.velocity_mps.x),double(b.velocity_mps.z));
-                require(speed<=previous+1e-6&&b.position_m.y==f.ground_height_m&&b.velocity_mps.y==0,"ground deceleration");previous=speed;
-                require(b.velocity_mps.z*f.roll.velocity_mps.z>=0,"roll reversal");
-            }
-            require(same(f.sample(f.stop_s).velocity_mps,DirectX::XMFLOAT3{})&&same(f.sample(f.stop_s).position_m,f.sample(f.stop_s+100).position_m),"final hold");
-            if(ey==-1)require(f.rebound.velocity_mps.z<0&&f.roll.velocity_mps.z<0,"backward ground lost sign");
-            const double apex=double(f.rebound.velocity_mps.y)*f.rebound.velocity_mps.y/(2*g);
-            if(ey==-.75f)high=apex;if(ey==-.5f)low=apex;
-            if(fps==30)std::cout<<std::setprecision(12)<<"GROUND ey="<<ey<<" speed="<<r.exit_speed_mps<<" angle="<<r.longitudinal_angle_deg<<" first_s="<<f.ground_s<<" first_distance="<<distance(f.rebound.position_m,f.initial.position_m)<<" impact_vy="<<impact.velocity_mps.y<<" rebound_vy="<<f.rebound.velocity_mps.y<<" rebound_apex_bottom="<<apex<<" second_s="<<f.second_ground_s<<" second_distance="<<distance(f.roll.position_m,f.initial.position_m)<<" roll_speed="<<f.roll_speed<<" stop_s="<<f.stop_s<<" final_distance="<<distance(f.sample(f.stop_s).position_m,f.initial.position_m)<<'\n';
+            if(control.empty())control=signature.str();else require(control==signature.str(),"30/60/120/backlog analytic determinism");
         }
-        if(ey<0)for(bool rolling:{false,true}) {
+        if(ey<0)for(unsigned stage:{0u,1u,2u}) {
             p.reset();p.start();const BattingReviewFixture fixture{448,0,ey};p.record_command(448,fixture.aim_center(p));
             while(!p.flight)p.advance(4'166'667);
-            const double target=rolling?(p.flight->second_ground_s+p.flight->stop_s)/2:(p.flight->ground_s+p.flight->second_ground_s)/2;
+            const auto& f=*p.flight;
+            const double target=stage==2?(f.rebound_settle_s+f.horizontal_stop_s)/2:stage==1?(f.rebound_start_s(2)+f.rebound_start_s(3))/2:(f.rebound_start_s(0)+f.rebound_start_s(1))/2;
             while(double(p.tick)/pitch_hz<target)p.advance(4'166'667);
-            require(p.start()&&p.tick==0&&!p.flight&&p.attempts.empty()&&p.pending_ticks==0,"Space during bounce/roll");
+            require(p.start()&&p.tick==0&&!p.flight&&p.attempts.empty()&&p.pending_ticks==0,"Space during high/low/settled ground travel");
             p.advance(4'166'666);require(p.tick==0,"Space retained fractional debt");
         }
     }
-    require(high>1&&low<1&&high>low*3,"high chopper not clearly distinct; do not tune by ey");
+    require(high[0]>1&&low[0]<1&&high[0]>low[0]*3&&high[1]>low[1]*3,"high chopper not clearly distinct; do not tune by ey");
     p.reset();
 }
 int main(int argc,char** argv){try {

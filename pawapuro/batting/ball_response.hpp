@@ -49,31 +49,36 @@ inline std::optional<BallResponse> ball_response(const TimingInteraction& timing
 }
 // Immutable analytic path on the preview world clock; ground_s always means FIRST hit.
 struct BattedBallFlight {
-    BallState initial;
-    double start_s,ground_s,second_ground_s,stop_s;
+    BallState initial,first_ground{};
+    double start_s,ground_s,rebound_settle_s,horizontal_stop_s,stop_s;
     float ground_height_m;
-    BallState rebound{},roll{};
-    double roll_speed=0,roll_deceleration=0;
+    double first_rebound_vy=0,rebound_ratio=0,rebound_duration=0;
+    double ground_speed=0,ground_deceleration=0;
     explicit BattedBallFlight(const BallResponse& response,float radius,GroundBallResponseTuning tuning={})
         :initial{response.launch_position_m,response.launch_velocity_mps},start_s(response.contact_time_s),ground_height_m(radius) {
         const double g=-double(earth_gravity_mps2),vy=initial.velocity_mps.y,h=std::max(0.,double(initial.position_m.y)-radius);
         ground_s=start_s+(vy+std::sqrt(vy*vy+2*g*h))/g;
-        second_ground_s=stop_s=ground_s;
+        rebound_settle_s=horizontal_stop_s=stop_s=ground_s;
         if(vy>=0)return; // Accepted airborne-family first-ground hold stays identical.
-        rebound=sample_reference_pitch(initial,ground_s-start_s);
-        rebound.position_m.y=radius;
-        rebound.velocity_mps={rebound.velocity_mps.x*tuning.impact_horizontal_retention,
-            -rebound.velocity_mps.y*tuning.rebound_vertical_ratio,rebound.velocity_mps.z*tuning.impact_horizontal_retention};
-        second_ground_s=ground_s+2*double(rebound.velocity_mps.y)/g;
-        roll=sample_reference_pitch(rebound,second_ground_s-ground_s);
-        roll.position_m.y=radius;
-        roll.velocity_mps={roll.velocity_mps.x*tuning.impact_horizontal_retention,0,roll.velocity_mps.z*tuning.impact_horizontal_retention};
-        roll_speed=std::hypot(double(roll.velocity_mps.x),double(roll.velocity_mps.z));
-        roll_deceleration=tuning.roll_deceleration_mps2;
-        stop_s=second_ground_s+roll_speed/roll_deceleration;
+        first_ground=sample_reference_pitch(initial,ground_s-start_s);
+        first_ground.position_m.y=radius;
+        rebound_ratio=tuning.rebound_vertical_ratio;
+        first_rebound_vy=-double(first_ground.velocity_mps.y)*rebound_ratio;
+        first_ground.velocity_mps={first_ground.velocity_mps.x*tuning.first_impact_horizontal_retention,0,
+            first_ground.velocity_mps.z*tuning.first_impact_horizontal_retention};
+        rebound_duration=(2*first_rebound_vy/g)/(1-rebound_ratio);
+        rebound_settle_s=ground_s+rebound_duration;
+        ground_speed=std::hypot(double(first_ground.velocity_mps.x),double(first_ground.velocity_mps.z));
+        ground_deceleration=tuning.ground_horizontal_deceleration_mps2;
+        horizontal_stop_s=ground_s+ground_speed/ground_deceleration;
+        stop_s=std::max(rebound_settle_s,horizontal_stop_s);
     }
     double first_hit_s() const {return ground_s;}
     bool complete(double world_s) const {return world_s>=stop_s;}
+    double rebound_launch_speed(unsigned k) const {return first_rebound_vy*std::pow(rebound_ratio,k);}
+    double rebound_start_s(unsigned k) const {
+        return k==0?ground_s:rebound_settle_s-rebound_duration*std::pow(rebound_ratio,k);
+    }
     BallState sample(double world_s) const {
         if(initial.velocity_mps.y>=0) {
             auto result=sample_reference_pitch(initial,std::clamp(world_s,start_s,ground_s)-start_s);
@@ -81,18 +86,28 @@ struct BattedBallFlight {
             return result;
         }
         if(world_s<ground_s)return sample_reference_pitch(initial,std::max(world_s,start_s)-start_s);
-        if(world_s<second_ground_s)return sample_reference_pitch(rebound,world_s-ground_s);
-        auto result=roll;
-        const double t=std::clamp(world_s,second_ground_s,stop_s)-second_ground_s;
-        if(roll_speed>0) {
-            const double distance=roll_speed*t-.5*roll_deceleration*t*t;
-            result.position_m.x+=static_cast<float>(double(roll.velocity_mps.x)/roll_speed*distance);
-            result.position_m.z+=static_cast<float>(double(roll.velocity_mps.z)/roll_speed*distance);
-            const double factor=std::max(0.,roll_speed-roll_deceleration*t)/roll_speed;
-            result.velocity_mps.x=static_cast<float>(roll.velocity_mps.x*factor);
-            result.velocity_mps.z=static_cast<float>(roll.velocity_mps.z*factor);
+        auto result=first_ground;
+        const double t=std::clamp(world_s,ground_s,horizontal_stop_s)-ground_s;
+        if(ground_speed>0) {
+            const double distance=ground_speed*t-.5*ground_deceleration*t*t;
+            result.position_m.x+=static_cast<float>(double(first_ground.velocity_mps.x)/ground_speed*distance);
+            result.position_m.z+=static_cast<float>(double(first_ground.velocity_mps.z)/ground_speed*distance);
+            const double factor=world_s>=horizontal_stop_s?0:std::max(0.,ground_speed-ground_deceleration*t)/ground_speed;
+            result.velocity_mps.x=static_cast<float>(first_ground.velocity_mps.x*factor);
+            result.velocity_mps.z=static_cast<float>(first_ground.velocity_mps.z*factor);
         }
-        if(complete(world_s))result.velocity_mps={};
+        if(world_s<rebound_settle_s) {
+            // Invert the geometric remaining-duration series; no height/tick cutoff.
+            auto k=static_cast<unsigned>(std::max(0.,std::floor(std::log((rebound_settle_s-world_s)/rebound_duration)/std::log(rebound_ratio))));
+            // Correct log rounding against the same representable boundaries used by callers.
+            // Exact boundaries belong to the outgoing (next) arc.
+            while(k>0&&world_s<rebound_start_s(k))--k;
+            while(world_s>=rebound_start_s(k+1))++k;
+            const double local=world_s-rebound_start_s(k),u=rebound_launch_speed(k),g=-double(earth_gravity_mps2);
+            // Roundoff protection for position only, never a bounce termination criterion.
+            result.position_m.y+=static_cast<float>(std::max(0.,u*local-.5*g*local*local));
+            result.velocity_mps.y=static_cast<float>(u-g*local);
+        }
         return result;
     }
 };
