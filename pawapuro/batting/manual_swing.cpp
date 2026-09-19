@@ -67,9 +67,9 @@ void ManualSwingPreview::dispatch_gameplay_contact() {
     a.gameplay=GameplayResult::Contact;a.gameplay_dispatch_tick=tick;
     flight.emplace(*a.response,tuning.bat_contact.ball_radius_m);pending.reset();armed=false;
     const auto& r=*a.response;const auto& auth=a.authorization;
-    std::fprintf(stderr,"GameplayContact attempt=%zu commit=%llu dispatch_tick=%llu efficiency=%.9f offset_ms=%+.9f ex=%.9g ey=%.9g q=%.9g spatial=%.9g energy=%.9g Power=%d Trajectory=%d effective_s=%.12f speed_mps=%.9g speed_kmh=%.9g launch_deg=%.9g spray_deg=%.9g origin=(%.9g,%.9g,%.9g) ground_s=%.12f RawOverlap=%s (diagnostic only)\n",
+    std::fprintf(stderr,"GameplayContact attempt=%zu commit=%llu dispatch_tick=%llu efficiency=%.9f offset_ms=%+.9f ex=%.9g ey=%.9g q=%.9g spatial=%.9g energy=%.9g Power=%d Trajectory=%d effective_s=%.12f speed_mps=%.9g speed_kmh=%.9g longitudinal_deg=%.9g spray_deg=%.9g origin=(%.9g,%.9g,%.9g) ground_s=%.12f RawOverlap=%s (diagnostic only)\n",
         *active_attempt+1,a.command.consumed_tick,tick,a.timing.efficiency,a.timing.offset_ms,auth.normalized_error.x,auth.normalized_error.y,auth.q,
-        r.spatial_transfer,r.energy_transfer,tuning.batter_profile.power,tuning.batter_profile.trajectory,r.contact_time_s,r.exit_speed_mps,r.exit_speed_mps*3.6f,r.launch_angle_deg,r.spray_angle_deg,
+        r.spatial_transfer,r.energy_transfer,tuning.batter_profile.power,tuning.batter_profile.trajectory,r.contact_time_s,r.exit_speed_mps,r.exit_speed_mps*3.6f,r.longitudinal_angle_deg,r.spray_angle_deg,
         r.launch_position_m.x,r.launch_position_m.y,r.launch_position_m.z,flight->ground_s,contact_state());
 }
 ManualSwingPreview::ManualSwingPreview(const std::filesystem::path& d,const BattingStaging& s)

@@ -66,8 +66,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 const auto& fields = *node->as_table();
                 const std::string prefix = std::string(section) + ".";
                 if (prefix == "ball_response.") only_keys(fields, {"ideal_exit_speed_min_mps", "ideal_exit_speed_max_mps",
-                    "spatial_edge_transfer", "minimum_exit_speed_factor", "trajectory_launch_degrees",
-                    "vertical_aim_bias_degrees", "max_spray_degrees", "full_spray_offset_ms"}, prefix);
+                    "spatial_edge_transfer", "minimum_exit_speed_factor", "vertical_contact_longitudinal_degrees",
+                    "max_spray_degrees", "full_spray_offset_ms"}, prefix);
                 if (prefix == "batter_profile.") only_keys(fields, {"display_name", "contact", "power", "trajectory"}, prefix);
                 if (prefix == "swing_tempo.") only_keys(fields, {"compact_area_ticks", "normal_finish_ticks"}, prefix);
                 if (prefix == "window.") only_keys(fields, {"width_fraction"}, prefix);
@@ -181,13 +181,12 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
             throw std::runtime_error("ball_response requires min exit speed <= max exit speed.");
         response.spatial_edge_transfer=number(table,"ball_response.spatial_edge_transfer",response.spatial_edge_transfer,0,1);
         response.minimum_exit_speed_factor=number(table,"ball_response.minimum_exit_speed_factor",response.minimum_exit_speed_factor,0,1);
-        response.vertical_aim_bias_degrees=number(table,"ball_response.vertical_aim_bias_degrees",response.vertical_aim_bias_degrees,0,90);
         response.max_spray_degrees=number(table,"ball_response.max_spray_degrees",response.max_spray_degrees,0,80);
         response.full_spray_offset_ms=number(table,"ball_response.full_spray_offset_ms",response.full_spray_offset_ms,1,500);
-        if(const auto node=table.at_path("ball_response.trajectory_launch_degrees")) {
+        if(const auto node=table.at_path("ball_response.vertical_contact_longitudinal_degrees")) {
             const auto* values=node.as_array();
-            if(!values||values->size()!=4)throw std::runtime_error("ball_response.trajectory_launch_degrees must contain exactly four numbers.");
-            for(std::size_t i=0;i<4;++i)response.trajectory_launch_degrees[i]=checked_number(*values->get(i),"ball_response.trajectory_launch_degrees",-15,50);
+            if(!values||values->size()!=7)throw std::runtime_error("ball_response.vertical_contact_longitudinal_degrees must contain exactly seven numbers.");
+            for(std::size_t i=0;i<7;++i)response.vertical_contact_longitudinal_degrees[i]=checked_number(*values->get(i),"ball_response.vertical_contact_longitudinal_degrees",-180,180);
         }
         std::fprintf(stderr, "Staging loaded: %s | owner: pawapuro/batting/staging.cpp | right_handed_pitcher_vs_left_handed_batter\n",
             source.c_str());

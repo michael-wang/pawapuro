@@ -532,3 +532,35 @@ ey/contact geometry先決定ground／airborne、line-drive neighborhood、極端
 Foul／dead／catchable只是本輪方向與family語言：沒有foul/fair、死球、catcher／fielding、接殺、strike count；ground反彈、rolling、friction也未實作。Exact intermediate numeric mapping與所有future response設計仍待Michael＋Julia review。
 
 驗證：agent核對clean HEAD／origin/main為942bd47c38dd8dd2e34f977ff9b85cb59cdb334c，pull --ff-only與提交前fetch均無後續accepted work。完整Debug／Release build及CTest通過：Debug **22/22（245.51 s）**，Release **22/22（17.97 s）**。兩組態CSV SHA-256皆為`7BC5C6F8DD67DB1CE31E780B2753291F62F44BE8AE044C8DB913F76AB1683FC6`；logs保存在同一study build目錄。Git diff僅test與本文件，production BallResponse／struct／tuning Data／presentation／gameplay完全未改，因此依scope未執行新visual smoke或製作screenshots。停止等待Michael＋Julia review，不進入replacement implementation。
+
+## Vertical Contact Direction S0（2026-09-19）
+
+Vertical Contact Topology Study S0 已接受為本輪 implementation 基礎。移除舊 `Trajectory baseline + vertical_aim_bias * ey`；`BallResponse.longitudinal_angle_deg` 取代舊 launch-angle 欄位，title／dispatch log 同步使用 longitudinal 名稱，沒有雙份angle或migration layer。
+
+`vertical_contact_longitudinal_angle` 是固定七個 Native ey anchors 的逐段線性插值，input defensively clamp至[−1,1]。`[ball_response].vertical_contact_longitudinal_degrees` 為唯一七個角度Data；loader要求恰七個finite numbers、各在[−180,180]，拒絕舊key、未知key、錯誤型別／長度／NaN／Inf／超界，不clamp authored值，也不把候選單調性強制為永久baseball規則。
+
+| ey | longitudinal angle（度） |
+|---|---:|
+| −1 | −150 |
+| −.75 | −35 |
+| −.5 | −15 |
+| 0 | 0 |
+| +.5 | +25 |
+| +.75 | +45 |
+| +1 | +130 |
+
+角度是在world Y–Z平面由+Z測量：0前平、+90上、±180後平、−90下；+130後上、−150後下。令theta為此角、phi為既有timing spray，unit direction為`(abs(cos(theta))*sin(phi), sin(theta), cos(theta)*cos(phi))`。平方和仍為cos²(theta)×(sin²(phi)+cos²(phi))+sin²(theta)=1；X正負由timing維持，Z正負由vertical contact決定，不加is_backward。ey符號沿用pitch−aim／ry：負為球上半部接觸、正為下半部。
+
+候選插值ey−.9約−104°，已後下；+.9約+96°，已後上，無額外special case。line-drive neighborhood ey−.1／0／+.1為−3／0／+5°；human-found ey≈−.412 named regression為−12.36°、vy<0且vz>0，取代舊約+10.112°。Intermediate anchors仍為playtest候選，等待Michael判斷手感。
+
+Trajectory 1／2／3／4在本S0**刻意暫時中性**：profile validation、card與儲存保留，但不影響response方向或速度。Human acceptance後的預定方向是僅對已forward-airborne的ey base response施加multiplicative modulation；倍率／作用threshold未定，本輪未實作。Spatial／Temporal／Energy transfer、Power speed、q、effective contact time、origin、Contact scaling與raw geometry完全保持原計算；timing spray及35°／65 ms Data不變。
+
+BattedBallFlight仍gravity-only analytic、first descending ground crossing後hold，沒有bounce／rolling。ey−.75只代表steep downward，尚不能演出high-chopper的高反彈；極頂後下也只到第一次接地停止。Backward僅指vz<0，沒有foul/fair、dead-ball、strike count、catcher／catch／out或backstop規則，沒有camera調整；後方球可能很快離開現有視野。
+
+Regression覆蓋七anchors／midpoints／clamp、line-drive band、±.9轉向、−.412 bug、等|ey|速度一致、early／center／late的X及Z責任、unit velocity（沿用1e−5 numerical tolerance）、Power方向獨立與暫時Trajectory中性。檢查原quality／speed計算與effective time／origin精確一致；加入ey≈+.95 backward flight的30／60／120 Hz及backlog逐tick一致回放。既有multi-swing、Contact、result hold、live aim及Data validation均保留；中心變平飛而較早落地，airborne follow-through測試從tick600改至確仍空中的tick520，未改completion規則或放寬容差。
+
+既有study直接呼叫production函式，更新輸出longitudinal與Up／Down／Flat欄；ignored `build/vertical-contact-direction-s0/current-response-table.csv`保存Michael75／85／3、commit448結果。ey−1的(vy,vz)約(−14.94251,−25.87963)，+1約(+22.89325,−19.20856) m/s；兩者speed皆29.88501549，中央speed44.33088303不變。精確anchors使用pitch-relative XY避免world float cancellation影響q=1，並未改authorization邊界。
+
+Release實機已取得中央Contact：actual consumed tick444，未移aim時title normalized ey顯示0.0000、longitudinal +0.000°、speed41.121 m/s、spray+9.603°，paused tick495可見向前飛球與retained baseball／live reticle。`build/vertical-contact-direction-s0/center-contact.png`與同名JSON是真實app擷取，不是offline render。嘗試偏心操作時computer-use偵測到使用者輸入／前景切換，停止進一步搶焦點；本輪沒有可靠取得ground／fly／backward偏心實機圖，依授權以Native table／backward replay提供精確anchors證據，未從pixels推算ey。人工review可R置中後將live aim y調到約.84（ey≈−.5）、.71（ey≈+.5）、.8985（ey≈−.95）或.6515（ey≈+.95），以dispatch log實際ey為準；Space後約1.87秒J，極端球可能迅速離開camera，本輪不解決camera可視性。
+
+驗證：agent核對HEAD／origin/main與pull --ff-only、提交前fetch均為542d496fc93b8181ae10923ba23511b7219508be，無後續accepted work。完整Debug／Release build通過，完整CTest **Debug22/22（238.77 s）、Release22/22（22.81 s）**。首次編譯因新增test區域變數ideal遮蔽既有名稱而觸發C4456／WX，已改名，未關warning或放寬容差。兩組態response CSV逐byte一致；build／CTest與initial compile logs在同一evidence目錄。沒有Trajectory multiplier、bounce／rolling／spin／drag、foul logic、spray tuning、timing UI、panel cleanup、step controls或animation變更。停止等待Michael＋Julia review。

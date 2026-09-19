@@ -195,7 +195,7 @@ int main(int argc, char** argv)
             char temporal[640];preview.timing_diagnostic(temporal,sizeof(temporal));
             char response[180]="No launch";
             if(preview.flight){const auto& r=*preview.latest()->response;
-                std::snprintf(response,sizeof(response),"speed=%.3fm/s launch=%+.3fdeg spray=%+.3fdeg effective=%.9fs %s",r.exit_speed_mps,r.launch_angle_deg,r.spray_angle_deg,r.contact_time_s,
+                std::snprintf(response,sizeof(response),"speed=%.3fm/s longitudinal=%+.3fdeg spray=%+.3fdeg effective=%.9fs %s",r.exit_speed_mps,r.longitudinal_angle_deg,r.spray_angle_deg,r.contact_time_s,
                     preview.flight->complete(double(preview.tick)/pawapuro::pitch_hz)?"GroundHold":"BattedFlight");}
             char title[2048];
             const auto ball=preview.displayed_ball_center();
