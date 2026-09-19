@@ -242,15 +242,19 @@ int main(int argc,char** argv){try{
  const auto check_cue=[&]{
   const auto phase=p.delivery.pitch.phase;
   const bool visible=batting_practice_pitch_marker_visible(p);
+  const auto marker=batting_practice_pitch_marker_state(p);
+  require(marker==(phase==PitchPhase::Ready?PitchMarkerVisualState::Hidden:phase==PitchPhase::InFlight?PitchMarkerVisualState::Current:PitchMarkerVisualState::Previous),"marker role differs from pitch");
+  const auto diagnostic_position=p.delivery.pitch.current.position_m,diagnostic_velocity=p.delivery.pitch.current.velocity_mps;
+  require(batting_practice_world_ball_visible(p)==(p.flight.has_value()||phase!=PitchPhase::Complete),"world ball presentation lifecycle");
   require(visible==(phase!=PitchPhase::Ready),"cue lifecycle changed");
   for(auto style:{ArrivalCueStyle::Baseball,ArrivalCueStyle::Ring}) {
-   cue.clear();append_arrival_cue(cue,scene,visible,style);
+   cue.clear();append_arrival_cue(cue,scene,marker,style);
    require(cue.size()==arrival_cue_vertex_count&&cue.data()==cue_storage&&cue.capacity()==cue_capacity,"cue count/allocation changed");
-   if(visible){const auto& expected=style==ArrivalCueStyle::Baseball?scene.arrival_baseball:scene.arrival_ring;
+   if(visible){const auto& expected=marker==PitchMarkerVisualState::Previous?(style==ArrivalCueStyle::Baseball?scene.previous_baseball:scene.previous_ring):(style==ArrivalCueStyle::Baseball?scene.arrival_baseball:scene.arrival_ring);
     require(std::memcmp(cue.data(),expected.data(),cue.size()*sizeof(engine::Vertex))==0,"persisted cue moved/restyled");
    }else for(const auto& v:cue)require(same(v.position,{}),"hidden cue remained visible");
   }
-  require(p.delivery.pitch.phase==phase,"presentation changed pitch phase");
+  require(p.delivery.pitch.phase==phase&&same(diagnostic_position,p.delivery.pitch.current.position_m)&&same(diagnostic_velocity,p.delivery.pitch.current.velocity_mps),"presentation changed pitch truth");
  };
  const auto* storage=review.data();const auto capacity=review.capacity();
  const auto render_review=[&]{review.clear();append_contact_review(review,live);

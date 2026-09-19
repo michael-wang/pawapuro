@@ -638,3 +638,21 @@ Regression 延伸既有 BallResponse／live-aim integration：Ready／tick383 �
 Release 實機證據在 ignored `build/previous-pitch-marker-s1/`：`contact.png/.json` 使用 `--batting-fixture 448 0 0`；`spatial-miss.png/.json` 使用 `--batting-fixture 448 0.6 1`；`timing-miss.png/.json` 使用 `--batting-fixture 80 0 0`。三者 Complete tick816 皆 Filled Baseball Visible。沒有 Michael 瞄準或 J timing。Space replay 的 `space-reset-title.json` 直接觀測新球 tick2、swings0、owner Hand、No launch、ArrivalCue Hidden；capture image 較晚已顯示後續幀，故沒有把該圖當作 Ready 證據。Ready 隱藏的精確時點另由 Native regression 驗證；NoSwing 也只用正常 start／不排 command 的 Native path，不新增 CLI。
 
 驗證：full Debug／Release build 成功；full CTest Debug **23/23（246.81 s）**、Release **23/23（18.39 s）**，未修改容差。開始 pull 與提交前 fetch 均確認 HEAD／origin/main=df8b9cb3fe029b21818eeaa922500edc1e898d2e，沒有後續 accepted work。Production diff 僅 practice visibility policy 與 main 的 helper 名稱；既有 simulation、fixture、renderer 與 Data 未變。
+
+## Batting Ball Presentation Coherence S1（2026-09-20）
+
+Previous Pitch Marker lifecycle 已接受，human review 指出 Miss 後兩顆球令人混淆：marker 是 evaluation-plane arrival，舊 incoming display 卻保留較晚的 post-plane slab-exit 點。本輪只整理 presentation。沒有 outgoing BattedBallFlight 時，incoming pitch 進入 Complete 就不再畫 live world ball，視覺上視為過平面後交給畫面外捕手；不模擬捕手。Miss／NoSwing 結果只保留 Previous marker 作為空間參考。Contact 則刻意共存固定 Previous marker 與仍照原 flight 運動的 live outgoing ball。
+
+World baseball 保留 gameplay radius 與 faceted sphere，body 改為 baseball-white，加入 camera-facing static red seams（288 vertices，radial offset 為 radius×0.003）；body768＋seams288 都在同一 translated static range。沒有 spin／rotation／seam physics。Marker 三個 local visual roles 為 Hidden=Ready、Current=InFlight、Previous=Complete；Current 原亮色不變，Previous 使用 startup-cached muted opaque RGB：body(.56,.57,.52)、seams(.48,.29,.30)、Ring(.57,.44,.34)。這些是 human-review 色彩候選，不是 alpha。Current／Previous contour與evaluation-plane位置完全相同，均636 vertices，Hidden為相同數量degenerate triangles，沒有per-frame allocation。
+
+Engine 只增加 `D3D12View::draw` 的 `translated_range_visible` bool（default true），決定是否發出既有 translated range draw call；不改 upload／fence／pipeline／座標。Pawapuro policy 為 `flight存在 || incoming phase不是Complete`。Visible pre-plane incoming 仍使用既有 analytic sample，過平面後不再延伸／固定在 slab exit；隱藏球的 displayed diagnostic position 回到既有 delivery.ball_center，沒有假座標。Pitch simulation、immutable raw contact trajectory、authorization、response、flight與BallAid safety不變。
+
+未來可能採 `PitchRequest／intended target + Pitcher Control／RNG sample → immutable per-pitch sampled PitchInstance → deterministic flight`。這只是邊界說明，尚無 RNG、seed、Control 或 PitchInstance 實作。Fixture 持續從**目前 production pitch instance**取得pitch point並反推aim，不依賴全域硬編碼座標，因此可沿用到未來逐球取樣。若軌跡可在建立／release之後改動，Previous marker則必須改用 actual arrival_at_plane snapshot，不能繼續假設startup prediction等於actual；本輪不新增動態重建或第二份位置狀態。
+
+沒有 alpha/blending、spin、catcher simulation、randomness、BallResponse／vertical／Trajectory／spray tuning、10-tick step、timing UI 或 panel cleanup。
+
+驗證延伸既有 scene／BallResponse／timing tests：gameplay-radius body、有限且貼近球面的紅色 seam、translated range共1056 vertices；Current／Previous contour精確相同、muted colors、636固定數量／stable capacity；Contact／Miss／NoSwing與Space的world-ball visibility；live aim不改marker或immutable history／flight；prediction／actual equality保留。舊「停在slab exit」測試刻意改為「pre-plane analytic、hidden state等於原delivery diagnostic」，沒有改raw solver或放寬容差。
+
+實機使用 `--batting-fixture 448 0 0`、`448 0.6 1`、`80 0 0`，證據在ignored `build/ball-presentation-coherence-s1/` 的 `contact.png/.json`、`spatial-miss.png/.json`、`timing-miss.png/.json`及各自log。兩種Miss的Complete畫面都只留下muted marker，沒有第二顆incoming world ball；Contact仍有原BattedFlight／ground hold，球在遠處，截圖不適合辨識細縫線，精確appearance/range由Native geometry驗證。`space-reset.json`實際觀測tick2、marker Hidden、owner Hand與新球正常位置；不將非同步截圖誤稱為精確tick2畫面。沒有要求Michael提供瞄準、J或其他輸入。
+
+Full Debug／Release build 成功；修正舊 post-plane display fixture 後，full CTest Debug **23/23（247.14 s）**、Release **23/23（17.91 s）**。Raw contact、response、flight、multi-swing及fixture regressions保持原tolerances。開始pull與提交前fetch皆確認HEAD／origin/main=7fb7bb55415c2c332349453baa1e50eca35d39d2，沒有後續accepted work。

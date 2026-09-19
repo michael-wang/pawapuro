@@ -197,7 +197,8 @@ int main(int argc, char** argv)
             if(!fixture)preview.input_boundary(swing_held,swing_edge,eligible,ac);
             const auto ad=aim.diagnostic(prediction.state.position_m);
             const auto ball_phase=preview.flight?(preview.flight->complete(double(preview.tick)/pawapuro::pitch_hz)?pawapuro::PitchPhase::Complete:pawapuro::PitchPhase::InFlight):delivery.pitch.phase;
-            const bool cue_visible=pawapuro::batting_practice_pitch_marker_visible(preview);
+            const auto marker_state=pawapuro::batting_practice_pitch_marker_state(preview);
+            const bool cue_visible=marker_state!=pawapuro::PitchMarkerVisualState::Hidden;
             char aim_error[160]="Hidden";
             if (cue_visible) std::snprintf(aim_error,sizeof(aim_error),"error=(%.4f,%.4f) normalized=(%.4f,%.4f) q=%.4f",ad.dx,ad.dy,ad.ex,ad.ey,ad.q);
             char temporal[640];preview.timing_diagnostic(temporal,sizeof(temporal));
@@ -225,10 +226,10 @@ int main(int argc, char** argv)
             }
             char title[2300];
             const auto ball=preview.displayed_ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | %sBallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Gameplay:%s RawOverlap:%s | %s | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+            std::snprintf(title,sizeof(title),"Pawapuro | %sBallAid:%s (B) | PitchMarker:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Gameplay:%s RawOverlap:%s | %s | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
                 "ball=(%.6f,%.6f,%.6f)  | backlog=%llu | Space:start/next-after-contact J:swing P:pause .:step Esc:quit Arrows:aim R:center",
                 fixture_status,ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
-                cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed()?preview.committed()->consumed_tick:0,preview.attempts.size(),preview.active_attempt?*preview.active_attempt+1:0,preview.rearmed()?"YES":"NO",preview.gameplay_state(),preview.contact_state(),response,temporal,
+                marker_state==pawapuro::PitchMarkerVisualState::Previous?"Previous":cue_visible?"Current":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed()?preview.committed()->consumed_tick:0,preview.attempts.size(),preview.active_attempt?*preview.active_attempt+1:0,preview.rearmed()?"YES":"NO",preview.gameplay_state(),preview.contact_state(),response,temporal,
                 ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,preview.flight?"BattedFlight":delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);
             if (last_title != title) {
@@ -240,7 +241,7 @@ int main(int argc, char** argv)
             dynamic_characters.insert(dynamic_characters.end(),motion.triangles.begin(),motion.triangles.end());
             dynamic_characters.insert(dynamic_characters.end(),batter.triangles.begin(),batter.triangles.end());
             pawapuro::append_contact_review(dynamic_characters,aim);
-            pawapuro::append_arrival_cue(dynamic_characters,scene,cue_visible,arrival_style);
+            pawapuro::append_arrival_cue(dynamic_characters,scene,marker_state,arrival_style);
             pawapuro::append_ball_readability(dynamic_characters,staging,ball,ball_phase,ball_readability,
                 static_cast<unsigned>(width),static_cast<unsigned>(height));
             result_panel.append(dynamic_characters,preview);
@@ -250,7 +251,8 @@ int main(int argc, char** argv)
             view.draw(pawapuro::batting_view_projection(staging, static_cast<float>(width) / static_cast<float>(height)),
                 preview.displayed_ball_translation(),dynamic_characters,pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count+batter_card.vertex_count(),
                 arrival_style==pawapuro::ArrivalCueStyle::Baseball ? static_cast<UINT>(pawapuro::contact_review_vertex_count) : 0,
-                arrival_style==pawapuro::ArrivalCueStyle::Baseball ? pawapuro::arrival_cue_vertex_count : 0);
+                arrival_style==pawapuro::ArrivalCueStyle::Baseball ? pawapuro::arrival_cue_vertex_count : 0,
+                pawapuro::batting_practice_world_ball_visible(preview));
         }
         if (motion.samples) std::fprintf(stderr,"CPU motion: samples=%llu pose_mean_us=%.3f skin_expand_basis_mean_us=%.3f\n",
             motion.samples,motion.pose_us/static_cast<double>(motion.samples),motion.skin_us/static_cast<double>(motion.samples));

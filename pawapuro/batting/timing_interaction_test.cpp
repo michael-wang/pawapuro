@@ -87,11 +87,11 @@ int main(int argc,char** argv){try {
     require(p.tick==466&&p.pending_ticks==20,"cutoff debt fixture");
     p.input_boundary(false,false,true,aim);p.input_boundary(true,true,true,aim);
     require(!p.pending&&!p.committed(),"backlogged post-exit target accepted");
-    // Display shares the exact analytic contact trajectory throughout the slab, then freezes at its exit.
+    // Visible pre-plane display shares analytic contact truth; hidden incoming state remains diagnostic.
     p.reset();p.start();until(p,475);
     while(p.tick<483){p.advance(4'166'667);const double time=double(p.tick)/240;
-        if(time>=ball.enter_s)require(same(p.displayed_ball_center(),sample_reference_pitch(p.delivery.pitch.initial,std::min(time,ball.exit_s)-release).position_m),"visible ball differs from slab geometry");}
-    const auto frozen=p.displayed_ball_center();until(p,600);require(same(frozen,p.displayed_ball_center()),"display did not stop at slab exit");
-    require(std::abs(frozen.z-(s.strike_zone_plane_z()-s.batting_interaction.half_depth_m))<1e-6,"wrong display freeze plane");
+        if(p.delivery.pitch.phase==PitchPhase::InFlight&&time>=ball.enter_s)require(same(p.displayed_ball_center(),sample_reference_pitch(p.delivery.pitch.initial,time-release).position_m),"visible pre-plane ball differs from geometry");}
+    const auto frozen=p.displayed_ball_center();until(p,600);require(same(frozen,p.displayed_ball_center()),"hidden incoming diagnostic position changed");
+    require(same(frozen,p.delivery.ball_center()),"hidden display fabricated diagnostic position");
     std::cout<<"PASS timing interaction, early/late input, whole attempt lifetime, bounded query and visible analytic slab\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

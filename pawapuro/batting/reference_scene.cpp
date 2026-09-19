@@ -52,13 +52,15 @@ void append_ball_readability(std::vector<engine::Vertex>& vertices, const Battin
 }
 
 void append_arrival_cue(std::vector<engine::Vertex>& vertices, const BattingReference& scene,
-    bool visible, ArrivalCueStyle style)
+    PitchMarkerVisualState state, ArrivalCueStyle style)
 {
-    if (!visible) {
+    if (state==PitchMarkerVisualState::Hidden) {
         vertices.resize(vertices.size()+arrival_cue_vertex_count);
         return;
     }
-    const auto& cue=style==ArrivalCueStyle::Baseball ? scene.arrival_baseball : scene.arrival_ring;
+    const auto& cue=state==PitchMarkerVisualState::Previous
+        ? (style==ArrivalCueStyle::Baseball?scene.previous_baseball:scene.previous_ring)
+        : (style==ArrivalCueStyle::Baseball?scene.arrival_baseball:scene.arrival_ring);
     vertices.insert(vertices.end(),cue.begin(),cue.end());
 }
 
@@ -178,11 +180,22 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
             release.y + staging.gameplay_ball.radius_m * std::cos(a), release.z + staging.gameplay_ball.radius_m * std::sin(a) * std::sin(b)};
     };
     for (int lat = 0; lat < 8; ++lat) {
-        const float shade = 0.65f + 0.35f * (1 - static_cast<float>(lat) / 8);
+        const float shade = 0.90f + 0.10f * (1 - static_cast<float>(lat) / 8);
         for (int lon = 0; lon < 16; ++lon) {
             quad(ball_point(lat, lon), ball_point(lat + 1, lon), ball_point(lat + 1, lon + 1),
-                ball_point(lat, lon + 1), {shade, shade, shade * 0.92f});
+                ball_point(lat, lon + 1), {shade*.96f, shade*.95f, shade*.87f});
         }
+    }
+    // Static seams on the camera-facing hemisphere; no orientation/spin state.
+    // Slightly raised above the faceted body, within this same translated range.
+    const auto seam_point=[&](float x,float y) -> XMFLOAT3 {
+        const float radius=staging.gameplay_ball.radius_m*1.003f;
+        return {release.x+radius*x,release.y+radius*y,release.z-radius*std::sqrt(1-x*x-y*y)};
+    };
+    for(float side:{-1.f,1.f})for(int i=0;i<24;++i) {
+        const float a=-.78f+1.56f*float(i)/24,b=-.78f+1.56f*float(i+1)/24;
+        const float ax=side*(.4f+.32f*a*a),bx=side*(.4f+.32f*b*b),half=.025f;
+        quad(seam_point(ax-half,a),seam_point(bx-half,b),seam_point(bx+half,b),seam_point(ax+half,a),{.95f,.12f,.16f});
     }
     // Project the one gameplay zone, then flatten its bounds into an axis-aligned overlay.
     scene.overlay_vertex_start = static_cast<unsigned>(vertices.size());
@@ -262,6 +275,11 @@ BattingReference make_batting_reference(const BattingStaging& staging, XMFLOAT3 
         }
     }
     scene.arrival_ring.resize(arrival_cue_vertex_count);
+    scene.previous_baseball=scene.arrival_baseball;
+    scene.previous_ring=scene.arrival_ring;
+    for(auto& v:scene.previous_baseball)
+        v.color=v.color.y<.5f?XMFLOAT3{.48f,.29f,.30f}:XMFLOAT3{.56f,.57f,.52f};
+    for(auto& v:scene.previous_ring)v.color={.57f,.44f,.34f};
     return scene;
 }
 

@@ -76,9 +76,26 @@ int main(int argc, char** argv)
             const auto position=predict_arrival(fixture()).state.position_m;
             constexpr float aspect=16.f/9;
             const auto scene=make_batting_reference(s,position,aspect,{});
+            unsigned body_count=0,seam_count=0;
             for(unsigned i=scene.ball_vertex_start;i<scene.overlay_vertex_start;++i) {
                 const auto p=scene.vertices[i].position;
-                require(std::abs(std::hypot(p.x-s.release_position_m.x,p.y-s.release_position_m.y,p.z-s.release_position_m.z)-radius)<1e-6f,"world baseball radius differs from gameplay Data");
+                const auto color=scene.vertices[i].color;
+                const bool seam=color.y==.12f;
+                if(seam){++seam_count;require(color.x==.95f&&color.z==.16f,"world seam red");}
+                else {++body_count;require(color.x>=.864f&&color.y>=.855f&&color.z>=.783f,"world body not baseball-white");}
+                require(std::isfinite(p.x)&&std::isfinite(p.y)&&std::isfinite(p.z),"nonfinite seam/body");
+                require(std::abs(std::hypot(p.x-s.release_position_m.x,p.y-s.release_position_m.y,p.z-s.release_position_m.z)-radius*(seam?1.003f:1.f))<1e-6f,"world body/seam radius differs from Data/offset");
+            }
+            require(body_count==8*16*6&&seam_count==2*24*6,"translated baseball range missing body/seams");
+            for(auto style:{ArrivalCueStyle::Baseball,ArrivalCueStyle::Ring}) {
+                const auto& current=style==ArrivalCueStyle::Baseball?scene.arrival_baseball:scene.arrival_ring;
+                const auto& previous=style==ArrivalCueStyle::Baseball?scene.previous_baseball:scene.previous_ring;
+                require(current.size()==636&&previous.size()==636,"ghost geometry count");
+                for(std::size_t i=0;i<current.size();++i) {
+                    require(current[i].position.x==previous[i].position.x&&current[i].position.y==previous[i].position.y&&current[i].position.z==previous[i].position.z,"ghost changed contour/point");
+                    const auto c=previous[i].color;
+                    require(c.x<.6f&&c.y<.6f&&c.z<.6f&&c.x!=current[i].color.x,"ghost not muted");
+                }
             }
             const auto forward=DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&s.camera_target_m),DirectX::XMLoadFloat3(&s.camera_position_m));
             const auto right=DirectX::XMVector3Normalize(DirectX::XMVector3Cross(DirectX::XMVectorSet(0,1,0,0),forward));

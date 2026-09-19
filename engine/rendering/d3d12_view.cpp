@@ -238,7 +238,7 @@ void D3D12View::resize(UINT new_width, UINT new_height)
     std::fprintf(stderr, "Resized: %u x %u\n", width, height);
 }
 
-void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices, UINT dynamic_overlay_count, UINT late_world_count, UINT early_overlay_count)
+void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices, UINT dynamic_overlay_count, UINT late_world_count, UINT early_overlay_count, bool translated_range_visible)
 {
     // One frame in flight keeps this first slice's ownership explicit. The previous
     // frame's fence has completed before reusing the allocator, depth or constants.
@@ -298,7 +298,7 @@ void D3D12View::draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOA
     }
     // Root constants are captured per draw; the immutable GPU buffer is never rewritten.
     commands->SetGraphicsRoot32BitConstants(0, 4, offset, 16);
-    commands->DrawInstanced(overlay_vertex_start - translated_vertex_start, 1, translated_vertex_start, 0);
+    if(translated_range_visible)commands->DrawInstanced(overlay_vertex_start - translated_vertex_start, 1, translated_vertex_start, 0);
     if (late_world_count) {
         commands->SetGraphicsRoot32BitConstants(0,4,zero_offset,16);
         commands->IASetVertexBuffers(0,1,&dynamic_view);

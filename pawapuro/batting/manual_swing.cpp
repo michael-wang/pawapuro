@@ -75,7 +75,7 @@ void ManualSwingPreview::dispatch_gameplay_contact() {
 ManualSwingPreview::ManualSwingPreview(const std::filesystem::path& d,const BattingStaging& s)
     :tuning(s),delivery(d/"pitcher/pitcher.glb",d/"pitcher/pitcher.toml",s),batter(d/"batter/ingame_s0",s),
      ball_passage(batting_interaction_passage(delivery.pitch,double(delivery.motion.release_tick)/pitch_hz,s.batting_interaction)) {
-    std::fprintf(stderr,"Manual Swing S0: source=%s recipe=gate-b-world-residual-v1 mode=Normal live-attempt input; Raw physical overlap diagnostic; query=ball slab intersect swing potential; displayed ball continues through slab\n",batter.asset.sha256.c_str());
+    std::fprintf(stderr,"Manual Swing S0: source=%s recipe=gate-b-world-residual-v1 mode=Normal live-attempt input; Raw physical overlap diagnostic; query=ball slab intersect swing potential; incoming display analytic before plane; unhit world ball hidden after arrival\n",batter.asset.sha256.c_str());
 }
 void ManualSwingPreview::reset() {
     delivery.reset();batter.evaluate_tick(0,std::nullopt);tick=pending_ticks=fractional_credit=arrival_tick=0;
@@ -172,8 +172,8 @@ void ManualSwingPreview::timing_diagnostic(char* buffer,std::size_t size) const 
 DirectX::XMFLOAT3 ManualSwingPreview::displayed_ball_center() const {
     const double time=double(tick)/pitch_hz;
     if(flight)return flight->sample(time).position_m;
-    if(delivery.ball_owner==BallOwner::Simulation&&time>=ball_passage.enter_s)
-        return sample_reference_pitch(delivery.pitch.initial,std::min(time,ball_passage.exit_s)-double(delivery.motion.release_tick)/pitch_hz).position_m;
+    if(delivery.pitch.phase==PitchPhase::InFlight&&time>=ball_passage.enter_s)
+        return sample_reference_pitch(delivery.pitch.initial,time-double(delivery.motion.release_tick)/pitch_hz).position_m;
     return delivery.ball_center();
 }
 DirectX::XMFLOAT3 ManualSwingPreview::displayed_ball_translation() const {

@@ -27,7 +27,7 @@ struct D3D12View {
     // Optional early NDC prefix precedes the translated range and late world suffix.
     // The optional NDC suffix shares the upload/fence lifetime and existing overlay pipeline.
     void draw(const DirectX::XMFLOAT4X4& view_projection, DirectX::XMFLOAT3 translation, std::span<const Vertex> dynamic_vertices = {}, UINT dynamic_overlay_count = 0,
-        UINT late_world_count = 0, UINT early_overlay_count = 0);
+        UINT late_world_count = 0, UINT early_overlay_count = 0, bool translated_range_visible = true);
 
 private:
     void wait_for_gpu();
