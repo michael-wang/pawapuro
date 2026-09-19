@@ -12,6 +12,35 @@ void require(bool b,const char* m){if(!b)throw std::runtime_error(m);}
 bool close_enough(double a,double b,double e=1e-6){return std::abs(a-b)<=e;}
 bool same(DirectX::XMFLOAT3 a,DirectX::XMFLOAT3 b){return a.x==b.x&&a.y==b.y&&a.z==b.z;}
 void finish(ManualSwingPreview& p){while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);}
+// Diagnostic of today's model, not accepted future vertical-contact balance.
+std::string vertical_contact_study(const ManualSwingPreview& p) {
+ const auto& s=p.tuning;const auto& tuning=s.ball_response;const auto& timing=p.latest()->timing;
+ const auto region=normal_authorization_region(s);
+ require(p.latest()->command.consumed_tick==448&&s.batter_profile.trajectory==3,"study fixture changed");
+ std::ostringstream out;out<<std::setprecision(12);
+ out<<"# Current production diagnostic only; no future angle/family contract\n"
+    <<"# Michael Contact="<<s.batter_profile.contact<<" Power="<<s.batter_profile.power<<" Trajectory="<<s.batter_profile.trajectory
+    <<" commit=448 efficiency="<<timing.efficiency<<" offset_ms="<<timing.offset_ms<<'\n'
+    <<"# rx="<<region.normal_radius_x_m<<" ry="<<region.normal_radius_y_m<<" baseline_deg="<<tuning.trajectory_launch_degrees[2]
+    <<" vertical_bias_deg="<<tuning.vertical_aim_bias_degrees<<" max_spray_deg="<<tuning.max_spray_degrees<<" full_spray_offset_ms="<<tuning.full_spray_offset_ms<<'\n'
+    <<"# Authorization evaluated in pitch-relative XY coordinates to represent +/-ry exactly at q=1\n"
+    <<"requested_ey,ey,q,spatial_transfer,exit_speed_mps,launch_deg,spray_deg,vx_mps,vy_mps,vz_mps,longitudinal\n";
+ for(float ey:{-1.f,-.95f,-.90f,-.75f,-.50f,-.10f,0.f,.10f,.50f,.75f,.90f,.95f,1.f}) {
+  const DirectX::XMFLOAT2 aim{0,-ey*region.normal_radius_y_m};
+  const auto auth=authorize_normal_hit(aim,{0,0},region);
+  require(auth.authorized&&auth.error.y==-aim.y&&auth.normalized_error.x==0&&close_enough(auth.normalized_error.y,ey),"study signed ey semantics");
+  require((ey==0&&auth.error.y==0)||(ey<0&&aim.y>0&&auth.error.y<0)||(ey>0&&aim.y<0&&auth.error.y>0),"study upper/lower sign inverted");
+  const auto response=ball_response(timing,auth,s.batter_profile,tuning,p.delivery.pitch.initial,double(p.delivery.motion.release_tick)/240);
+  require(response.has_value(),"study authorized overlap did not launch");const auto& r=*response;
+  const float elevation=DirectX::XMConvertToRadians(r.launch_angle_deg),spray=DirectX::XMConvertToRadians(r.spray_angle_deg);
+  require(same(r.launch_velocity_mps,{r.exit_speed_mps*std::cos(elevation)*std::sin(spray),r.exit_speed_mps*std::sin(elevation),r.exit_speed_mps*std::cos(elevation)*std::cos(spray)}),"current velocity decomposition changed; revisit study");
+  // Report direction; never assert forward-only as a desired gameplay invariant.
+  const auto v=r.launch_velocity_mps;
+  out<<ey<<','<<auth.normalized_error.y<<','<<auth.q<<','<<r.spatial_transfer<<','<<r.exit_speed_mps<<','<<r.launch_angle_deg<<','<<r.spray_angle_deg<<','<<v.x<<','<<v.y<<','<<v.z<<','
+     <<(v.z>0?"Forward field (+Z)":v.z<0?"Back home/catcher (-Z)":"Zero longitudinal")<<'\n';
+ }
+ return out.str();
+}
 int main(int argc,char** argv){try{
  require(argc==3,"expected batting/fixture directories");const std::filesystem::path d=argv[1],temp=argv[2];
  const auto s=load_batting_staging(d/"staging.toml");
@@ -53,7 +82,15 @@ int main(int argc,char** argv){try{
  const auto up=run(448,0,.8f),down=run(448,0,-.8f);require(up.response&&down.response&&up.response->launch_angle_deg>peak.launch_angle_deg&&down.response->launch_angle_deg<peak.launch_angle_deg&&close_enough(up.response->exit_speed_mps,down.response->exit_speed_mps,1e-5),"vertical bias/q sign");
  std::cout<<"VERTICAL ey=+0.8 launch="<<up.response->launch_angle_deg<<" ey=0 launch="<<peak.launch_angle_deg<<" ey=-0.8 launch="<<down.response->launch_angle_deg<<" paired_speed="<<up.response->exit_speed_mps<<'\n';
  const auto left=run(448,.8f),right=run(448,-.8f);require(left.response->spray_angle_deg==right.response->spray_angle_deg&&close_enough(left.response->exit_speed_mps,right.response->exit_speed_mps),"ex steered spray");
- auto a=run(448);auto profile=s.batter_profile;profile.power=120;
+ auto a=run(448);
+ const auto study_tick=p.tick;const auto study_ball=p.displayed_ball_center();
+ std::vector<unsigned char> study_attempt(sizeof(SwingAttempt));std::memcpy(study_attempt.data(),p.latest(),study_attempt.size());
+ const auto table=vertical_contact_study(p);
+ require(table==vertical_contact_study(p),"vertical study not deterministic");
+ require(p.tick==study_tick&&same(study_ball,p.displayed_ball_center())&&std::memcmp(study_attempt.data(),p.latest(),study_attempt.size())==0,"study mutated production state");
+ std::filesystem::create_directories(temp);
+ {std::ofstream output(temp/"current-response-table.csv");output<<table;require(bool(output),"study artifact write failed");}
+ auto profile=s.batter_profile;profile.power=120;
  auto power=ball_response(a.timing,a.authorization,profile,s.ball_response,p.delivery.pitch.initial,1.6);
  require(power->exit_speed_mps>peak.exit_speed_mps&&power->launch_angle_deg==peak.launch_angle_deg&&power->spray_angle_deg==peak.spray_angle_deg,"Power independence");
  profile=s.batter_profile;profile.trajectory=4;auto trajectory=ball_response(a.timing,a.authorization,profile,s.ball_response,p.delivery.pitch.initial,1.6);

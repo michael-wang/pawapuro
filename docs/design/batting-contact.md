@@ -484,3 +484,51 @@ Native regression 使用80早揮→448第二次Contact、A=P−(.13,.065)，確�
 Release 實機已完成協作 smoke：computer-use 的12次Right短按未改變SDL held-key aim，改由Michael真正長按並回覆「已移動」，agent重新擷取app確認。448 Contact空中paused tick511，live aim由(0,.7750)改為(.1735,.7750)，reticle向右、原baseball不動，ball position及response title不變；恢復至tick603後飛球繼續。Space後新球paused tick11仍保留(.1735,.7750)，swings=0、No launch、cue Hidden；下一次未再移aim，實際consumed commit444再次Contact。其後在非paused flight中按R，aim回中央，tick507→615球繼續飛行，speed36.399／launch20／spray9.603保持原值。這是人工長按＋agent操作的實際Release app evidence，不宣稱自動長按成功；精確flight等值與command snapshot由Native regression證明，截圖不代替逐tick精度測試。
 
 證據皆在本機ignored build/live-aim-s1/：before-movement.png、after-movement.png、flight-continued.png、next-pitch-aim.png、next-command-contact.png、recenter-during-flight.png及同名title JSON。App正常退出；production code未於前述完整build／CTest之後更改。本輪完成提交後停止等待Michael＋Julia review。
+
+## Vertical Contact Topology Study S0（2026-09-19）
+
+**Post-contact Live Aim S1 已由 Michael human accepted。** 先前「打到球上半部仍變成飛球」現在確認是 response model／責任分配問題，不只是係數不足。本輪只做 current-code diagnostic 與設計研究，沒有替換公式或調參。
+
+### Signed ey 與 topology
+
+沿用 `error.y = pitch.y - aim.y`、`ey = error.y / ry`。ey<0 表示球低於瞄準中心，aim 在球上方，概念上接觸球的上半部；ey>0 相反，接觸下半部；ey=0 垂直置中。這是 normalized gameplay contact 語意，不宣稱等於 raw capsule 的球面接觸位置。
+
+| ey anchor | 人類期望 family | 現行 Trajectory3 output（本次診斷） | 表達是否足夠 | anchor 信心 |
+|---|---|---|---|---|
+| −1／−.95／−.90 | 極頂擦球，朝本壘／捕手，groundward foul；通常很快死球 | +Z，−4／−2.8／−1.6°，向前向下 | 不足：不能轉向後方；rolling／dead-ball 未建模 | topology 高；精確界線未定 |
+| −.75 | 內野 high chopper／高彈跳候選 | +Z，+2°，初速略向上 | 不足：尚無 bounce，不能把此角度稱作 high chopper | 暫定 |
+| −.50 | 普通 grounder 候選 | +Z，+8°，初速向上 | 可表達向下分量，但目前 family mapping 不符；ground response 未實作 | 暫定 |
+| −.10／0／+.10 | line-drive neighborhood | +Z，+17.6／20／22.4°，由 Trajectory baseline 抬升 | 可以表達 forward airborne，但由 Trajectory 決定 family 的責任不符；不以角度定義 line drive | topology 高；角度未定 |
+| +.50 | 普通 fly 候選 | +Z，+32° | 可以表達 forward airborne；數值尚不能認定正確 | 暫定 |
+| +.75 | 較高 fly 候選 | +Z，+38° | 可以表達 forward airborne；數值尚不能認定正確 | 暫定 |
+| +.90／+.95／+1 | 極底擦球，朝本壘／捕手的 airborne pop foul，可能可接殺 | +Z，+41.6／42.8／44°，仍向前 | 不足：不能轉向後方；catch／out 未建模 | topology 高；精確界線未定 |
+
+上表角度只報告既有程式結果，**不是新的 gameplay anchors 或 thresholds**。目標不是單調的「ey 越大，elevation 永遠越大」：兩端都需轉回本壘側，中間依序存在 high chopper／grounder／line drive／fly／high fly 的 family。極頂與極底的方向相同但垂直性質不同；這需要分開表達 longitudinal direction 與上下方向。
+
+### Current-code deterministic evidence
+
+既有 `ball_response_test` 直接呼叫未修改的 `authorize_normal_hit`／`ball_response`。使用 Michael Contact75／Power85／Trajectory3、ex=0、Compact commit448 的實際 TimingInteraction：efficiency=0.974447238051、offset=−1.16678376993 ms。掃描 ey=−1、−.95、−.90、−.75、−.50、−.10、0、+.10、+.50、+.75、+.90、+.95、+1。
+
+Authorization 的 XY 使用以 pitch point 為原點的相對座標 `(pitch=(0,0), aim=(0,−ey*ry))`，避免把 world .775 加減 .13 時的float cancellation誤當成q=1邊界外；不是改epsilon或覆寫決策。Current response只使用authorization normalized error／q，不使用其world point；timing、incoming pitch、release、profile和Data皆來自真正448 fixture。CSV同時列 requested ey 與實際float ey。
+
+測試輸出 `build/{debug,release}/response-test/current-response-table.csv`，交付副本在 ignored `build/vertical-contact-study-s0/current-response-table.csv`。每列包含ey、q、spatial transfer、speed、launch、spray、vx／vy／vz與longitudinal標記。13列全部為Forward field；spray皆+0.628268182278°。兩端speed約29.8850 m/s，中央44.3309 m/s；−1的(vy,vz)約(−2.08467,+29.81042)，+1約(+20.75988,+21.49619)。未提交generated evidence。
+
+測試檢查signed ey、目前velocity decomposition、同一次study重複產生完全相同table，並確認preview tick／displayed ball／整個SwingAttempt representation不變。未加入`vz>0`的assert，也未替暫定anchors增加expected gameplay angles；未來更換representation時應重看此診斷，而非維持forward-only缺陷。
+
+### 為何現行 representation 無法往後打
+
+目前velocity為 `vx=speed*cos(elevation)*sin(spray)`、`vy=speed*sin(elevation)`、`vz=speed*cos(elevation)*cos(spray)`。Elevation硬clamp為[−15°,50°]；目前authored spray最大±35°。因此 `cos(elevation)>=cos(50°)>0`，`cos(spray)>=cos(35°)>0`。目前Data的minimum speed factor=.20、ideal speed至少20 m/s，speed嚴格正，故所有valid launched Contact都必定`vz>0`。即使只考慮startup validator允許的spray最大80°，cos仍正；若未來Data允許零速度則可能vz=0，但仍不能變成負Z。這是**現行模型的限制**，不是永久行為要求。
+
+現行launch_angle只描述受限的上下elevation，沒有forward/back分支。單一scalar並非數學上永遠不能表達：若重新定義為涵蓋後方的longitudinal角度可以，但那已是representation契約變更，不能稱作調大現有bias。既有spray屬於early/late→pull/opposite，範圍也不跨90°；直接讓ey去改spray既混合responsibility，又會牽動左右方向，不建議。
+
+### 最小未來方向與 Trajectory 邊界（未實作）
+
+考慮三個具體選擇：forward/back bool最小但只能硬切，無法描述朝純垂直靠近的連續transition；signed longitudinal forwardness可表達正／零／負Z並保留timing的lateral責任；重新定義一個Y/Z平面的longitudinal方向角也能表達兩端，但需重新釐清與原launch_angle及spray組合的語意。
+
+**建議最小方向：讓ey-derived response具有一個明確帶正負的longitudinal分量／forwardness**，與其垂直分量一起定義family方向；timing保留lateral pull/opposite。這只是representation邊界建議，沒有新增production欄位、公式或curve。後續必須一起決定direction normalization與speed分解，不能把任意scalar直接乘vz而意外改變總速；也須明確決定backward時timing的左右語意，避免不小心反轉。此輪不選transition位置、角度、速度或機率。
+
+ey/contact geometry先決定ground／airborne、line-drive neighborhood、極端skim及forward／back。Trajectory僅能調節**已是forward airborne**的結果，不能把grounder或backward top/bottom skim救回普通forward fly。偏好概念為ey的base airborne response再受Trajectory乘法調節；**multiplier值、作用對象與啟用threshold皆未決，未實作乘法**。Power仍不因本研究改動。
+
+Foul／dead／catchable只是本輪方向與family語言：沒有foul/fair、死球、catcher／fielding、接殺、strike count；ground反彈、rolling、friction也未實作。Exact intermediate numeric mapping與所有future response設計仍待Michael＋Julia review。
+
+驗證：agent核對clean HEAD／origin/main為942bd47c38dd8dd2e34f977ff9b85cb59cdb334c，pull --ff-only與提交前fetch均無後續accepted work。完整Debug／Release build及CTest通過：Debug **22/22（245.51 s）**，Release **22/22（17.97 s）**。兩組態CSV SHA-256皆為`7BC5C6F8DD67DB1CE31E780B2753291F62F44BE8AE044C8DB913F76AB1683FC6`；logs保存在同一study build目錄。Git diff僅test與本文件，production BallResponse／struct／tuning Data／presentation／gameplay完全未改，因此依scope未執行新visual smoke或製作screenshots。停止等待Michael＋Julia review，不進入replacement implementation。
