@@ -2,6 +2,7 @@
 #include "reference_pitch.hpp"
 #include "engine/rendering/d3d12_view.hpp"
 #include <vector>
+#include <optional>
 #include "staging.hpp"
 
 namespace pawapuro {
@@ -28,5 +29,7 @@ inline void append_arrival_cue(std::vector<engine::Vertex>& vertices, const Batt
 BattingReference make_batting_reference(const BattingStaging& staging,
     DirectX::XMFLOAT3 predicted_position, float aspect, std::span<const engine::Vertex> pitcher_vertices, std::span<const engine::Vertex> batter_vertices = {});
 DirectX::XMFLOAT2 project_batting_point(const BattingStaging& staging, DirectX::XMFLOAT3 point, float aspect);
+// Optional overlay only; invalid camera setup still fails through batting_view_projection.
+std::optional<DirectX::XMFLOAT2> try_project_batting_point(const BattingStaging& staging, DirectX::XMFLOAT3 point, float aspect);
 DirectX::XMFLOAT4X4 batting_view_projection(const BattingStaging& staging, float aspect);
 }

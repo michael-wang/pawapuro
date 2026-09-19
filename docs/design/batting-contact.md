@@ -586,3 +586,21 @@ Deterministic fixtures：Contact75 axis reaches .345／.215 m；diagonal exact t
 實機證據：Release consumed tick444 的中央Contact已保存於 ignored `build/gameplay-ball-geometry-s1/center-contact.png`／JSON。Michael手動調整live aim後，agent以同一位置開始下一球並出棒；`lower-half-skin-contact.png`／JSON記錄實際aim y=.5909、error.y=.1841、ey≈+.8565、q≈.7335、Spatial:Authorized／Gameplay:Contact、longitudinal≈+81.195°。球心確在舊ry=.13之外，Filled Baseball仍與ellipse邊緣重疊；此為實機擷取，不是offline render。其後Computer Use被使用者實體Escape停止，未再操作視窗；未取得上半部偏心實機圖，精確兩側以Native fixtures為據。人工可沿用retained cue，把aim y調到約.5815／.9685（ey≈+.9／−.9），Space後約1.85秒J，以實際consumed diagnostics為準；不從pixels估算ey。
 
 驗證：HEAD／origin/main與兩次同步確認皆為143d3848149c8b3b524d43de51210be5276b9308，沒有後續accepted work。Full Debug／Release build成功；full CTest **Debug22/22（244.65 s）、Release22/22（18.60 s）**。Initial Debug僅上述舊拒絕fixture失敗，改成確實分離的aim後完整重跑通過，沒有放寬tolerance。兩組態production response table SHA-256皆為`B8702EF2F545E0EB69E331FD84DA9E39A6AE680493FA99C486E039B87789C37B`；logs／CSV／實機截圖都在ignored `build/gameplay-ball-geometry-s1/`，不提交generated evidence。沒有修改七個方向角、Trajectory、spray、physical solver、renderer、Previous Pitch Marker lifetime或backward-camera crash。停止等待Michael＋Julia review。
+
+## Backward BallAid Projection Safety S1（2026-09-19）
+
+Pawapuro Gameplay Ball Geometry S1 已獲 human acceptance。Michael實機確認極端skin graze可產生後上／後下球，並揭露BallAid的presentation crash：合法backward flight越過camera plane後，optional readability overlay卻呼叫strict projection，在clip.w≤0時拋出「Batting overlay point is behind the camera.」而終止app。
+
+新增local `try_project_batting_point`，使用相同view-projection與除法，正常點與strict結果精確相同；clip.w非finite／≤0，或normalized X/Y非finite時回傳nullopt，不製造座標。Camera setup自身的invariant仍由既有matrix函式fail-fast；原 `project_batting_point` 完全保留，strike-zone／Arrival Cue等required固定overlay仍走strict path。
+
+只有BallAid改用safe projection。Center或gameplay-radius sizing edge任一不可投影，就append原有固定 **384** 個zero/degenerate vertices；後續screen-radius arithmetic若溢位也同樣隱藏。OFF仍在任何projection之前直接填hidden geometry，ON值不因失敗改動。保留正常半徑／顏色／stroke／readability floor、既有reserved buffer capacity，沒有per-frame allocation、D3D12修改或visibility framework。World baseball仍以原displayed_ball_translation交給GPU clipping；simulation、velocity、ground hold、result lifecycle皆不改。
+
+Sizing edge沿camera-right，數學上與center同depth；測試以斜向test camera與camera plane附近float cancellation構成center可投影、edge不可投影的固定fixture，並未改production camera。另測behind center、非finite點／NDC、OFF時不需有效camera、normal strict/safe精確一致與既有forward geometry。Backward Compact448、ey≈+.950000167、vz≈−11.876327515 m/s，逐tickappend跨過camera，first hidden tick585，仍到ground_s≈7.722866984／Complete tick1854；與immutable flight control／response一致，既有30／60／120 Hz及backlog regression保留。
+
+Previous Pitch Marker在Miss／NoSwing後的lifetime仍是下一個獨立項目。本輪不改BallResponse／七個角度／spray／geometry授權／兩種ball radii／camera，也沒有foul、bounce、rolling、spin、drag、timing UI、panel或step-control工作。
+
+Full Debug／Release build與full CTest均通過：Debug22/22（238.38 s）、Release22/22（18.51 s）。Production response CSV與573a4b8 baseline逐byte一致（SHA-256 B8702EF2F545E0EB69E331FD84DA9E39A6AE680493FA99C486E039B87789C37B）。Strict projection原implementation未改；normal點的safe／strict值精確相等，既有球體、cue、BallAid footprint與forward flight檢查保持原tolerance。Logs在ignored `build/backward-ballaid-s1/`。
+
+Release實機由Michael直接打出後飛球（不要求精確手動ey），agent觀測並擷取：consumed452、longitudinal+98.637°、speed28.761 m/s、GroundHold／Complete tick1878、ball=(-3.633927,.085,-24.846628)，BallAid設定仍ON，球已明確在camera後方，app存活而無error dialog。Michael再按Space／P，agent擷取新球paused tick199：swings=0、Gameplay/RawOverlap Pending、No launch、owner=Hand，live aim保留。證據為ignored `backward-complete.png/.json` 與 `space-next-pitch.png/.json`；未取得飛行初段的實機截圖，跨plane逐tick數值由Native regression提供。手動出棒／reset與agent直接觀測證據分開記錄，沒有offline mock或假稱精確OS timing。
+
+本輪開始pull與提交前fetch皆確認HEAD／origin/main=573a4b82577c44a9614e2f2980a0865c018c74dd，沒有後續accepted work。停止等待Michael＋Julia review，不接續Previous Pitch Marker工作。

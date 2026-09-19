@@ -127,7 +127,30 @@ int main(int argc,char** argv){try{
  // Backward flight uses the same analytic sampler and render/backlog clock contract.
  const DirectX::XMFLOAT2 backward_aim{center.x,center.y-.95f*(region.normal_radius_y_m+s.gameplay_ball.radius_m)};
  p.reset();p.start();p.record_command(448,backward_aim);std::vector<DirectX::XMFLOAT3> backward_history{p.displayed_ball_center()};
- while(p.phase==PreviewPhase::Playing){p.advance(4'166'667);backward_history.push_back(p.displayed_ball_center());}
+ std::vector<engine::Vertex> backward_aid;backward_aid.reserve(ball_readability_vertex_count);
+ const auto* aid_storage=backward_aid.data();const auto aid_capacity=backward_aid.capacity();
+ std::optional<BattedBallFlight> flight_control;std::vector<unsigned char> response_control;
+ bool visible_before_crossing=false;std::uint64_t first_hidden_tick=0;
+ while(p.phase==PreviewPhase::Playing){p.advance(4'166'667);backward_history.push_back(p.displayed_ball_center());
+  if(p.flight) {
+   if(!flight_control){flight_control=p.flight;response_control.resize(sizeof(BallResponse));std::memcpy(response_control.data(),&*p.latest()->response,sizeof(BallResponse));}
+   backward_aid.clear();append_ball_readability(backward_aid,s,p.displayed_ball_center(),PitchPhase::InFlight,true,1920,1080);
+   require(backward_aid.size()==ball_readability_vertex_count&&backward_aid.data()==aid_storage&&backward_aid.capacity()==aid_capacity,"backward aid count/allocation");
+   bool hidden=true;for(const auto& v:backward_aid){
+    require(std::isfinite(v.position.x)&&std::isfinite(v.position.y)&&std::isfinite(v.position.z),"backward aid nonfinite vertex");
+    hidden=hidden&&same(v.position,{})&&same(v.color,{});
+   }
+   if(!try_project_batting_point(s,p.displayed_ball_center(),16.f/9)) {
+    require(hidden,"behind-camera aid still visible");
+    if(!first_hidden_tick)first_hidden_tick=p.tick;
+   } else if(!first_hidden_tick)visible_before_crossing=visible_before_crossing||!hidden;
+   const auto expected=flight_control->sample(double(p.tick)/240);
+   require(same(p.displayed_ball_center(),expected.position_m)&&same(p.flight->sample(double(p.tick)/240).velocity_mps,expected.velocity_mps)&&p.flight->ground_s==flight_control->ground_s,"BallAid changed flight");
+   require(std::memcmp(response_control.data(),&*p.latest()->response,sizeof(BallResponse))==0,"BallAid changed response");
+  }
+ }
+ require(visible_before_crossing&&first_hidden_tick&&p.tick>first_hidden_tick&&p.flight->complete(double(p.tick)/240),"backward ball failed to continue behind camera to ground/Complete");
+ std::cout<<"BALLAID backward ey="<<p.latest()->authorization.normalized_error.y<<" vz="<<p.latest()->response->launch_velocity_mps.z<<" first_hidden_tick="<<first_hidden_tick<<" complete_tick="<<p.tick<<" ground_s="<<p.flight->ground_s<<'\n';
  require(p.flight&&p.latest()->response->launch_velocity_mps.z<0,"backward replay fixture");
  for(unsigned hz:{30u,60u,120u,0u}){p.start();p.record_command(448,backward_aim);
   while(p.phase==PreviewPhase::Playing){p.advance(hz?1'000'000'000/hz:100'000'000);require(same(p.displayed_ball_center(),backward_history.at(static_cast<std::size_t>(p.tick))),"backward flight cadence");}}

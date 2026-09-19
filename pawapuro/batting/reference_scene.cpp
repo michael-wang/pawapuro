@@ -14,14 +14,29 @@ void append_ball_readability(std::vector<engine::Vertex>& vertices, const Battin
     }
     const float w=static_cast<float>(width), h=static_cast<float>(height);
     const float aspect = w/h;
-    const auto p = project_batting_point(staging, center, aspect);
+    const auto projected_center = try_project_batting_point(staging, center, aspect);
+    if (!projected_center) {
+        vertices.resize(vertices.size()+ball_readability_vertex_count);
+        return;
+    }
+    const auto p = *projected_center;
     const auto forward = XMVectorSubtract(XMLoadFloat3(&staging.camera_target_m), XMLoadFloat3(&staging.camera_position_m));
     const auto right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0,1,0,0), forward));
     XMFLOAT3 edge;
     XMStoreFloat3(&edge, XMVectorAdd(XMLoadFloat3(&center), XMVectorScale(right, staging.gameplay_ball.radius_m)));
+    const auto projected_edge = try_project_batting_point(staging, edge, aspect);
+    if (!projected_edge) {
+        vertices.resize(vertices.size()+ball_readability_vertex_count);
+        return;
+    }
     // Follow the gameplay ball radius, with a small screen-space readability floor.
     const float pixel_scale=h/1080.0f;
-    const float radius = std::max(5.0f*pixel_scale, std::abs(project_batting_point(staging, edge, aspect).x-p.x)*w/2);
+    const float radius = std::max(5.0f*pixel_scale, std::abs(projected_edge->x-p.x)*w/2);
+    const float outer=radius+2*pixel_scale;
+    if (!std::isfinite(outer)||!std::isfinite(std::abs(p.x)+2*outer/w)||!std::isfinite(std::abs(p.y)+2*outer/h)) {
+        vertices.resize(vertices.size()+ball_readability_vertex_count);
+        return;
+    }
     const auto band = [&](float inner, float outer, XMFLOAT3 color) {
         const auto point = [&](float angle, float r) -> XMFLOAT3 {
             return {p.x+2*r*std::cos(angle)/w, p.y+2*r*std::sin(angle)/h, 0};
@@ -282,5 +297,15 @@ DirectX::XMFLOAT2 project_batting_point(const BattingStaging& staging, DirectX::
     if (!std::isfinite(clip.w) || clip.w <= 0)
         throw std::runtime_error("Batting overlay point is behind the camera.");
     return {clip.x / clip.w, clip.y / clip.w};
+}
+std::optional<XMFLOAT2> try_project_batting_point(const BattingStaging& staging, XMFLOAT3 point, float aspect)
+{
+    const auto matrix=batting_view_projection(staging,aspect);
+    XMFLOAT4 clip;
+    XMStoreFloat4(&clip,XMVector4Transform(XMVectorSet(point.x,point.y,point.z,1),XMLoadFloat4x4(&matrix)));
+    if (!std::isfinite(clip.w)||clip.w<=0) return std::nullopt;
+    const XMFLOAT2 ndc{clip.x/clip.w,clip.y/clip.w};
+    if (!std::isfinite(ndc.x)||!std::isfinite(ndc.y)) return std::nullopt;
+    return ndc;
 }
 }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <stdexcept>
 
 using namespace pawapuro;
@@ -34,6 +35,41 @@ int main(int argc, char** argv)
     try {
         require(argc == 2, "Expected authored staging path");
         fixture_staging = load_batting_staging(argv[1]);
+        {
+        const auto normal=predict_arrival(fixture()).state.position_m;
+        const auto strict=project_batting_point(fixture_staging,normal,16.f/9);
+        const auto optional=try_project_batting_point(fixture_staging,normal,16.f/9);
+        require(optional&&optional->x==strict.x&&optional->y==strict.y,"safe/strict normal projection differs");
+        std::vector<engine::Vertex> hidden_aid;hidden_aid.reserve(ball_readability_vertex_count);
+        const auto* storage=hidden_aid.data();const auto capacity=hidden_aid.capacity();
+        const auto check_hidden=[&](const BattingStaging& s,DirectX::XMFLOAT3 point,bool enabled=true) {
+            hidden_aid.clear();append_ball_readability(hidden_aid,s,point,PitchPhase::InFlight,enabled,1920,1080);
+            require(hidden_aid.size()==ball_readability_vertex_count&&hidden_aid.data()==storage&&hidden_aid.capacity()==capacity,"hidden aid count/allocation");
+            for(const auto& v:hidden_aid)require(equal(v.position,{})&&equal(v.color,{}),"invalid aid did not append finite degenerate vertices");
+        };
+        auto behind=fixture_staging.camera_position_m;behind.z-=1;
+        require(!try_project_batting_point(fixture_staging,behind,16.f/9),"behind safe projection fabricated NDC");
+        bool threw=false;try{(void)project_batting_point(fixture_staging,behind,16.f/9);}catch(const std::runtime_error&){threw=true;}
+        require(threw,"strict behind projection no longer fails");check_hidden(fixture_staging,behind);
+        for(float bad:{std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()}) {
+            require(!try_project_batting_point(fixture_staging,{bad,0,0},16.f/9),"nonfinite point projected");
+            check_hidden(fixture_staging,{bad,0,0});
+        }
+        auto invalid_camera=fixture_staging;invalid_camera.camera_target_m=invalid_camera.camera_position_m;
+        check_hidden(invalid_camera,behind,false); // OFF must never evaluate even an invalid camera.
+        // Camera-right is mathematically parallel to the image plane. Near w=0,
+        // finite-precision point construction can still put only the sizing edge behind it.
+        auto near_camera=fixture_staging;near_camera.camera_position_m={0,0,-5};near_camera.camera_target_m={-2,0,0};
+        const DirectX::XMFLOAT3 point{-3e-7f,0,-5};
+        const auto forward=DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&near_camera.camera_target_m),DirectX::XMLoadFloat3(&near_camera.camera_position_m));
+        const auto right=DirectX::XMVector3Normalize(DirectX::XMVector3Cross(DirectX::XMVectorSet(0,1,0,0),forward));
+        DirectX::XMFLOAT3 edge;
+        DirectX::XMStoreFloat3(&edge,DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&point),DirectX::XMVectorScale(right,near_camera.gameplay_ball.radius_m)));
+        require(try_project_batting_point(near_camera,point,16.f/9)&&!try_project_batting_point(near_camera,edge,16.f/9),"center-valid edge-invalid fixture");
+        check_hidden(near_camera,point);
+        require(!try_project_batting_point(fixture_staging,{std::numeric_limits<float>::max(),1,0},16.f/9),"nonfinite normalized coordinate accepted");
+        std::puts("PASS safe/strict projection, center/edge unavailable, finite hidden geometry, OFF without camera evaluation.");
+        }
         // One gameplay radius drives the sphere, both cue footprints and BallAid.
         for(float radius:{.085f,.1f}) {
             auto s=fixture_staging;s.gameplay_ball.radius_m=radius;
