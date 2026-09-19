@@ -75,7 +75,8 @@ int main(int argc,char** argv){try{
   require(same(r.launch_position_m,sample_reference_pitch(p.delivery.pitch.initial,r.contact_time_s-double(p.delivery.motion.release_tick)/240).position_m),"launch origin not pitch truth");
   require(a.gameplay_dispatch_tick==static_cast<std::uint64_t>(std::ceil(r.contact_time_s*240)),"gameplay dispatched at wrong tick");
   require(p.tick==p.completion_tick(),"completion did not wait for ground/animations");
-  const auto ground=p.flight->sample(p.flight->ground_s);require(ground.position_m.y==s.gameplay_ball.radius_m&&same(ground.velocity_mps,{})&&same(ground.position_m,p.flight->sample(p.flight->ground_s+10).position_m),"ground hold/bounce");
+  const auto ground=p.flight->sample(p.flight->ground_s);require(ground.position_m.y==s.gameplay_ball.radius_m&&ground.velocity_mps.y>0&&!p.flight->complete(p.flight->ground_s),"first impact must rebound");
+  const auto stopped=p.flight->sample(p.flight->stop_s);require(same(stopped.velocity_mps,{})&&same(stopped.position_m,p.flight->sample(p.flight->stop_s+10).position_m),"final ground hold");
   require(p.flight->sample(p.flight->ground_s-1e-5).position_m.y>s.gameplay_ball.radius_m,"wrong ground root");
   std::cout<<"RESPONSE commit="<<c<<" raw="<<p.contact_state()<<" efficiency="<<a.timing.efficiency<<" offset_ms="<<a.timing.offset_ms<<" effective_s="<<r.contact_time_s<<" speed="<<r.exit_speed_mps<<" kmh="<<r.exit_speed_mps*3.6<<" longitudinal="<<r.longitudinal_angle_deg<<" spray="<<r.spray_angle_deg<<" ground_s="<<p.flight->ground_s<<'\n';
  }
@@ -249,7 +250,7 @@ int main(int argc,char** argv){try{
  }
  p.reset();p.start();p.record_command(433,center);until(477);require(p.flight.has_value(),"433 contact fixture");
  until(static_cast<std::uint64_t>(std::ceil(p.flight->ground_s*240)));
- require(p.phase==PreviewPhase::Playing&&p.flight->complete(double(p.tick)/240)&&p.delivery.phase!=DeliveryPhase::Complete,"ground-before-pitcher-completion fixture");clean_restart();
+ require(p.phase==PreviewPhase::Playing&&!p.flight->complete(double(p.tick)/240)&&p.delivery.phase!=DeliveryPhase::Complete,"rebound-before-pitcher-completion fixture");clean_restart();
  p.reset();p.start();until(100);require(!p.start()&&p.tick==100,"ordinary Playing restarted");
  p.record_command(448,center);until(477);require(p.latest()->response&&!p.flight&&!p.start()&&p.tick==477,"planned response enabled early restart");
  p.toggle_pause();require(!p.start()&&p.paused&&p.tick==477,"pre-contact pause enabled restart");
@@ -336,9 +337,9 @@ int main(int argc,char** argv){try{
  p.input_boundary(false,false,true,live.center());until(447);p.input_boundary(true,true,true,live.center());until(448);
  require(p.attempts.size()==1&&p.latest()->command.aim_center.x==adjusted.x&&p.latest()->command.aim_center.y==adjusted.y,"next input did not snapshot adjusted aim");
  finish(p);p.start();
- // First-ground hold can precede overall completion; both selected cue styles still persist.
+ // First ground impact now rebounds before overall completion; both cue styles persist.
  p.record_command(433,center);until(735);
- require(p.phase==PreviewPhase::Playing&&p.flight&&p.flight->complete(double(p.tick)/240)&&batting_practice_pitch_marker_visible(p),"ground-before-completion cue fixture");check_cue();
+ require(p.phase==PreviewPhase::Playing&&p.flight&&!p.flight->complete(double(p.tick)/240)&&double(p.tick)/240>=p.flight->ground_s&&batting_practice_pitch_marker_visible(p),"rebound-before-completion cue fixture");check_cue();
  live.move(-1,-1,.05);live.recenter();const auto recentered=live.center();p.start();check_live();
  require(live.center().x==recentered.x&&live.center().y==recentered.y,"Space undid post-contact R");
  p.record_command(80,live.center());finish(p);

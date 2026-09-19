@@ -59,7 +59,6 @@ struct BattedBallFlight {
         const double g=-double(earth_gravity_mps2),vy=initial.velocity_mps.y,h=std::max(0.,double(initial.position_m.y)-radius);
         ground_s=start_s+(vy+std::sqrt(vy*vy+2*g*h))/g;
         rebound_settle_s=horizontal_stop_s=stop_s=ground_s;
-        if(vy>=0)return; // Accepted airborne-family first-ground hold stays identical.
         first_ground=sample_reference_pitch(initial,ground_s-start_s);
         first_ground.position_m.y=radius;
         rebound_ratio=tuning.rebound_vertical_ratio;
@@ -80,11 +79,6 @@ struct BattedBallFlight {
         return k==0?ground_s:rebound_settle_s-rebound_duration*std::pow(rebound_ratio,k);
     }
     BallState sample(double world_s) const {
-        if(initial.velocity_mps.y>=0) {
-            auto result=sample_reference_pitch(initial,std::clamp(world_s,start_s,ground_s)-start_s);
-            if(complete(world_s)){result.position_m.y=ground_height_m;result.velocity_mps={};}
-            return result;
-        }
         if(world_s<ground_s)return sample_reference_pitch(initial,std::max(world_s,start_s)-start_s);
         auto result=first_ground;
         const double t=std::clamp(world_s,ground_s,horizontal_stop_s)-ground_s;

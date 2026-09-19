@@ -15,7 +15,7 @@ void ground_response_checks(ManualSwingPreview& p) {
     const auto distance=[](auto a,auto b){return std::hypot(double(a.x)-b.x,double(a.z)-b.z);};
     const double g=-double(earth_gravity_mps2);
     std::array<double,2> high{},low{};
-    for(float ey:{-.75f,-.5f,-1.f,0.f,.25f,.5f,.75f}) {
+    for(float ey:{-.75f,-.5f,-1.f,-.25f,0.f,.25f,.5f,.75f,.9f}) {
         std::string control;
         for(unsigned fps:{30u,60u,120u,1u}) {
             p.reset();p.start();const BattingReviewFixture fixture{448,0,ey};
@@ -28,20 +28,20 @@ void ground_response_checks(ManualSwingPreview& p) {
             for(double t:{f.start_s,f.ground_s,f.rebound_settle_s,f.horizontal_stop_s,f.stop_s,f.stop_s+10})record(t);
             const double legacy_ground=f.start_s+(double(r.launch_velocity_mps.y)+std::sqrt(double(r.launch_velocity_mps.y)*r.launch_velocity_mps.y+2*g*std::max(0.,double(r.launch_position_m.y)-f.ground_height_m)))/g;
             require(f.ground_s==legacy_ground,"first impact time changed");
-            if(r.launch_velocity_mps.y>=0) {
-                require(f.stop_s==legacy_ground,"airborne acquired ground response");
-                for(unsigned i=0;i<=100;++i) {
-                    const double time=f.start_s+(legacy_ground-f.start_s)*i/80.;
-                    auto old=sample_reference_pitch(f.initial,std::clamp(time,f.start_s,legacy_ground)-f.start_s);
-                    if(time>=legacy_ground){old.position_m.y=f.ground_height_m;old.velocity_mps={};}
-                    require(same(f.sample(time).position_m,old.position_m)&&same(f.sample(time).velocity_mps,old.velocity_mps),"airborne baseline sample changed");record(time);
-                }
-            }else {
+            for(unsigned i=0;i<100;++i) {
+                const double time=f.start_s+(legacy_ground-f.start_s)*i/100.;
+                const auto old=sample_reference_pitch(f.initial,time-f.start_s);
+                require(same(f.sample(time).position_m,old.position_m)&&same(f.sample(time).velocity_mps,old.velocity_mps),"pre-ground baseline sample changed");record(time);
+            }
+            {
                 const auto impact=sample_reference_pitch(f.initial,f.ground_s-f.start_s);
                 require(distance(impact.position_m,f.first_ground.position_m)==0&&f.first_ground.position_m.y==f.ground_height_m,"first impact continuity");
                 require(f.first_ground.velocity_mps.x==impact.velocity_mps.x*.85f&&f.first_ground.velocity_mps.z==impact.velocity_mps.z*.85f,"one-time horizontal retention");
-                require(f.first_rebound_vy==-double(impact.velocity_mps.y)*double(.35f),"first rebound ratio");
-                require(f.rebound_duration==(2*f.first_rebound_vy/g)/(1-double(.35f))&&f.rebound_settle_s==f.ground_s+f.rebound_duration,"infinite geometric settle");
+                require(f.first_rebound_vy==-double(impact.velocity_mps.y)*double(.50f),"first rebound ratio");
+                require(f.rebound_duration==(2*f.first_rebound_vy/g)/(1-double(.50f))&&f.rebound_settle_s==f.ground_s+f.rebound_duration,"infinite geometric settle");
+                require(f.ground_deceleration==5.5&&f.rebound_ratio==.5,"authored ground response tuning");
+                require(f.sample(f.ground_s).velocity_mps.y>0&&!f.complete(f.ground_s),"first impact instantly froze");
+                if(ey==-.25f)require(r.launch_velocity_mps.y>0&&r.longitudinal_angle_deg>0&&r.longitudinal_angle_deg<5,"low-positive launch regression premise");
                 double previous_apex=0,previous_u=0,previous_duration=0;
                 for(unsigned k=0;k<6;++k) {
                     const double u=f.rebound_launch_speed(k),start=f.rebound_start_s(k),end=f.rebound_start_s(k+1),duration=2*u/g,apex=u*u/(2*g);
@@ -49,7 +49,7 @@ void ground_response_checks(ManualSwingPreview& p) {
                     require(std::abs((end-start)-duration)<1e-14,"arc duration");
                     const auto top=f.sample((start+end)/2);
                     require(std::abs(double(top.position_m.y)-f.ground_height_m-apex)<1e-5&&std::abs(top.velocity_mps.y)<1e-5,"analytic apex");
-                    if(k>=2)require(apex<.05&&top.position_m.y>f.ground_height_m,"low hops were discarded");
+                    if(apex<.05)require(top.position_m.y>f.ground_height_m,"low hops were discarded");
                     const auto boundary=f.sample(start);
                     require(boundary.position_m.y==f.ground_height_m&&boundary.velocity_mps.y==static_cast<float>(u),"exact impact uses outgoing arc");
                     for(double t:{std::nextafter(start,-INFINITY),start,std::nextafter(start,INFINITY)}) {
@@ -87,7 +87,7 @@ void ground_response_checks(ManualSwingPreview& p) {
                 require(in_place.horizontal_stop_s<in_place.rebound_settle_s&&!in_place.complete(in_place.horizontal_stop_s),"remaining in-place rebounds");
                 const auto moving_y=in_place.sample((in_place.horizontal_stop_s+in_place.rebound_settle_s)/2);
                 require(moving_y.velocity_mps.x==0&&moving_y.velocity_mps.z==0&&moving_y.position_m.y>f.ground_height_m,"independent vertical/horizontal components");
-                if(ey==-1){
+                if(ey==-1||ey==.9f){
                     std::vector<engine::Vertex> aid;aid.reserve(ball_readability_vertex_count);const auto storage=aid.data();
                     for(unsigned i=0;i<=100;++i){
                         const auto b=f.sample(f.start_s+(f.stop_s-f.start_s)*i/100.);require(b.velocity_mps.z<=0,"backward lost sign");
@@ -100,17 +100,17 @@ void ground_response_checks(ManualSwingPreview& p) {
             }
             if(control.empty())control=signature.str();else require(control==signature.str(),"30/60/120/backlog analytic determinism");
         }
-        if(ey<0)for(unsigned stage:{0u,1u,2u}) {
+        if(ey<=0)for(unsigned stage:{0u,1u,2u}) {
             p.reset();p.start();const BattingReviewFixture fixture{448,0,ey};p.record_command(448,fixture.aim_center(p));
             while(!p.flight)p.advance(4'166'667);
             const auto& f=*p.flight;
-            const double target=stage==2?(f.rebound_settle_s+f.horizontal_stop_s)/2:stage==1?(f.rebound_start_s(2)+f.rebound_start_s(3))/2:(f.rebound_start_s(0)+f.rebound_start_s(1))/2;
+            const double target=stage==2?(f.rebound_settle_s+f.horizontal_stop_s)/2:stage==1?(f.rebound_start_s(4)+f.rebound_start_s(5))/2:(f.rebound_start_s(0)+f.rebound_start_s(1))/2;
             while(double(p.tick)/pitch_hz<target)p.advance(4'166'667);
             require(p.start()&&p.tick==0&&!p.flight&&p.attempts.empty()&&p.pending_ticks==0,"Space during high/low/settled ground travel");
             p.advance(4'166'666);require(p.tick==0,"Space retained fractional debt");
         }
     }
-    require(high[0]>1&&low[0]<1&&high[0]>low[0]*3&&high[1]>low[1]*3,"high chopper not clearly distinct; do not tune by ey");
+    require(high[0]>5&&low[0]>1&&low[0]<2&&high[0]>low[0]*3&&high[1]>low[1]*3,"high chopper not clearly distinct; do not tune by ey");
     p.reset();
 }
 int main(int argc,char** argv){try {
@@ -162,7 +162,7 @@ int main(int argc,char** argv){try {
         };
         render();require(panel.vertex_count%3==0,"triangle count");
         // Each real fixture consumes normal player intent; no forced authorization/result/flight.
-        for(const BattingReviewFixture fixture:{BattingReviewFixture{448,0,0},{448,0,.5f},{448,0,.75f},{448,0,.9f},{448,0,-.5f},{448,0,-.75f},{448,.6f,1},{80,0,0},{456,0,0},{0,0,0}}){
+        for(const BattingReviewFixture fixture:{BattingReviewFixture{448,0,0},{448,0,.5f},{448,0,.75f},{448,0,.9f},{448,0,-.5f},{448,0,-.75f},{448,0,-.25f},{448,0,.25f},{448,.6f,1},{80,0,0},{456,0,0},{0,0,0}}){
             p.reset();p.start();if(fixture.commit_tick)require(p.record_command(fixture.commit_tick,fixture.aim_center(p)),"fixture intent rejected");
             require(batting_info(p)==empty,"reset retained panel truth");render();
             std::optional<double> timing,speed;std::optional<BattingFlightMetrics> previous,frozen;

@@ -722,3 +722,9 @@ BattedBallFlight 使用同一 world clock，預算 first hit（ground_s／first_
 垂直 u_k=u1*e^k、duration_k=2*u_k/g、apex_k=u_k²/(2g)；無限幾何反彈序列在 first_ground_s+(2*u1/g)/(1-e) 收斂。用對數定位弧段，精確可表示邊界屬於下一個 outgoing arc；只在數學 settle time 後固定 Y／vy，沒有高度或 tick cutoff。水平在 first_ground_s+initial_ground_speed/deceleration 停止，overall stop 取兩者最大值；沒有反彈清單、固定跳數、GroundBall／Chopper 分類或 ey 特判。
 
 Batting Info 仍只計首次觸地前的時間／距離／最高高度與初速；空中球維持原首次觸地 hold。限制：平地、無 mound／地面凹凸、無旋轉／spin、無草地泥土地表差異。未來地面不平可能讓微小 hop 更重要，但本輪不加入 terrain randomness，也不額外調整水平距離或 Ball Response。
+
+## Unified Ground Impact + Rebound Tuning S2
+
+人類 playtest 拒絕 S0／S1 暫時的初始 vy<0 限制：低角度正向起飛球首次落地即黏住。現在所有擊出球都在首次 descending ground contact 進入同一 ground response；此前的重力飛行、首次觸地時間／位置與 Batting Info 定義不變，不按 ey／角度分類。
+
+rebound_vertical_ratio 候選由 0.35 改為 0.50，後續 apex 保留率由 12.25% 改為 25%，首跳高度約為前版的 2.0408 倍。水平仍是首次 impact 保留 0.85，之後持續以 5.5 m/s² 有效減速，不在後續 impact 再扣乘數。無限幾何反彈保留低快 hop，無高度／tick cutoff、固定跳數或高飛球特例／上限。未來不平地形／spin 可能把能量重新導向垂直，但本輪沒有地形、旋轉、表面差異或能量轉移模型；Ball Response launch angle／speed、Power、Trajectory、timing／spray 均未調整。
