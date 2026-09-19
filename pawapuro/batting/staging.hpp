@@ -17,6 +17,9 @@ struct HitAuthorizationTuning { float normal_radius_x_m=0.26f, normal_radius_y_m
 struct PlayerAimTuning { float cursor_speed_mps=0.65f; };
 struct BattingInteractionTuning { float half_depth_m=0.40f; };
 struct SwingPhasePotentialTuning { float normal_start_ms=75,normal_peak_ms=125,normal_end_ms=190; };
+struct GroundBallResponseTuning {
+    float rebound_vertical_ratio=.25f,impact_horizontal_retention=.70f,roll_deceleration_mps2=10;
+};
 struct BallResponseTuning {
     float ideal_exit_speed_min_mps=20,ideal_exit_speed_max_mps=55;
     float spatial_edge_transfer=.35f,minimum_exit_speed_factor=.20f;
@@ -26,6 +29,7 @@ struct BallResponseTuning {
 };
 struct BattingStaging {
     BallResponseTuning ball_response;
+    GroundBallResponseTuning ground_ball_response;
     BatterProfile batter_profile;
     double window_width_fraction=0.75;
     double compact_area_ticks=30;

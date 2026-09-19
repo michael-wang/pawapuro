@@ -18,7 +18,7 @@ BattingInfo batting_info(const ManualSwingPreview& p) {
         result.exit_speed_kmh=double(p.latest()->response->exit_speed_mps)*3.6;
         const auto& f=*p.flight;
         // First ground hit is currently the only collision. Future hits must supply their actual stop time.
-        const double time=std::clamp(double(p.tick)/pitch_hz,f.start_s,f.ground_s);
+        const double time=std::clamp(double(p.tick)/pitch_hz,f.start_s,f.first_hit_s());
         const auto current=f.sample(time).position_m;
         const double elapsed=time-f.start_s;
         const double peak_elapsed=std::clamp(-double(f.initial.velocity_mps.y)/earth_gravity_mps2,0.,elapsed);

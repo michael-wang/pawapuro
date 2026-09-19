@@ -4,9 +4,72 @@
 #include <cmath>
 #include <cstring>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 using namespace pawapuro;
 void require(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
+void ground_response_checks(ManualSwingPreview& p) {
+    const auto same=[](auto a,auto b){return a.x==b.x&&a.y==b.y&&a.z==b.z;};
+    const auto distance=[](auto a,auto b){return std::hypot(double(a.x)-b.x,double(a.z)-b.z);};
+    double high=0,low=0;
+    for(float ey:{-.75f,-.5f,-1.f,0.f,.25f,.5f,.75f}) {
+        std::string control;
+        for(unsigned fps:{30u,60u,120u,1u}) {
+            p.reset();p.start();const BattingReviewFixture fixture{448,0,ey};
+            require(p.record_command(448,fixture.aim_center(p)),"ground fixture intent");
+            while(p.phase==PreviewPhase::Playing)p.advance(1'000'000'000ull/fps);
+            require(p.flight.has_value(),"ground fixture Contact");fixture.verify(*p.latest());
+            const auto f=*p.flight;const auto r=*p.latest()->response;
+            std::ostringstream signature;signature<<std::setprecision(17)<<p.tick<<','<<f.ground_s<<','<<f.second_ground_s<<','<<f.stop_s;
+            for(double t:{f.start_s,f.ground_s,(f.ground_s+f.second_ground_s)/2,f.second_ground_s,(f.second_ground_s+f.stop_s)/2,f.stop_s,f.stop_s+10}) {
+                const auto b=f.sample(t);signature<<','<<b.position_m.x<<','<<b.position_m.y<<','<<b.position_m.z<<','<<b.velocity_mps.x<<','<<b.velocity_mps.y<<','<<b.velocity_mps.z;
+            }
+            if(control.empty())control=signature.str();else require(control==signature.str(),"30/60/120/backlog piecewise determinism");
+            const double g=-double(earth_gravity_mps2);
+            const double legacy_ground=f.start_s+(double(r.launch_velocity_mps.y)+std::sqrt(double(r.launch_velocity_mps.y)*r.launch_velocity_mps.y+2*g*std::max(0.,double(r.launch_position_m.y)-f.ground_height_m)))/g;
+            require(f.ground_s==legacy_ground,"first impact time changed");
+            if(r.launch_velocity_mps.y>=0) {
+                require(f.stop_s==legacy_ground,"airborne acquired ground response");
+                for(unsigned i=0;i<=100;++i) {
+                    const double time=f.start_s+(legacy_ground-f.start_s)*i/80.;
+                    auto old=sample_reference_pitch(f.initial,std::clamp(time,f.start_s,legacy_ground)-f.start_s);
+                    if(time>=legacy_ground){old.position_m.y=f.ground_height_m;old.velocity_mps={};}
+                    require(same(f.sample(time).position_m,old.position_m)&&same(f.sample(time).velocity_mps,old.velocity_mps),"airborne baseline sample changed");
+                }
+                continue;
+            }
+            const auto impact=sample_reference_pitch(f.initial,f.ground_s-f.start_s);
+            require(distance(impact.position_m,f.rebound.position_m)==0&&f.rebound.position_m.y==f.ground_height_m,"first position continuity");
+            require(f.rebound.velocity_mps.y==-impact.velocity_mps.y*.25f&&f.rebound.velocity_mps.y>0&&f.rebound.velocity_mps.x==impact.velocity_mps.x*.7f&&f.rebound.velocity_mps.z==impact.velocity_mps.z*.7f,"first rebound velocity");
+            const auto second=sample_reference_pitch(f.rebound,f.second_ground_s-f.ground_s);
+            require(distance(second.position_m,f.roll.position_m)==0&&f.roll.position_m.y==f.ground_height_m&&f.roll.velocity_mps.y==0,"second position continuity");
+            require(f.roll.velocity_mps.x==second.velocity_mps.x*.7f&&f.roll.velocity_mps.z==second.velocity_mps.z*.7f,"second retention");
+            double previous=f.roll_speed;
+            for(unsigned i=0;i<=100;++i) {
+                const auto b=f.sample(f.second_ground_s+(f.stop_s-f.second_ground_s)*i/100.);
+                const double speed=std::hypot(double(b.velocity_mps.x),double(b.velocity_mps.z));
+                require(speed<=previous+1e-6&&b.position_m.y==f.ground_height_m&&b.velocity_mps.y==0,"ground deceleration");previous=speed;
+                require(b.velocity_mps.z*f.roll.velocity_mps.z>=0,"roll reversal");
+            }
+            require(same(f.sample(f.stop_s).velocity_mps,DirectX::XMFLOAT3{})&&same(f.sample(f.stop_s).position_m,f.sample(f.stop_s+100).position_m),"final hold");
+            if(ey==-1)require(f.rebound.velocity_mps.z<0&&f.roll.velocity_mps.z<0,"backward ground lost sign");
+            const double apex=double(f.rebound.velocity_mps.y)*f.rebound.velocity_mps.y/(2*g);
+            if(ey==-.75f)high=apex;if(ey==-.5f)low=apex;
+            if(fps==30)std::cout<<std::setprecision(12)<<"GROUND ey="<<ey<<" speed="<<r.exit_speed_mps<<" angle="<<r.longitudinal_angle_deg<<" first_s="<<f.ground_s<<" first_distance="<<distance(f.rebound.position_m,f.initial.position_m)<<" impact_vy="<<impact.velocity_mps.y<<" rebound_vy="<<f.rebound.velocity_mps.y<<" rebound_apex_bottom="<<apex<<" second_s="<<f.second_ground_s<<" second_distance="<<distance(f.roll.position_m,f.initial.position_m)<<" roll_speed="<<f.roll_speed<<" stop_s="<<f.stop_s<<" final_distance="<<distance(f.sample(f.stop_s).position_m,f.initial.position_m)<<'\n';
+        }
+        if(ey<0)for(bool rolling:{false,true}) {
+            p.reset();p.start();const BattingReviewFixture fixture{448,0,ey};p.record_command(448,fixture.aim_center(p));
+            while(!p.flight)p.advance(4'166'667);
+            const double target=rolling?(p.flight->second_ground_s+p.flight->stop_s)/2:(p.flight->ground_s+p.flight->second_ground_s)/2;
+            while(double(p.tick)/pitch_hz<target)p.advance(4'166'667);
+            require(p.start()&&p.tick==0&&!p.flight&&p.attempts.empty()&&p.pending_ticks==0,"Space during bounce/roll");
+            p.advance(4'166'666);require(p.tick==0,"Space retained fractional debt");
+        }
+    }
+    require(high>1&&low<1&&high>low*3,"high chopper not clearly distinct; do not tune by ey");
+    p.reset();
+}
 int main(int argc,char** argv){try {
     require(argc==2,"expected batting directory");const std::filesystem::path d=argv[1];
     const auto staging=load_batting_staging(d/"staging.toml");ManualSwingPreview p(d,staging);
@@ -22,7 +85,7 @@ int main(int argc,char** argv){try {
         p.attempts.back().timing.offset_ms=offset;
         require(batting_info(p).timing==(std::abs(offset)<=10?InfoTiming::Center:offset<0?InfoTiming::Early:InfoTiming::Late),"timing display boundary");
     }
-    p.reset();
+    p.reset();ground_response_checks(p);
     std::vector<engine::Vertex> marker;
     marker.reserve(ground_projection_vertex_count);
     const auto* marker_storage=marker.data();
@@ -56,7 +119,7 @@ int main(int argc,char** argv){try {
         };
         render();require(panel.vertex_count%3==0,"triangle count");
         // Each real fixture consumes normal player intent; no forced authorization/result/flight.
-        for(const BattingReviewFixture fixture:{BattingReviewFixture{448,0,0},{448,0,.5f},{448,0,.75f},{448,0,.9f},{448,.6f,1},{80,0,0},{456,0,0},{0,0,0}}){
+        for(const BattingReviewFixture fixture:{BattingReviewFixture{448,0,0},{448,0,.5f},{448,0,.75f},{448,0,.9f},{448,0,-.5f},{448,0,-.75f},{448,.6f,1},{80,0,0},{456,0,0},{0,0,0}}){
             p.reset();p.start();if(fixture.commit_tick)require(p.record_command(fixture.commit_tick,fixture.aim_center(p)),"fixture intent rejected");
             require(batting_info(p)==empty,"reset retained panel truth");render();
             std::optional<double> timing,speed;std::optional<BattingFlightMetrics> previous,frozen;
@@ -84,7 +147,7 @@ int main(int argc,char** argv){try {
                         peak_held|=info.flight->max_height_m==previous->max_height_m&&now<f.ground_s;
                     }
                     if(frozen)require(*info.flight==*frozen,"first-hit metrics changed");
-                    if(f.complete(now))frozen=info.flight;
+                    if(now>=f.first_hit_s())frozen=info.flight;
                     previous=info.flight;
                 }else{require(!info.exit_speed_kmh,"speed before dispatched Contact");require(!p.flight,"missing existing flight");const auto text=format_batting_info(info);for(unsigned row=1;row<5;++row)require(std::strcmp(text[row].data(),"--")==0,"Miss/NoSwing metric is not placeholder");}
                 if(p.tick%120==0)render();

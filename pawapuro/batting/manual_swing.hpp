@@ -58,7 +58,7 @@ struct ManualSwingPreview {
     const char* gameplay_state() const;
     std::uint64_t completion_tick() const {
         const auto batter_end=committed()?committed()->tempo.end_tick(committed()->consumed_tick):batter.end_tick;
-        const auto ground=flight?static_cast<std::uint64_t>(std::ceil(flight->ground_s*pitch_hz)):0;
+        const auto ground=flight?static_cast<std::uint64_t>(std::ceil(flight->stop_s*pitch_hz)):0;
         return std::max({delivery.motion.end_tick,batter_end,ground});
     }
     // Read-only latest-attempt views; no second copy of per-swing truth.

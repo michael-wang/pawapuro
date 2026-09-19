@@ -704,3 +704,11 @@ Runtime COLOR_0 不是服裝語意：舊投手鞋與眼睛共色，打者還有�
 `revise_authored_palette.py` 使用 generator 的語意建構 witness，先核對完整 polygon topology，再只修改已存 `.blend` 的目標色彩；不複製 generator 的 geometry／rig／animation。使用原 exporter 匯出投手、ingame batter；static batter 同步更新以保持既有 mesh 一致性回歸。`validate_authored_palette.py build/authored-palette-s1` 核對 before／after GLB JSON 與所有非 COLOR_0 BIN bytes 完全相同、最終色群符合 authoring，以及 5,304 組 motion expected samples 不變（只更新來源 SHA 註解）。正式 GLB／source SHA 在各資產 TOML 維護。
 
 地面投影原洋紅色與 0.35 m 半徑經人類檢視過於搶眼；新版候選為 RGB (0.72, 0.74, 0.76)、半徑 0.18 m。Y=0.02 m、32 segments／96 vertices、XZ 跟隨與 lifetime 均不變；仍只是 development/readability aid，沒有 gameplay authority。
+
+## Ground Ball Response S0
+
+僅 BallResponse 初始 `launch_velocity_mps.y < 0` 啟用：原解析式首次觸地 → 一次重力反彈 → 第二次觸地 → 水平等減速滑行 → 停住保留。候選 Data 為 rebound_vertical_ratio=0.25、impact_horizontal_retention=0.70（兩次 impact 各套一次）、roll_deceleration_mps2=10。高 chopper 來自較大的向下 impact 速度，沒有 ey 特判；這些值是 gameplay candidate，不是實測草地或恢復係數。
+
+BattedBallFlight 使用同一 world clock，預算 first hit（ground_s／first_hit_s）、second_ground_s 與 stop_s；sample 直接解析各段，不做逐 tick 物理積分。Complete 等待 stop 及原動畫完成；Space 仍可隨時於 Contact 後重開。資訊欄飛行時間／距離／最大高度只描述首次觸地以前，初速不變；小灰白地面投影與世界球繼續跟隨反彈／滑行直到停止。
+
+初速 Y >= 0 的球完全保留原首次觸地即停語意。只有平地、一次反彈，沒有 mound／terrain 碰撞、旋轉／spin、多次跳動、材質差異或空氣阻力；Ball Response 角度、Power、Trajectory、timing 與 spray 均未調整。

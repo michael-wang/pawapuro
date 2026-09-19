@@ -112,3 +112,8 @@ vertical_contact_longitudinal_degrees = [-150, -35, -15, 3, 8, 15, 25, 45, 130]
 trajectory_airborne_slope_multiplier = [0.8, 1.0, 1.2, 1.4]
 max_spray_degrees = 35.0
 full_spray_offset_ms = 65.0
+
+[ground_ball_response]
+rebound_vertical_ratio = 0.25
+impact_horizontal_retention = 0.70
+roll_deceleration_mps2 = 10.0

@@ -59,8 +59,8 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
     const std::string source(utf8.begin(), utf8.end());
     try {
         const auto table = toml::parse_file(utf8);
-        only_keys(table, {"gameplay_ball", "ball_response", "batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}, "");
-        for (const char* section : {"gameplay_ball", "ball_response", "batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}) {
+        only_keys(table, {"ground_ball_response", "gameplay_ball", "ball_response", "batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}, "");
+        for (const char* section : {"ground_ball_response", "gameplay_ball", "ball_response", "batter_profile", "swing_tempo", "window", "camera", "release", "field", "mound", "reference_pitch", "strike_zone", "pitcher_blockout", "batter_blockout", "character_style", "bat_contact", "player_aim", "hit_authorization", "batting_interaction", "swing_phase_potential"}) {
             if (const auto* node = table.get(section)) {
                 if (!node->is_table()) throw std::runtime_error(std::string(section) + " must be a table.");
                 const auto& fields = *node->as_table();
@@ -78,6 +78,7 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
                 if (prefix == "bat_contact.") only_keys(fields, {"ball_radius_m", "bat_radius_m"}, prefix);
                 if (prefix == "camera.") only_keys(fields, {"preset", "position_m", "target_m", "vertical_fov_degrees"}, prefix);
                 if (prefix == "release.") only_keys(fields, {"position_m"}, prefix);
+                if (prefix == "ground_ball_response.") only_keys(fields, {"rebound_vertical_ratio", "impact_horizontal_retention", "roll_deceleration_mps2"}, prefix);
                 if (prefix == "gameplay_ball.") only_keys(fields, {"radius_m"}, prefix);
                 if (prefix == "field.") only_keys(fields, {"grass_half_width_m", "grass_end_z_m", "home_dirt_radius_m"}, prefix);
                 if (prefix == "reference_pitch.") only_keys(fields, {"initial_velocity_mps"}, prefix);
@@ -175,6 +176,12 @@ BattingStaging load_batting_staging(const std::filesystem::path& path)
         candidate.batter_profile.contact=ability("batter_profile.contact",0,120);
         candidate.batter_profile.power=ability("batter_profile.power",0,120);
         candidate.batter_profile.trajectory=ability("batter_profile.trajectory",1,4);
+        auto& ground=candidate.ground_ball_response;
+        ground.rebound_vertical_ratio=number(table,"ground_ball_response.rebound_vertical_ratio",ground.rebound_vertical_ratio,0,1);
+        ground.impact_horizontal_retention=number(table,"ground_ball_response.impact_horizontal_retention",ground.impact_horizontal_retention,0,1);
+        ground.roll_deceleration_mps2=number(table,"ground_ball_response.roll_deceleration_mps2",ground.roll_deceleration_mps2,0,1000);
+        if(ground.impact_horizontal_retention<=0||ground.roll_deceleration_mps2<=0)
+            throw std::runtime_error("ground_ball_response retention and deceleration must be positive.");
         auto& response=candidate.ball_response;
         response.ideal_exit_speed_min_mps=number(table,"ball_response.ideal_exit_speed_min_mps",response.ideal_exit_speed_min_mps,1,100);
         response.ideal_exit_speed_max_mps=number(table,"ball_response.ideal_exit_speed_max_mps",response.ideal_exit_speed_max_mps,1,100);
