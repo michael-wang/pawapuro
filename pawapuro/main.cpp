@@ -160,7 +160,7 @@ int main(int argc, char** argv)
                     }
                     if (!fixture && event.key.scancode == SDL_SCANCODE_R) { aim.recenter(); last_input_time=SDL_GetTicksNS(); }
                     if (event.key.scancode == SDL_SCANCODE_P) { pause_preview(); swing_edge=false; }
-                    if (event.key.scancode == SDL_SCANCODE_PERIOD) preview.single_step();
+                    if (event.key.scancode == SDL_SCANCODE_PERIOD) preview.step_ticks((event.key.mod & SDL_KMOD_SHIFT) ? 10u : 1u);
                 }
                 if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) { if(!fixture)preview.lose_input(); swing_edge=false; }
                 if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
@@ -227,7 +227,7 @@ int main(int argc, char** argv)
             char title[2300];
             const auto ball=preview.displayed_ball_center();
             std::snprintf(title,sizeof(title),"Pawapuro | %sBallAid:%s (B) | PitchMarker:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Gameplay:%s RawOverlap:%s | %s | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
-                "ball=(%.6f,%.6f,%.6f)  | backlog=%llu | Space:start/next-after-contact J:swing P:pause .:step Esc:quit Arrows:aim R:center",
+                "ball=(%.6f,%.6f,%.6f)  | backlog=%llu | Space:start/next-after-contact J:swing P:pause .:step Shift+.:10-step Esc:quit Arrows:aim R:center",
                 fixture_status,ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
                 marker_state==pawapuro::PitchMarkerVisualState::Previous?"Previous":cue_visible?"Current":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed()?preview.committed()->consumed_tick:0,preview.attempts.size(),preview.active_attempt?*preview.active_attempt+1:0,preview.rearmed()?"YES":"NO",preview.gameplay_state(),preview.contact_state(),response,temporal,
                 ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,preview.flight?"BattedFlight":delivery.owner_name(),delivery.pitch.tick,

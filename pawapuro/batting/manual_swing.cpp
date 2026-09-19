@@ -93,7 +93,14 @@ bool ManualSwingPreview::toggle_tempo(){
 }
 void ManualSwingPreview::lose_input(){if(pending)input_result="Cancelled";pending.reset();armed=false;}
 void ManualSwingPreview::toggle_pause(){if(phase==PreviewPhase::Playing){paused=!paused;lose_input();}}
-bool ManualSwingPreview::single_step(){return phase==PreviewPhase::Playing&&paused?step_tick():false;}
+bool ManualSwingPreview::single_step(){return step_ticks(1);}
+bool ManualSwingPreview::step_ticks(unsigned count){
+    if(phase!=PreviewPhase::Playing||!paused||count==0)return false;
+    // Review steps own no wall-time debt; every intermediate tick stays authoritative.
+    pending_ticks=fractional_credit=0;
+    for(unsigned i=0;i<count;++i)if(step_tick())return true;
+    return false;
+}
 bool ManualSwingPreview::swing_available() const {
     return armed&&phase==PreviewPhase::Playing&&!paused&&!pending&&!active_attempt&&intent_live(tick+pending_ticks+1);
 }

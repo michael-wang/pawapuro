@@ -83,6 +83,7 @@ struct ManualSwingPreview {
     bool start();
     void toggle_pause();
     bool single_step();
+    bool step_ticks(unsigned count);
     bool advance(std::uint64_t elapsed_ns);
     void lose_input();
     void input_boundary(bool held,bool edge,bool eligible,DirectX::XMFLOAT2 aim);

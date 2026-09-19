@@ -16,6 +16,9 @@ std::string truth(const ManualSwingPreview& p) {
     s<<int(a.command.tempo.mode)<<','<<int(t.state)<<','<<t.start_s<<','<<t.peak_s<<','<<t.end_s<<','<<t.efficiency<<','<<t.offset_ms<<';';
     if(t.overlap)s<<t.overlap->start_s<<','<<t.overlap->end_s<<';';
     pair(h.pitch_point);pair(h.error);pair(h.normalized_error);s<<h.authorized<<','<<h.q<<','<<int(a.gameplay)<<','<<int(a.geometry)<<','<<a.gameplay_dispatch_tick<<';';
+    s<<a.contact_query_count<<','<<a.contact_count<<','<<a.contact_dispatch_tick<<';';
+    if(a.searched_interval)s<<a.searched_interval->start_s<<','<<a.searched_interval->end_s<<';';
+    if(a.contact){const auto& c=*a.contact;s<<c.fractional_tick<<','<<c.sample.preview_time_s<<','<<c.sample.approach.u<<','<<c.ball_radius_m<<','<<c.bat_radius_m<<';';triple(c.normal);triple(c.relative_velocity);}
     if(a.response){const auto& r=*a.response;s<<r.contact_time_s<<','<<r.exit_speed_mps<<','<<r.longitudinal_angle_deg<<','<<r.spray_angle_deg<<','<<r.temporal_transfer<<','<<r.spatial_transfer<<','<<r.energy_transfer<<';';triple(r.launch_position_m);triple(r.launch_velocity_mps);}
     if(p.flight){const auto& f=*p.flight;triple(f.initial.position_m);triple(f.initial.velocity_mps);s<<f.start_s<<','<<f.ground_s<<','<<f.ground_height_m<<';';
         for(double time:{2.,2.1,2.5,3.,5.,10.}){const auto b=f.sample(time);triple(b.position_m);triple(b.velocity_mps);}}
@@ -73,5 +76,39 @@ int main(int argc,char** argv){try{
     require(preview.tick==0&&preview.pending_ticks==0&&!preview.flight&&preview.attempts.empty(),"airborne replay retained truth/debt");
     preview.advance(4'166'666);require(preview.tick==0,"fractional debt survived replay");
     preview.advance(1);require(preview.tick==1,"replay clock not clean");
+    // Review batches use the same intermediate ticks as repeated single steps.
+    ManualSwingPreview singles(directory,staging);PlayerAim singles_aim(staging);
+    preview.reset();require(!preview.step_ticks(10)&&preview.tick==0,"Ready stepped");
+    const BattingReviewFixture center{448,0,0};center.start(preview,aim);center.start(singles,singles_aim);
+    require(!preview.step_ticks(10)&&preview.tick==0,"unpaused stepped");
+    BattingReviewFixture::toggle_pause(preview);BattingReviewFixture::toggle_pause(singles);
+    preview.step_ticks(1);singles.single_step();require(preview.tick==1&&singles.tick==1,"one-step changed");
+    bool release_crossed=false,commit_crossed=false,contact_crossed=false,stopped_short=false;
+    while(preview.phase==PreviewPhase::Playing){
+        const auto before=preview.tick;
+        const bool completed=preview.step_ticks(10);bool single_completed=false;
+        for(unsigned i=0;i<10;++i)single_completed=singles.single_step()||single_completed;
+        require(completed==single_completed&&preview.tick==singles.tick&&preview.phase==singles.phase&&preview.paused==singles.paused,"batch clock/completion differs");
+        require(preview.pending_ticks==0&&singles.pending_ticks==0,"step introduced backlog");
+        require(preview.batter.pose.world==singles.batter.pose.world&&preview.delivery.motion.pose.world==singles.delivery.motion.pose.world,"batch pose differs");
+        const auto a=preview.displayed_ball_center(),b=singles.displayed_ball_center();
+        require(a.x==b.x&&a.y==b.y&&a.z==b.z&&preview.delivery.pitch.phase==singles.delivery.pitch.phase&&preview.delivery.tick==singles.delivery.tick,"batch pitch/flight differs");
+        require(preview.attempts.size()==singles.attempts.size()&&bool(preview.pending)==bool(singles.pending),"batch command differs");
+        if(preview.latest())require(truth(preview)==truth(singles),"batch authoritative result differs");
+        if(before<384&&preview.tick>=384){require(preview.delivery.release_count==1,"batch skipped release");release_crossed=true;}
+        if(before<448&&preview.tick>=448){require(preview.committed()->consumed_tick==448,"batch skipped exact commit");center.verify(*preview.latest());commit_crossed=true;}
+        if(before<478&&preview.tick>=478){require(preview.latest()->gameplay_dispatch_tick==478&&preview.flight.has_value(),"batch skipped Contact dispatch");contact_crossed=true;}
+        if(!completed)require(preview.paused&&preview.tick==before+10,"step unpaused or wrong count");
+        else stopped_short=preview.tick<before+10&&preview.tick==preview.completion_tick();
+    }
+    require(release_crossed&&commit_crossed&&contact_crossed&&stopped_short,"missing step boundary coverage");
+    const auto held=truth(preview);preview.step_ticks(10);preview.advance(1'000'000'000);require(truth(preview)==held,"Complete step advanced");
+    // Existing backlog and fractional credit are discarded, never replayed on resume.
+    preview.reset();preview.start();preview.advance(150'000'001);require(preview.pending_ticks>0,"debt fixture has no backlog");
+    preview.toggle_pause();const auto debt_tick=preview.tick;preview.step_ticks(10);
+    require(preview.tick==debt_tick+10&&preview.paused&&preview.pending_ticks==0,"review retained backlog");
+    preview.toggle_pause();const auto resumed=preview.tick;preview.advance(0);preview.advance(4'166'666);
+    require(preview.tick==resumed,"review retained fractional debt");preview.advance(1);require(preview.tick==resumed+1,"resume clock changed");
+    std::cout<<"Review steps: 1/10, release 384, commit 448, Contact 478, Complete early-stop and zero debt passed\n";
     std::cout<<"Batting review fixture passed\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

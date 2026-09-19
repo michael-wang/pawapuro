@@ -656,3 +656,9 @@ Engine 只增加 `D3D12View::draw` 的 `translated_range_visible` bool（default
 實機使用 `--batting-fixture 448 0 0`、`448 0.6 1`、`80 0 0`，證據在ignored `build/ball-presentation-coherence-s1/` 的 `contact.png/.json`、`spatial-miss.png/.json`、`timing-miss.png/.json`及各自log。兩種Miss的Complete畫面都只留下muted marker，沒有第二顆incoming world ball；Contact仍有原BattedFlight／ground hold，球在遠處，截圖不適合辨識細縫線，精確appearance/range由Native geometry驗證。`space-reset.json`實際觀測tick2、marker Hidden、owner Hand與新球正常位置；不將非同步截圖誤稱為精確tick2畫面。沒有要求Michael提供瞄準、J或其他輸入。
 
 Full Debug／Release build 成功；修正舊 post-plane display fixture 後，full CTest Debug **23/23（247.14 s）**、Release **23/23（17.91 s）**。Raw contact、response、flight、multi-swing及fixture regressions保持原tolerances。開始pull與提交前fetch皆確認HEAD／origin/main=7fb7bb55415c2c332349453baa1e50eca35d39d2，沒有後續accepted work。
+
+## Review Step Controls S1
+
+P 暫停語意不變；Playing 且暫停時，`.` 推進 1 個 authoritative simulation tick，任一 Shift + `.` 推進最多 10 ticks（240 Hz 下約 41.67 ms），遇到 Complete 即停止。兩者逐次呼叫同一個 tick 路徑，release、fixture command、Contact dispatch 與 flight 都經過原本的中間 ticks，不使用假的 elapsed wall time；操作清除 backlog／fractional credit，不留下恢復播放的時間欠帳。Playing 期間步進後仍暫停，Complete 沿用既有完成語意。
+
+一般操作與 `--batting-fixture` 都支援，keydown repeat 仍不觸發額外步進。這只是人工檢視便利功能，未加入 slow motion、任意步長 UI、scrubber，也未變更 gameplay、調參或棒球呈現。
