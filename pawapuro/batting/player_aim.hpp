@@ -11,6 +11,8 @@ public:
     explicit PlayerAim(const BattingStaging& staging);
     DirectX::XMFLOAT2 center() const { return center_m; }
     void recenter();
+    // Exact development placement: reject invalid/unreachable input, never clamp.
+    bool set_center(DirectX::XMFLOAT2 center);
     // Signed world axes; the current fixed camera maps right/up to +X/+Y.
     void move(float x_axis,float y_axis,double elapsed_s);
     AimDiagnostic diagnostic(DirectX::XMFLOAT3 predicted) const;

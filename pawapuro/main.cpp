@@ -4,6 +4,7 @@
 #include "batting/reference_pitch.hpp"
 #include "batting/manual_swing.hpp"
 #include "batting/player_aim.hpp"
+#include "batting/review_fixture.hpp"
 #include "batting/contact_review.hpp"
 #include "batting/contact_panel.hpp"
 #include "batting/batter_card.hpp"
@@ -30,8 +31,9 @@ int main(int argc, char** argv)
         const char* base_path = SDL_GetBasePath();
         if (!base_path) throw std::runtime_error(SDL_GetError());
         auto staging_path = utf8_path(base_path) / "staging.toml";
-        if (argc == 3 && std::string_view(argv[1]) == "--staging") staging_path = utf8_path(argv[2]);
-        else if (argc != 1) throw std::runtime_error("Usage: pawapuro [--staging path/to/staging.toml]");
+        const auto options=pawapuro::parse_batting_options(argc,argv);
+        const auto& fixture=options.fixture;
+        if(options.staging_path)staging_path=utf8_path(options.staging_path->data());
         const auto staging = pawapuro::load_batting_staging(staging_path);
         const SDL_DisplayID primary=SDL_GetPrimaryDisplay();
         SDL_Rect usable{};
@@ -122,6 +124,12 @@ int main(int argc, char** argv)
             zone_left_top.x, zone_left_top.y, zone_right_bottom.x, zone_right_bottom.y, predicted_screen.x, predicted_screen.y);
         engine::D3D12View view;
         view.initialize(hwnd, static_cast<UINT>(width), static_cast<UINT>(height), scene.vertices, scene.ball_vertex_start, scene.overlay_vertex_start, static_cast<UINT>(motion.triangles.size()+batter.triangles.size()+pawapuro::contact_review_vertex_count+pawapuro::ball_readability_vertex_count+pawapuro::arrival_cue_vertex_count+result_panel.vertex_count+batter_card.vertex_count()));
+        if(fixture)fixture->start(preview,aim);
+        bool fixture_reported=false;
+        const auto pause_preview=[&] {
+            if(fixture)pawapuro::BattingReviewFixture::toggle_pause(preview);
+            else preview.toggle_pause();
+        };
         auto last_time = SDL_GetTicksNS();
         auto last_input_time=SDL_GetTicksNS();
         std::string last_title;
@@ -143,21 +151,21 @@ int main(int argc, char** argv)
                     if (event.key.scancode == SDL_SCANCODE_V) arrival_style=arrival_style==pawapuro::ArrivalCueStyle::Baseball
                         ? pawapuro::ArrivalCueStyle::Ring : pawapuro::ArrivalCueStyle::Baseball;
                     if (event.key.scancode == SDL_SCANCODE_B) ball_readability = !ball_readability;
-                    if (event.key.scancode == SDL_SCANCODE_T) preview.toggle_tempo();
-                    if (event.key.scancode == SDL_SCANCODE_J) swing_edge=true;
+                    if (!fixture && event.key.scancode == SDL_SCANCODE_T) preview.toggle_tempo();
+                    if (!fixture && event.key.scancode == SDL_SCANCODE_J) swing_edge=true;
                     if (event.key.scancode == SDL_SCANCODE_ESCAPE) running = false;
-                    if (event.key.scancode == SDL_SCANCODE_SPACE && preview.start()) {
-                        last_time=SDL_GetTicksNS(); arrival_reported=false;
+                    if (event.key.scancode == SDL_SCANCODE_SPACE && (fixture?fixture->start(preview,aim):preview.start())) {
+                        last_time=SDL_GetTicksNS(); arrival_reported=false; fixture_reported=false;
                         std::fprintf(stderr,"Preview start/replay: preview_tick=0 pitcher_tick=0 batter_tick=0 owner=Hand pitch_tick=0; debt cleared.\n");
                     }
-                    if (event.key.scancode == SDL_SCANCODE_R) { aim.recenter(); last_input_time=SDL_GetTicksNS(); }
-                    if (event.key.scancode == SDL_SCANCODE_P) { preview.toggle_pause(); swing_edge=false; }
+                    if (!fixture && event.key.scancode == SDL_SCANCODE_R) { aim.recenter(); last_input_time=SDL_GetTicksNS(); }
+                    if (event.key.scancode == SDL_SCANCODE_P) { pause_preview(); swing_edge=false; }
                     if (event.key.scancode == SDL_SCANCODE_PERIOD) preview.single_step();
                 }
-                if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) { preview.lose_input(); swing_edge=false; }
+                if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) { if(!fixture)preview.lose_input(); swing_edge=false; }
                 if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
-                    preview.lose_input(); swing_edge=false;
-                    if (preview.phase == pawapuro::PreviewPhase::Playing && !preview.paused) preview.toggle_pause();
+                    if(!fixture)preview.lose_input(); swing_edge=false;
+                    if (preview.phase == pawapuro::PreviewPhase::Playing && !preview.paused) pause_preview();
                     std::fprintf(stderr, "Window minimized; active preview paused (P to resume).\n");
                 }
                 if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED || event.type == SDL_EVENT_WINDOW_FOCUS_LOST) last_input_time=SDL_GetTicksNS();
@@ -175,7 +183,7 @@ int main(int argc, char** argv)
             const auto input_now=SDL_GetTicksNS();
             const double input_dt=double(input_now-last_input_time)/1e9;
             last_input_time=input_now;
-            if (SDL_GetWindowFlags(window.get()) & SDL_WINDOW_INPUT_FOCUS) {
+            if (!fixture && (SDL_GetWindowFlags(window.get()) & SDL_WINDOW_INPUT_FOCUS)) {
                 const bool* keys=SDL_GetKeyboardState(nullptr);
                 aim.move(float(keys[SDL_SCANCODE_RIGHT])-float(keys[SDL_SCANCODE_LEFT]),
                     float(keys[SDL_SCANCODE_UP])-float(keys[SDL_SCANCODE_DOWN]),input_dt);
@@ -186,7 +194,7 @@ int main(int argc, char** argv)
             // SDL clears keyboard state on focus loss. The Windows physical key state
             // prevents a held J from rearming merely because focus was regained.
             const bool swing_held=(GetAsyncKeyState('J')&0x8000)!=0;
-            preview.input_boundary(swing_held,swing_edge,eligible,ac);
+            if(!fixture)preview.input_boundary(swing_held,swing_edge,eligible,ac);
             const auto ad=aim.diagnostic(prediction.state.position_m);
             const auto ball_phase=preview.flight?(preview.flight->complete(double(preview.tick)/pawapuro::pitch_hz)?pawapuro::PitchPhase::Complete:pawapuro::PitchPhase::InFlight):delivery.pitch.phase;
             const bool cue_visible=pawapuro::contact_review_arrival_visible(preview);
@@ -197,11 +205,29 @@ int main(int argc, char** argv)
             if(preview.flight){const auto& r=*preview.latest()->response;
                 std::snprintf(response,sizeof(response),"speed=%.3fm/s longitudinal=%+.3fdeg spray=%+.3fdeg effective=%.9fs %s",r.exit_speed_mps,r.longitudinal_angle_deg,r.spray_angle_deg,r.contact_time_s,
                     preview.flight->complete(double(preview.tick)/pawapuro::pitch_hz)?"GroundHold":"BattedFlight");}
-            char title[2048];
+            char fixture_status[240]="";
+            if(fixture) {
+                std::snprintf(fixture_status,sizeof(fixture_status),"Fixture: commit=%llu ex=%+.9g ey=%+.9g | ",fixture->commit_tick,fixture->ex,fixture->ey);
+                if(const auto* attempt=preview.latest()) {
+                    fixture->verify(*attempt);
+                    const auto& auth=attempt->authorization;
+                    std::snprintf(fixture_status,sizeof(fixture_status),"Fixture: commit=%llu ex=%+.9g ey=%+.9g actual=(%+.9g,%+.9g) | ",fixture->commit_tick,fixture->ex,fixture->ey,auth.normalized_error.x,auth.normalized_error.y);
+                    if(!fixture_reported) {
+                        std::fprintf(stderr,"Fixture requested: commit=%llu ex=%+.9g ey=%+.9g; actual consumed=%llu aim=(%.9g,%.9g) pitch=(%.9g,%.9g) normalized=(%.9g,%.9g) q=%.9g authorized=%d efficiency=%.12g offset_ms=%.12g Gameplay=%s\n",
+                            fixture->commit_tick,fixture->ex,fixture->ey,attempt->command.consumed_tick,attempt->command.aim_center.x,attempt->command.aim_center.y,
+                            auth.pitch_point.x,auth.pitch_point.y,auth.normalized_error.x,auth.normalized_error.y,auth.q,auth.authorized,attempt->timing.efficiency,attempt->timing.offset_ms,preview.gameplay_state());
+                        if(attempt->response) {const auto& r=*attempt->response;
+                            std::fprintf(stderr,"Fixture planned response: effective=%.12g origin=(%.9g,%.9g,%.9g) speed=%.9g longitudinal=%.9g spray=%.9g velocity=(%.9g,%.9g,%.9g)\n",
+                                r.contact_time_s,r.launch_position_m.x,r.launch_position_m.y,r.launch_position_m.z,r.exit_speed_mps,r.longitudinal_angle_deg,r.spray_angle_deg,r.launch_velocity_mps.x,r.launch_velocity_mps.y,r.launch_velocity_mps.z);}
+                        fixture_reported=true;
+                    }
+                }
+            }
+            char title[2300];
             const auto ball=preview.displayed_ball_center();
-            std::snprintf(title,sizeof(title),"Pawapuro | BallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Gameplay:%s RawOverlap:%s | %s | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
+            std::snprintf(title,sizeof(title),"Pawapuro | %sBallAid:%s (B) | ArrivalCue:%s/%s (V) | Swing:%s %s commit=%llu swings=%zu active=%zu rearmed=%s Gameplay:%s RawOverlap:%s | %s | %s | live aim=(%.4f,%.4f) %s | %s | preview_tick=%llu delivery_tick=%llu animation_tick=%llu batter_tick=%llu owner=%s pitch_tick=%llu "
                 "ball=(%.6f,%.6f,%.6f)  | backlog=%llu | Space:start/next-after-contact J:swing P:pause .:step Esc:quit Arrows:aim R:center",
-                ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
+                fixture_status,ball_readability?"ON":"OFF",arrival_style==pawapuro::ArrivalCueStyle::Baseball?"Filled Baseball":"Ring",
                 cue_visible?"Visible":"Hidden",preview.swing_state(),eligible&&preview.swing_available()?"OPEN":"CLOSED",preview.committed()?preview.committed()->consumed_tick:0,preview.attempts.size(),preview.active_attempt?*preview.active_attempt+1:0,preview.rearmed()?"YES":"NO",preview.gameplay_state(),preview.contact_state(),response,temporal,
                 ac.x,ac.y,aim_error,preview.state_name(),preview.tick,delivery.tick,motion.tick,batter.tick,preview.flight?"BattedFlight":delivery.owner_name(),delivery.pitch.tick,
                 ball.x,ball.y,ball.z,preview.pending_ticks);

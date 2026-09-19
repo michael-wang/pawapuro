@@ -18,6 +18,10 @@ PlayerAim::PlayerAim(const BattingStaging& s):tuning(s.player_aim),authorization
     recenter();
 }
 void PlayerAim::recenter() { center_m={0,(bottom+top)/2}; }
+bool PlayerAim::set_center(DirectX::XMFLOAT2 center) {
+    if(!std::isfinite(center.x)||!std::isfinite(center.y)||center.x < -half_width||center.x > half_width||center.y < bottom||center.y > top)return false;
+    center_m=center;return true;
+}
 void PlayerAim::move(float x,float y,double elapsed_s) {
     if (!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(elapsed_s)||elapsed_s<=0) return;
     const float length=std::hypot(x,y);

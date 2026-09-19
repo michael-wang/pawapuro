@@ -93,6 +93,15 @@ if(BUILD_TESTING)
     target_include_directories(ball_response_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(ball_response_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
     add_test(NAME ball_response COMMAND ball_response_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting" "${CMAKE_CURRENT_BINARY_DIR}/response-test")
+    add_executable(review_fixture_test pawapuro/batting/review_fixture_test.cpp pawapuro/batting/player_aim.cpp pawapuro/batting/reference_scene.cpp
+        pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/manual_swing.cpp
+        pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp
+        pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
+    target_compile_features(review_fixture_test PRIVATE cxx_std_20)
+    target_compile_options(review_fixture_test PRIVATE /W4 /WX /permissive- /utf-8)
+    target_include_directories(review_fixture_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(review_fixture_test PRIVATE mesh_glb tomlplusplus::tomlplusplus)
+    add_test(NAME review_fixture COMMAND review_fixture_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting")
     add_executable(multi_swing_test pawapuro/batting/multi_swing_test.cpp pawapuro/batting/player_aim.cpp
         pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/manual_swing.cpp
         pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp

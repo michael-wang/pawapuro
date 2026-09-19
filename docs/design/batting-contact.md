@@ -604,3 +604,19 @@ Full Debug／Release build與full CTest均通過：Debug22/22（238.38 s）、Re
 Release實機由Michael直接打出後飛球（不要求精確手動ey），agent觀測並擷取：consumed452、longitudinal+98.637°、speed28.761 m/s、GroundHold／Complete tick1878、ball=(-3.633927,.085,-24.846628)，BallAid設定仍ON，球已明確在camera後方，app存活而無error dialog。Michael再按Space／P，agent擷取新球paused tick199：swings=0、Gameplay/RawOverlap Pending、No launch、owner=Hand，live aim保留。證據為ignored `backward-complete.png/.json` 與 `space-next-pitch.png/.json`；未取得飛行初段的實機截圖，跨plane逐tick數值由Native regression提供。手動出棒／reset與agent直接觀測證據分開記錄，沒有offline mock或假稱精確OS timing。
 
 本輪開始pull與提交前fetch皆確認HEAD／origin/main=573a4b82577c44a9614e2f2980a0865c018c74dd，沒有後續accepted work。停止等待Michael＋Julia review，不接續Previous Pitch Marker工作。
+
+## Batting Review Fixture S0（2026-09-19）
+
+Backward BallAid Projection Safety S1 已獲 human acceptance。精確 commit／ex／ey 的視覺 review 不再依賴 Michael 手動移動游標或計時出棒；Native tests 之外，正式 app 現在接受 `pawapuro [--staging <path>] [--batting-fixture <commit_tick> <ex> <ey>]`，兩個 option 可省略、可交換順序。Tick 必須是 uint64，ex／ey 必須是 finite float；缺值、重複／未知 option、溢位或不可到達的 aim 都明確拒絕，不 clamp。
+
+這是 Pawapuro Native development tooling。`BattingReviewFixture` 從 production `predict_arrival` 取得 evaluation-plane P，從目前 Contact-scaled region 與 gameplay ball Data 取得 rx／ry／rb，再計算 `A=(P.x-ex*(rx+rb), P.y-ey*(ry+rb))`。`PlayerAim::set_center` 只接受 finite 且在既有移動邊界內的精確中心；同一 A 同時作為可見 reticle 與 `record_command(commit_tick,A)` 的 immutable snapshot。正常 TimingInteraction → Hit Authorization → Gameplay Contact → BallResponse → BattedBallFlight 仍是唯一結果來源；fixture 不強制 Authorized／Contact，也不覆寫 q 或 response。
+
+啟動自動開始，固定目前 Normal／Compact；fixture 模式 J／方向鍵／R／T 不介入，P／`.`／B／V／Escape 保留。預先記錄的 fixture command 不因 focus loss 或 pause 取消；最小化仍 pause，resume／single-step 繼續同一命令。這與一般 OS J edge 的取消語意刻意分開，一般模式的 controls／focus／held-key 規則不變。Space 沿既有 Contact 後或 Complete 可重開的條件，透過正常 start 清除 tick／backlog／fractional debt／attempts／flight，再恢復相同 aim 與 command；不新增 mid-pitch cancel。
+
+Title 顯示 fixture request 與實際 normalized ex／ey，消耗時以既有 float tolerance 1e−6 核對 consumed tick／ex／ey，stderr 記錄 aim、pitch point、q、授權、timing、planned response；實際 Contact dispatch 仍由既有 log／title 明確區分。新 regression 覆蓋 center448、±.9、early433、late456、真實 spatial rejection、invalid CLI／aim、pause／step、airborne reset 與 30／60／120 Hz／backlog 重播的逐值相同結果。這不是 save-state／replay recording system，也沒有 generic console、fixture registry 或 Lua。
+
+Previous Pitch Marker、BallResponse／vertical anchors、Trajectory、spray、camera、timing UI、panel 與 step controls 都未修改。停止於本 slice，等待 Michael＋Julia review。
+
+Release CLI 實機證據在 ignored `build/batting-review-fixture-s0/`：`center.png`、`lower.png`、`upper.png`、`center-replay.png` 與同名 JSON，對應 `center-desktop.log`／`lower-desktop.log`／`upper-desktop.log`。三者都 consumed448、ex=0；actual ey 分別 0／+0.899999917／−0.899999917，與 requested 0／±0.9 相差不到 1e−6。後兩者 authorized，longitudinal 約 +95.9999695／−103.999962°，velocity Z 約 −3.30796504／−7.65601301 m/s。截圖是實際 Release app 的 spatial relation／結果，非 offline reconstruction；沒有人工瞄準或 J 計時。中央以 OS Space 重播，request／consumption、response、dispatch、Complete 四組 log 逐行相同；Native regression 另比較不同 cadence 的 flight samples 與重播清除 debt。圖像不作精確 ey 或短暫初始飛行方向的量測依據，以 committed log 為數值權威。
+
+驗證：full Debug／Release build 成功；full CTest Debug **23/23（254.05 s）**、Release **23/23（19.08 s）**。最後拒絕 malformed `+-1` 的 parser 補強另經 Debug 重建及 focused fixture **1/1（35.62 s）**；Release 全量已包含此補強。初次新測試誤把 `single_step()` 的 completion 回傳值當作步進成功，修正為驗證實際 tick，未改 simulation 或 tolerance。開始同步與提交前 fetch 均確認 HEAD／origin/main 為 2653e6f9d440caac4a70aeaacdd01f0c48a1a423，沒有後續 accepted work。
