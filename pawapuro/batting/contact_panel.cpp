@@ -15,6 +15,7 @@ BattingInfo batting_info(const ManualSwingPreview& p) {
             : timing->offset_ms<0 ? InfoTiming::Early : InfoTiming::Late;
     }
     if(p.flight) {
+        result.exit_speed_kmh=double(p.latest()->response->exit_speed_mps)*3.6;
         const auto& f=*p.flight;
         // First ground hit is currently the only collision. Future hits must supply their actual stop time.
         const double time=std::clamp(double(p.tick)/pitch_hz,f.start_s,f.ground_s);
@@ -37,9 +38,10 @@ BattingInfoText format_batting_info(const BattingInfo& info) {
     };
     if(info.offset_ms)number(0,"%+.1f ms",*info.offset_ms);
     if(info.flight){number(1,"%.2f s",info.flight->elapsed_s);number(2,"%.1f m",info.flight->distance_m);number(3,"%.1f m",info.flight->max_height_m);}
+    if(info.exit_speed_kmh)number(4,"%.1f km/h",*info.exit_speed_kmh);
     return text;
 }
-namespace { constexpr char glyph_characters[]="0123456789+-.sm"; }
+namespace { constexpr char glyph_characters[]="0123456789+-.smk/h"; }
 ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     if(!width||!height)throw std::runtime_error("Batting info needs client pixels");
     const float scale=float(height)/1080;
@@ -54,9 +56,9 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
         for(const auto& run:mask.runs)quad(v,x+run.x/scale,y+run.y/scale,run.w/scale,1/scale,color);
     };
     const DirectX::XMFLOAT3 white{.95f,.96f,1},muted{.66f,.71f,.76f},gold{1,.9f,.58f},dark{.035f,.06f,.09f};
-    quad(base,24,24,500,272,dark);quad(base,24,24,4,272,gold);
+    quad(base,24,24,500,320,dark);quad(base,24,24,4,320,gold);
     text(base,L"打擊資訊",42,34,30,white);quad(base,42,72,464,1,{.25f,.30f,.35f});
-    for(unsigned row=0;row<4;++row)text(base,batting_info_labels[row],42,84+48*float(row),24,white);
+    for(unsigned row=0;row<5;++row)text(base,batting_info_labels[row],42,84+48*float(row),24,white);
     for(unsigned i=0;i<4;++i)text(timing_text[i],info_timing_labels[i],202,82,28,i==2?gold:white);
     // Small concrete helper area; lower-left Batter Profile remains independent.
     const float helper_x=float(width)/scale-350;
@@ -75,7 +77,7 @@ ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
     // Last slot is a blank; every slot/state has an identical triangle count.
     const auto pad=[](auto& variants){std::size_t count=0;for(const auto& v:variants)count=std::max(count,v.size());for(auto& v:variants)v.resize(count);};
     pad(timing_text);pad(tempo_text);pad(glyphs);
-    vertex_count=static_cast<unsigned>(base.size()+timing_text[0].size()+tempo_text[0].size()+4*16*glyphs[0].size());
+    vertex_count=static_cast<unsigned>(base.size()+timing_text[0].size()+tempo_text[0].size()+5*16*glyphs[0].size());
 }
 void ContactResultPanel::append(std::vector<engine::Vertex>& target,const ManualSwingPreview& p) const {
     const auto info=batting_info(p);const auto values=format_batting_info(info);
@@ -83,7 +85,7 @@ void ContactResultPanel::append(std::vector<engine::Vertex>& target,const Manual
     add(base);add(timing_text[static_cast<unsigned>(info.timing)]);
     const auto tempo=p.phase==PreviewPhase::Ready||p.phase==PreviewPhase::Complete?p.next_tempo:p.attempt_tempo.mode;
     add(tempo_text[tempo==SwingTempo::Original?0:1]);
-    for(unsigned row=0;row<4;++row)for(unsigned slot=0;slot<16;++slot){
+    for(unsigned row=0;row<5;++row)for(unsigned slot=0;slot<16;++slot){
         const char c=row==0&&!info.offset_ms?' ':values[row][slot];const char* found=c?std::strchr(glyph_characters,c):nullptr;
         const auto index=found?static_cast<std::size_t>(found-glyph_characters):glyphs.size()-1;
         const float x=(row==0?296.f:202.f)+16*float(slot),y=82+48*float(row);

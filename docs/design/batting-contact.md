@@ -690,3 +690,9 @@ Perfect contact 不必是最高／最遠的一球；目前 gravity-only vacuum d
 Michael T3 Atari 實值：9.57279682159°、44.3308830261 m/s、1.59265146611 s、69.6205019108 m、max ball-bottom height 3.46712970734 m。Slight upper ey=-.25：3.56116890907°、0.749366066449 s、33.0591722644 m、1.08037614822 m；slight lower ey=+.25：17.6505279541°、2.78430506422 s、117.276847485 m、9.8542881012 m。原 timing efficiency／offset、速度、spray／effective time／origin 均由 regression 保留；距離差不是平衡結論。
 
 Full Debug／Release build 成功，CTest 各 23/23（242.84 s／14.23 s），沒有放寬既有 tolerances。Release 僅擷取三種指定 fixture：`448 0 0`、`448 0 -0.25`、`448 0 +0.25`；ignored `build/central-contact-basin-s1/center.jpg`、`upper.jpg`、`lower.jpg` 均顯示真正 app 的 Complete／Batting Info metrics，各附 title JSON 與 app log。沒有要求 Michael 人工精確輸入。
+
+## Batted Ball Readability S1
+
+Central Contact Basin 與 quality-weighted Trajectory S1 已通過人類驗收。打擊資訊新增「擊球初速」，於 Gameplay Contact 派送後顯示 BallResponse 初速乘以 3.6 的 km/h（一位小數）；它不是即時球速，飛行與結果保留期間固定，Space 清除。飛行時間、飛行距離、最大高度仍是原有玩家回饋。
+
+新增亮洋紅色、半徑 0.35 m 的地面投影圓盤，作為開發／閱讀輔助，不是真實陰影、落點預測或碰撞物。它只在 outgoing flight 存在時顯示，讀取當前 sample 的 X/Z，Y 固定於地面上方 0.02 m；首次觸地後隨既有 sample 停留，Space 後隱藏。32 個三角形維持固定 96 頂點，不新增每幀配置或 Engine API。標記沒有 gameplay authority；Ball Response、飛行與既有四項資訊定義均不變。
