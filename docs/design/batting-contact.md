@@ -662,3 +662,15 @@ Full Debug／Release build 成功；修正舊 post-plane display fixture 後，f
 P 暫停語意不變；Playing 且暫停時，`.` 推進 1 個 authoritative simulation tick，任一 Shift + `.` 推進最多 10 ticks（240 Hz 下約 41.67 ms），遇到 Complete 即停止。兩者逐次呼叫同一個 tick 路徑，release、fixture command、Contact dispatch 與 flight 都經過原本的中間 ticks，不使用假的 elapsed wall time；操作清除 backlog／fractional credit，不留下恢復播放的時間欠帳。Playing 期間步進後仍暫停，Complete 沿用既有完成語意。
 
 一般操作與 `--batting-fixture` 都支援，keydown repeat 仍不觸發額外步進。這只是人工檢視便利功能，未加入 slow motion、任意步長 UI、scrubber，也未變更 gameplay、調參或棒球呈現。
+
+## Batting Info Window Cleanup S1
+
+左上 Batting Info Window 改為正式打擊練習回饋：揮棒時機、飛行時間、飛行距離、最大高度。移除原本三項結果／游標清單、擊球判定說明、authorization／raw overlap 主面板文字。右上小型次要提示保留 Space、目前／下一球 A/B 節奏、T 切換與 P／單步控制；左下 Batter Profile card 不變。
+
+時機讀取最近一次已 consumed SwingAttempt 的 signed offset：負為太早、正為太晚；`|offset| ≤ 10 ms` 暫列為「剛好」的純顯示候選，顯示到小數一位 ms，不改 temporal overlap、efficiency 或 gameplay acceptance。未出棒顯示 `--`，multi-swing 每次新 intent 更新為該次時機，之後保持到下一次出棒或 Space。
+
+三項 flight 值只在已 dispatch、存在 BattedBallFlight 後顯示。飛行時間為 launch 至目前／first hit 的秒數（兩位小數）；距離為 launch 至目前／first hit 的 XZ 直線距離（公尺一位小數）；最大高度為從 launch 到目前所達到的最高球底離地高度（公尺一位小數），包括 tick 間的 analytic apex。數值由既有 authoritative tick 與 immutable flight 唯讀推導，無第二個 clock 或累計狀態。尚無 flight 顯示 `--`；暫停不變，first hit 後凍結，Complete hold 保留，Space 清除。目前唯一 first hit 是原有 first-ground crossing；未來若新增 wall/object collision，必須使用實際第一碰撞終止點／時間，不能繼續當成只落地。
+
+靜態中文與有限數字字元在 startup 快取；每幀只格式化 stack buffer 並組合固定數量 glyph triangles，無 per-frame GDI rasterization 或新增 heap allocation。沒有通用 font/UI/statistics framework、ground projection marker、timing graph，也沒有 Ball Response／flight 調參。
+
+驗證：full Debug／Release build 成功，CTest 各 23/23（248.84 s／14.87 s）。新版 panel test 涵蓋中心／fly Contact、空間 Miss、early timing Miss、NoSwing、Space、analytic apex、first-hit freeze、1080／1620 固定 geometry／stable reserved storage；既有 gameplay／fixture 回歸未改容差。Release 實機證據在 ignored `build/batting-info-window-s1/`：`contact.jpg`（448/0/0：-1.2 ms、0.38 s、16.7 m、0.7 m）、`miss.jpg`（80/0/0：太早 -1534.5 ms、三項 flight 為 --）、`reset.jpg`（Space 後 tick14 paused、新球四欄 --），各附 title JSON。未要求人工精確輸入。

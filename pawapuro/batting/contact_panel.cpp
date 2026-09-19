@@ -3,90 +3,91 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <cwchar>
+#include <cstring>
 #include <stdexcept>
 namespace pawapuro {
-ContactPanelState contact_panel_state(const ManualSwingPreview& p) {
-    switch(p.gameplay_result()) {
-    case GameplayResult::NoSwing:return ContactPanelState::NoSwing;
-    case GameplayResult::Miss:return ContactPanelState::Miss;
-    case GameplayResult::Contact:return ContactPanelState::Contact;
-    default:return p.phase==PreviewPhase::Ready ? ContactPanelState::Ready
-        : p.committed() ? ContactPanelState::Swinging : ContactPanelState::Waiting;
+BattingInfo batting_info(const ManualSwingPreview& p) {
+    BattingInfo result;
+    if(const auto* timing=p.timing()) {
+        result.offset_ms=timing->offset_ms;
+        // Display candidate only, independent of temporal overlap and gameplay acceptance.
+        result.timing=std::abs(timing->offset_ms)<=10 ? InfoTiming::Center
+            : timing->offset_ms<0 ? InfoTiming::Early : InfoTiming::Late;
     }
-}
-
-int contact_panel_highlight(ContactPanelState state) {
-    switch(state) {
-    case ContactPanelState::NoSwing:return 0;
-    case ContactPanelState::Contact:return 1;
-    case ContactPanelState::Miss:return 2;
-    default:return -1;
+    if(p.flight) {
+        const auto& f=*p.flight;
+        // First ground hit is currently the only collision. Future hits must supply their actual stop time.
+        const double time=std::clamp(double(p.tick)/pitch_hz,f.start_s,f.ground_s);
+        const auto current=f.sample(time).position_m;
+        const double elapsed=time-f.start_s;
+        const double peak_elapsed=std::clamp(-double(f.initial.velocity_mps.y)/earth_gravity_mps2,0.,elapsed);
+        const auto peak=f.sample(f.start_s+peak_elapsed).position_m;
+        result.flight=BattingFlightMetrics{elapsed,
+            std::hypot(double(current.x)-f.initial.position_m.x,double(current.z)-f.initial.position_m.z),
+            std::max(0.,double(peak.y)-f.ground_height_m)};
     }
+    return result;
 }
+BattingInfoText format_batting_info(const BattingInfo& info) {
+    BattingInfoText text{};
+    for(auto& row:text)std::snprintf(row.data(),row.size(),"--");
+    const auto number=[&](unsigned row,const char* format,double value){
+        const int size=std::snprintf(text[row].data(),text[row].size(),format,value);
+        if(size<0||size>=int(text[row].size()))std::snprintf(text[row].data(),text[row].size(),"--");
+    };
+    if(info.offset_ms)number(0,"%+.1f ms",*info.offset_ms);
+    if(info.flight){number(1,"%.2f s",info.flight->elapsed_s);number(2,"%.1f m",info.flight->distance_m);number(3,"%.1f m",info.flight->max_height_m);}
+    return text;
+}
+namespace { constexpr char glyph_characters[]="0123456789+-.sm"; }
 ContactResultPanel::ContactResultPanel(unsigned width,unsigned height) {
-    if(!width||!height)throw std::runtime_error("Contact panel needs client pixels");
+    if(!width||!height)throw std::runtime_error("Batting info needs client pixels");
     const float scale=float(height)/1080;
-    const wchar_t* texts[]={L"本球／最近出棒結果",L"按 Space 開始",L"等待出棒",L"揮棒中",
-        contact_panel_labels[0],contact_panel_labels[1],contact_panel_labels[2],
-        L"時間重疊＋瞄準授權",L"共同決定擊球是否成立。",
-        L"Space：下一球",L"物理重疊僅供開發診斷。",L"A 原節奏",L"B 快出棒",L"下一球：A 原節奏",L"下一球：B 快出棒",
-        L"T：下一球前切換",L"揮棒時機：等待",
-        L"瞄準授權：等待",L"瞄準授權：通過",L"瞄準授權：超出範圍",
-        L"揮棒時機：無重疊（早）",L"揮棒時機：有重疊",L"揮棒時機：無重疊（晚）",L"可再次出棒",L"揮棒中",L"出棒機會已結束",L"出棒已排程",L"等待第一次出棒"};
-    std::array<StartupTextMask,28> masks;
-    for(unsigned i=0;i<masks.size();++i)masks[i]=raster_startup_text(texts[i],static_cast<int>(std::lround((i==0?30:i>=4&&i<=6?28:20)*scale)));
-    for(unsigned variant=0;variant<variants.size()+annotations.size();++variant) {
-        auto& v=variant<6?variants[variant]:annotations[variant-6];const auto state=static_cast<ContactPanelState>(variant);
-        const int selected=contact_panel_highlight(state);
-        const auto point=[&](float x,float y){return DirectX::XMFLOAT3{2*x*scale/float(width)-1,1-2*y*scale/float(height),0};};
-        const auto quad=[&](float x,float y,float w,float h,DirectX::XMFLOAT3 color){
-            auto a=point(x,y),b=point(x+w,y),c=point(x+w,y+h),d=point(x,y+h);
-            v.insert(v.end(),{{a,color},{b,color},{c,color},{a,color},{c,color},{d,color}});
-        };
-        const auto text=[&](unsigned index,float x,float y,DirectX::XMFLOAT3 color){
-            for(const auto& run:masks[index].runs)quad(x+run.x/scale,y+run.y/scale,run.w/scale,1/scale,color);
-        };
-        const DirectX::XMFLOAT3 white{0.95f,0.96f,1},dark{0.035f,0.06f,0.09f},bright{1,0.9f,0.58f};
-        if(variant>=6) {
-            const unsigned index=variant-6;
-            if(index<6)text(11+index,42,index<2?394.f:index<4?420.f:index==4?446.f:474.f,white);
-            if(index>=7&&index<10)text(17+index-7,42,510,bright);
-            if(index>=10&&index<13)text(20+index-10,42,474,bright);
-            if(index>=13)text(23+index-13,42,76,bright);
-            annotation_vertex_count=std::max(annotation_vertex_count,static_cast<unsigned>(v.size()));
-            continue;
-        }
-        quad(24,24,540,526,dark);text(0,42,34,white);
-        if(variant<1)text(1+variant,42,76,white);
-        for(unsigned row=0;row<3;++row) {
-            const float y=110+46*float(row);const bool active=int(row)==selected;
-            if(active) {
-                quad(38,y-2,510,42,bright);
-                v.insert(v.end(),{{point(46,y+10),dark},{point(58,y+18),dark},{point(46,y+26),dark}});
-            }
-            text(4+row,70,y,active?dark:white);
-        }
-        text(7,42,256,white);text(8,42,282,white);
-        if(state==ContactPanelState::Contact){text(9,42,326,bright);text(10,42,352,bright);}
-        vertex_count=std::max(vertex_count,static_cast<unsigned>(v.size()));
+    x_scale=2*scale/float(width);y_scale=2*scale/float(height);
+    const auto point=[&](float x,float y){return DirectX::XMFLOAT3{x*x_scale-1,1-y*y_scale,0};};
+    const auto quad=[&](std::vector<engine::Vertex>& v,float x,float y,float w,float h,DirectX::XMFLOAT3 color){
+        const auto a=point(x,y),b=point(x+w,y),c=point(x+w,y+h),d=point(x,y+h);
+        v.insert(v.end(),{{a,color},{b,color},{c,color},{a,color},{c,color},{d,color}});
+    };
+    const auto text=[&](std::vector<engine::Vertex>& v,const wchar_t* value,float x,float y,int size,DirectX::XMFLOAT3 color){
+        const auto mask=raster_startup_text(value,static_cast<int>(std::lround(size*scale)));
+        for(const auto& run:mask.runs)quad(v,x+run.x/scale,y+run.y/scale,run.w/scale,1/scale,color);
+    };
+    const DirectX::XMFLOAT3 white{.95f,.96f,1},muted{.66f,.71f,.76f},gold{1,.9f,.58f},dark{.035f,.06f,.09f};
+    quad(base,24,24,500,272,dark);quad(base,24,24,4,272,gold);
+    text(base,L"打擊資訊",42,34,30,white);quad(base,42,72,464,1,{.25f,.30f,.35f});
+    for(unsigned row=0;row<4;++row)text(base,batting_info_labels[row],42,84+48*float(row),24,white);
+    for(unsigned i=0;i<4;++i)text(timing_text[i],info_timing_labels[i],202,82,28,i==2?gold:white);
+    // Small concrete helper area; lower-left Batter Profile remains independent.
+    const float helper_x=float(width)/scale-350;
+    quad(base,helper_x,24,326,112,dark);
+    text(base,L"Space：開始／下一球",helper_x+14,34,18,muted);
+    text(base,L"T：下一球前切換",helper_x+14,84,18,muted);
+    text(base,L"P：暫停　.／Shift+.：步進",helper_x+14,109,16,muted);
+    text(tempo_text[0],L"A 原節奏",helper_x+14,59,18,muted);
+    text(tempo_text[1],L"B 快出棒",helper_x+14,59,18,muted);
+    for(unsigned i=0;i<sizeof(glyph_characters)-1;++i){
+        const wchar_t value[]{wchar_t(glyph_characters[i]),0};text(glyphs[i],value,0,0,26,gold);
+        float extent=0;for(const auto& v:glyphs[i])extent=std::max(extent,v.position.x+1);
+        const float fit=std::min(1.f,14*x_scale/extent);
+        for(auto& v:glyphs[i])v.position.x=-1+(v.position.x+1)*fit;
     }
-    base_vertex_count=vertex_count;
-    for(auto& v:variants)v.resize(base_vertex_count);
-    for(auto& v:annotations)v.resize(annotation_vertex_count);
-    vertex_count=base_vertex_count+6*annotation_vertex_count;
-    std::fprintf(stderr,"Contact panel: cached fixed Chinese text, six variants, %u vertices; no per-frame rasterization\n",vertex_count);
+    // Last slot is a blank; every slot/state has an identical triangle count.
+    const auto pad=[](auto& variants){std::size_t count=0;for(const auto& v:variants)count=std::max(count,v.size());for(auto& v:variants)v.resize(count);};
+    pad(timing_text);pad(tempo_text);pad(glyphs);
+    vertex_count=static_cast<unsigned>(base.size()+timing_text[0].size()+tempo_text[0].size()+4*16*glyphs[0].size());
 }
 void ContactResultPanel::append(std::vector<engine::Vertex>& target,const ManualSwingPreview& p) const {
-    const auto& vertices=variants.at(static_cast<unsigned>(contact_panel_state(p)));target.insert(target.end(),vertices.begin(),vertices.end());
-    const auto add=[&](unsigned index){const auto& v=annotations[index];target.insert(target.end(),v.begin(),v.end());};
-    const auto mode=p.phase==PreviewPhase::Ready?p.next_tempo:p.attempt_tempo.mode;
-    add(mode==SwingTempo::Original?0:1);
-    add(p.phase==PreviewPhase::Complete?(p.next_tempo==SwingTempo::Original?2:3):6);
-    add(4);add(!p.timing()?5:p.timing()->state==SwingTimingState::Early?10:p.timing()->state==SwingTimingState::Overlap?11:12);
-    add(!p.authorization()?7:p.authorization()->authorized?8:9);
-    add(p.phase==PreviewPhase::Ready||p.paused?6:p.active_attempt?14:p.pending?16:p.rearmed()?13:
-        p.phase==PreviewPhase::Playing&&p.intent_live(p.tick+p.pending_ticks+1)&&!p.latest()?17:
-        p.latest()||p.phase==PreviewPhase::Playing?15:6);
+    const auto info=batting_info(p);const auto values=format_batting_info(info);
+    const auto add=[&](const auto& vertices){target.insert(target.end(),vertices.begin(),vertices.end());};
+    add(base);add(timing_text[static_cast<unsigned>(info.timing)]);
+    const auto tempo=p.phase==PreviewPhase::Ready||p.phase==PreviewPhase::Complete?p.next_tempo:p.attempt_tempo.mode;
+    add(tempo_text[tempo==SwingTempo::Original?0:1]);
+    for(unsigned row=0;row<4;++row)for(unsigned slot=0;slot<16;++slot){
+        const char c=row==0&&!info.offset_ms?' ':values[row][slot];const char* found=c?std::strchr(glyph_characters,c):nullptr;
+        const auto index=found?static_cast<std::size_t>(found-glyph_characters):glyphs.size()-1;
+        const float x=(row==0?296.f:202.f)+16*float(slot),y=82+48*float(row);
+        for(auto vertex:glyphs[index]){vertex.position.x+=x*x_scale;vertex.position.y-=y*y_scale;target.push_back(vertex);}
+    }
 }
 }
