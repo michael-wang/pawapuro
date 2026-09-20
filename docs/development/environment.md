@@ -1131,3 +1131,15 @@ Double timing efficiency 依 tick 為 0.548464895834／0.974447238051／0.414864
 實機擷取限制：sandbox 啟動的程序有正常 Contact／Complete log，但未出現在 computer-use `list_windows`；以既有逐命令核准流程於可見桌面啟動後才取得截圖，沒有修改 sandbox／ACL。曾有另一個同名 app 遮住 late fixture，已 activate 正確 window 並重擷取，PNG 與 title 核對一致。HUD 仍顯示「太早／剛好／太晚」，並不因 energy 解耦而改寫 timing 診斷。ey0 的兩個 spatial 列仰角仍略不同（約 9.573°／8.804°），是原 quality-weighted Trajectory 的 q 效果；不將其視為本輪新規則。實機數值與截圖不代表 Michael＋Julia 已接受手感。
 
 最終完整 Debug／Release build 均成功，完整 CTest **Debug 23/23（393.15 s）、Release 23/23（14.51 s）** 通過，包含既有 vertical-contact／Trajectory／ground response、multi-swing、fixture／replay 與 presentation regressions。六組 CSV 在 Debug／Release 逐字相同，紀錄為 `config-invariants.txt`。最終 logs 位於同目錄 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`；初輪失敗保留為 `debug-initial-ctest.log`／`release-initial-ctest.log`。完成技術驗證後停在 Michael＋Julia human review gate，未宣告候選接受。
+
+## Timing Timeline S1 (2026-09-20)
+
+以 agent `exec_command`／PowerShell、cwd `C:\astra-dev\pawapuro` 讀取 AGENTS.md，經逐命令核准 `git pull --ff-only origin main`，確認 HEAD／origin/main 均為 `1ee5ccdc0f26845fb0ee7137db29134dc7fdced1` 且工作樹乾淨。改動限於 `contact_panel.hpp/.cpp`、既有 `contact_panel_test.cpp` 與指定文件；設計及 display-range policy 由 [Timing Timeline S1](../design/batting-contact.md#timing-timeline-s1-2026-09-20) 唯一擁有。
+
+使用既有 x64 `VsDevCmd.bat`／`chcp 65001`，完整 `cmake --build build/<config>`、`ctest --test-dir build/<config> --output-on-failure -j 4`。前兩次 Release compile 的 MSVC `/W4 /WX` 回報 C4456：新區域變數 `c`／`position` 遮蔽既有名稱；已局部更名，未關閉 warning 或修改 compiler flags。這是正常 compiler failure，非 runner／sandbox 問題；初次輸出保存在 ignored `build/timing-timeline-s1/initial-compile.log`。
+
+Panel regression 以正常 fixture intent 驗證 441／448／455 Contact 的 marker 上／中／下排序與 authoritative contact time；80／480 temporal Miss 的 peak／端點 clamp，及 448／ex0.6／ey1 spatial Miss 的空心 marker。另檢查 Pending 不提前顯示 Contact、NoSwing 無 marker 且 ms=`--`、yellow interval 的時間來源與 screen-space enter-above-exit、同 pitch interval 不隨 attempt 改變，以及 30／120／240 Hz delivery chunks／backlog 的 replay 一致性。保留原 live flight metrics、first-hit freeze、hold／Space reset、1080／1620 geometry 固定容量與不修改 simulation state 的檢查。Timing Responsibility Split 的六組 production CSV 與上輪 candidate 逐字相同，紀錄為同目錄 `gameplay-invariants.txt`。
+
+Release 實機由既有 CLI 啟動，透過 computer-use 擷取 `contact-early`（441／0／0）、`contact-center`（448／0／0）、`contact-late`（455／0／0）、`swing-miss`（80／0／0）及一般啟動 `no-swing`，各附 JPEG／title JSON／app log，全部留在 ignored `build/timing-timeline-s1/`，同目錄 `REVIEW.md` 列出完整 CLI 指令。Contact 圖為實心白球，miss 的空心灰球 clamp 至軌道上端但小字仍保留 −1534.5 ms。這些是不同觀察時刻的真實 app 圖，不是同步影片或 latency 證據；有被其他視窗遮蔽的 capture 已 activate 正確 app 後重擷取。沒有新增 production capture mode、camera 或 HUD tuning Data；本輪未宣稱 Debug GPU validation 或 human acceptance。
+
+最終完整 Debug／Release build 均成功，完整 CTest **Debug 23/23（419.44 s）、Release 23/23（18.40 s）** 通過，沒有放寬既有容差。Logs 為同目錄 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`。技術驗證與實機畫面交付後停止，等待 Michael＋Julia human review。

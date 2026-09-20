@@ -120,14 +120,29 @@ int main(int argc,char** argv){try {
         &&std::wstring(batting_info_labels[2])==L"飛行距離"&&std::wstring(batting_info_labels[3])==L"最大高度","primary fields changed");
     require(std::wstring(batting_info_labels[4])==L"擊球初速","exit speed label");
     for(const auto* label:batting_info_labels)require(std::wstring(label)!=L"擊球成立"&&std::wstring(label)!=L"揮空"&&std::wstring(label)!=L"未出棒","old result list remains primary");
-    const auto empty=batting_info(p);require(!empty.offset_ms&&!empty.exit_speed_kmh&&!empty.flight&&empty.timing==InfoTiming::Waiting,"Ready values");
+    const auto empty=batting_info(p);require(!empty.offset_ms&&!empty.exit_speed_kmh&&!empty.flight&&empty.timeline.marker==TimingMarker::None,"Ready values");
     for(const auto& row:format_batting_info(empty))require(std::strcmp(row.data(),"--")==0,"empty placeholder");
-    // Presentation threshold does not feed production timing or response.
-    p.attempts.push_back({});
-    for(double offset:{-10.01,-10.,0.,10.,10.01}){
-        p.attempts.back().timing.offset_ms=offset;
-        require(batting_info(p).timing==(std::abs(offset)<=10?InfoTiming::Center:offset<0?InfoTiming::Early:InfoTiming::Late),"timing display boundary");
+    const auto timeline_position=[&](double time){return std::clamp(.5+(time-p.ball_passage.reference_s)/.080,0.,1.);};
+    require(empty.timeline.passage_enter==timeline_position(p.ball_passage.enter_s)&&empty.timeline.passage_exit==timeline_position(p.ball_passage.exit_s)
+        &&empty.timeline.passage_enter>0&&empty.timeline.passage_enter<empty.timeline.passage_exit&&empty.timeline.passage_exit<1,"visible authoritative yellow interval");
+    std::array<double,3> contact_positions{};unsigned contact_index=0;
+    for(const BattingReviewFixture fixture:{BattingReviewFixture{441,0,0},{448,0,0},{455,0,0},{80,0,0},{480,0,0},{448,.6f,1}}){
+        std::optional<BattingInfo> control;
+        for(const std::uint64_t cadence:{4'166'667ULL,33'333'333ULL,8'333'333ULL,250'000'000ULL}){
+            p.reset();p.start();require(p.record_command(fixture.commit_tick,fixture.aim_center(p)),"timeline fixture intent");
+            while(!p.latest()||p.latest()->gameplay==GameplayResult::Pending)p.advance(cadence);
+            fixture.verify(*p.latest());const auto info=batting_info(p);const bool contact=p.latest()->gameplay==GameplayResult::Contact;
+            require(info.timeline.marker==(contact?TimingMarker::Contact:TimingMarker::SwingPeak),"timeline marker kind");
+            const double event=contact?p.latest()->response->contact_time_s:p.timing()->peak_s;
+            require(info.timeline.marker_position==timeline_position(event)&&info.offset_ms==p.timing()->offset_ms,"timeline event time or secondary offset");
+            require(info.timeline.passage_enter==empty.timeline.passage_enter&&info.timeline.passage_exit==empty.timeline.passage_exit,"attempt moved interval");
+            if(control)require(info.timeline==control->timeline&&info.offset_ms==control->offset_ms,"timeline replay/cadence changed");else control=info;
+            if(fixture.commit_tick==80)require(info.timeline.marker_position==0,"early peak clamp");
+            if(fixture.commit_tick==480)require(info.timeline.marker_position==1,"late peak clamp");
+        }
+        if(contact_index<3)contact_positions[contact_index++]=control->timeline.marker_position;
     }
+    require(contact_positions[0]<contact_positions[1]&&contact_positions[1]<contact_positions[2],"early/center/late vertical ordering");
     p.reset();ground_response_checks(p);
     std::vector<engine::Vertex> marker;
     marker.reserve(ground_projection_vertex_count);
@@ -159,6 +174,20 @@ int main(int argc,char** argv){try {
             require(drawn.size()==panel.vertex_count&&drawn.data()==allocation&&drawn.capacity()==capacity,"fixed geometry/allocation contract");
             for(const auto& v:drawn)require(std::isfinite(v.position.x)&&std::isfinite(v.position.y),"nonfinite info geometry");
             require(tick==p.tick&&pose==p.batter.pose.world&&before==batting_info(p),"panel mutated production state");
+            const auto band=panel.base.size(),marker_start=band+6;
+            require(drawn[band].position.y==1-(100+144*float(before.timeline.passage_enter))*panel.y_scale
+                &&drawn[band+2].position.y==1-(100+144*float(before.timeline.passage_exit))*panel.y_scale
+                &&drawn[band].position.y>drawn[band+2].position.y,"yellow screen-space ordering/position");
+            if(before.timeline.marker==TimingMarker::None){
+                for(std::size_t i=0;i<panel.timing_markers[0].size();++i)require(drawn[marker_start+i].position.x==0&&drawn[marker_start+i].position.y==0,"no-swing marker visible");
+            }else{
+                const bool filled=before.timeline.marker==TimingMarker::Contact;
+                const auto& marker_template=panel.timing_markers[filled?1:0];
+                require(marker_template[0].color.x==(filled?.95f:.66f),"filled white/hollow gray variant");
+                if(filled)require(drawn[marker_start].position.x==232*panel.x_scale-1
+                    &&drawn[marker_start].position.y==1-(100+144*float(before.timeline.marker_position))*panel.y_scale,"filled center does not match contact time");
+                else require(drawn[marker_start].position.x==(240*panel.x_scale-1),"hollow outline radius");
+            }
         };
         render();require(panel.vertex_count%3==0,"triangle count");
         // Each real fixture consumes normal player intent; no forced authorization/result/flight.
@@ -171,6 +200,9 @@ int main(int argc,char** argv){try {
                 p.advance(4'166'667);check_marker();const auto info=batting_info(p);
                 if(p.latest()){
                     fixture.verify(*p.latest());require(info.offset_ms==p.timing()->offset_ms,"timing source changed");
+                    const bool dispatched=p.latest()->gameplay==GameplayResult::Contact;
+                    require(info.timeline.marker==(dispatched?TimingMarker::Contact:TimingMarker::SwingPeak)
+                        &&info.timeline.marker_position==timeline_position(dispatched?p.latest()->response->contact_time_s:p.timing()->peak_s),"planned contact presented as dispatched or wrong latest attempt");
                     if(timing)require(timing==info.offset_ms,"timing did not persist");timing=info.offset_ms;
                 }else require(!info.offset_ms,"timing before consumed swing");
                 if(info.flight){

@@ -675,6 +675,16 @@ P 暫停語意不變；Playing 且暫停時，`.` 推進 1 個 authoritative sim
 
 驗證：full Debug／Release build 成功，CTest 各 23/23（248.84 s／14.87 s）。新版 panel test 涵蓋中心／fly Contact、空間 Miss、early timing Miss、NoSwing、Space、analytic apex、first-hit freeze、1080／1620 固定 geometry／stable reserved storage；既有 gameplay／fixture 回歸未改容差。Release 實機證據在 ignored `build/batting-info-window-s1/`：`contact.jpg`（448/0/0：-1.2 ms、0.38 s、16.7 m、0.7 m）、`miss.jpg`（80/0/0：太早 -1534.5 ms、三項 flight 為 --）、`reset.jpg`（Space 後 tick14 paused、新球四欄 --），各附 title JSON。未要求人工精確輸入。
 
+## Timing Timeline S1 (2026-09-20)
+
+**候選，等待 Michael＋Julia human review。** 本節取代 Batting Info timing 區原本「太早／剛好／太晚」及 ±10 ms 顯示分類。主要回饋改為垂直時間軌道，上方較早、下方較晚；黃色線段直接對應 authoritative `ball_passage.enter_s → exit_s`，不表達好／壞時機或能量品質。其餘飛行時間、距離、最大高度與擊球初速的來源、hold／reset 契約保留，只為 timing 圖增加局部高度並將數值列下移。
+
+讀取最近一次 consumed SwingAttempt：Gameplay Contact **實際 dispatch 後**才顯示實心白色棒球，以 `BallResponse.contact_time_s` 定位；已有 swing 但尚未 Contact（含 Pending／Miss）顯示空心灰色棒球，以 `timing.peak_s` 定位，不提前把 planned response 畫成已接觸。NoSwing／reset 無 marker。旁邊較小的 signed ms 繼續讀取 `timing.offset_ms`，未出棒為 `--`；它是 swing peak 相對 reference 的原有 offset，不是將 contact marker 位置反算成另一個 offset。
+
+固定於該 pitch 的局部顯示範圍以 `reference_s` 為中心，half-range=`max(40 ms, reference−enter, exit−reference)`；目前為 ±40 ms。144 px 高軌道採線性、由上至下的時間投影，確保 passage 全部可見，不跟著 attempt 自動縮放。超出範圍的 peak 僅在畫面上 clamp 至端點，ms 保留完整符號與大小。Filled／hollow marker geometry 與字形在 startup 快取，每幀只依既有 state 定位，沒有第二個 clock、history、Data tuning 或通用 chart／icon 系統。
+
+這是 presentation-only：Temporal Match、spatial-only energy、timing→spray、q、ey／Trajectory、球路與 ground response 完全不變。Pause／單步／十步讀取同一 state，Contact／Miss 保留至既有 reset／下一次 attempt，不增加新的生命週期。技術與實機紀錄見 [開發環境](../development/environment.md#timing-timeline-s1-2026-09-20)；測試通過不代表 human acceptance。
+
 ## Central Contact Basin + Quality-Weighted Trajectory S1
 
 「阿搭力」是 timing 與 spatial contact **一起**接近最佳，不等於 ey=0，也不新增 Perfect／Good／Bad 或 Atari HUD label。目前 fixed pitch 的 deterministic reference 為 `448 / 0 / 0`（q=0，240 Hz 下接近 peak）。前次未提交的 +8°／全額 Trajectory prototype 已還原至 e104346，ignored evidence 保留；本輪是重新實作的九-anchor 候選。
