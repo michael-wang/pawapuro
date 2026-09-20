@@ -1179,3 +1179,31 @@ Agent `exec_command`／PowerShell、cwd `C:\astra-dev\pawapuro` 讀取 AGENTS.md
 Release 實機 evidence 使用原 fixture CLI，截圖為 `436.jpg`、`444.jpg`、`441.jpg`、`448-contact.jpg`、`455.jpg`、`448-miss.jpg`、`80.jpg`，各附 window title JSON／app log，同目錄 `REVIEW.md` 有完整指令與比較重點。相同視窗／panel 尺寸；Contact／Miss 圖使用既有結果保留。部分圖右上有系統圖示，不遮左上時間軸，影像未加工；沒有新增 production capture mode。NoSwing／Space 由既有 Native lifecycle test 驗證。所有 capture 沿用 computer-use，未改環境或 app 設定。
 
 沿用 x64 VsDevCmd／UTF-8 code page，完整 `cmake --build build/<config>` 與 `ctest --test-dir build/<config> --output-on-failure -j 4`：**Debug build 成功、CTest 23/23（337.62 s）；Release build 成功、CTest 23/23（18.78 s）**。未遇到 compiler／test failure，沒有放寬容差。Debug／Release 的 `timing-responsibility.csv`、`current-response-table.csv`、`central-basin-table.csv` 與 baseline 逐字相同；既有 panel 測試的 GROUND／held flight metrics 輸出亦完全相同，紀錄在 `gameplay-invariants.txt`。完整 build／CTest logs 同目錄，`git diff --check` 通過。交付後停止，仍待 Michael＋Julia human review；不更新 checkpoint 或宣告 S1.2 接受。
+
+## Fieldless Bat Kinematics Study S0 (2026-09-20)
+
+Agent `exec_command`／PowerShell、cwd `C:\astra-dev\pawapuro` 讀取 AGENTS.md，核准 fetch／`pull --ff-only origin main` 後確認 HEAD／origin/main=`9ab4bc9bcc957ec18576696242fda6c166de7c55`，工作樹乾淨。新增 study-only `fieldless_bat_kinematics_study.cpp` 連入既有 BallResponse test，以及單用途離線 `fieldless_bat_kinematics_report.py`；production source、sampling API、Data、已接受的 Timing Decision Timeline 均未修改。
+
+以實際 ManualSwingPreview live-input domain 正整數 tick1～480 為搜尋範圍，逐 tick 查 production Temporal Match，再經正常 Compact／Normal fixture consumption／spatial authorization／Contact dispatch／raw-query completion，得到 **431～462，共32個 centered Gameplay Contacts**。不是沿用舊資產 432～496 authoring domain；所有 raw NoContactInWindow rows 仍在樣本內。使用 Michael 75/85/3、ex=ey=0，實際 accepted tempo snapshot，effective BallResponse.contact_time_s 與 immutable pitch，同一 barrel-local centerline material point 以 ±0.0001 s 差分。
+
+Stage A `fieldless-kinematics.csv` 在 ignored `build/fieldless-bat-kinematics-s0/`，17位有效數字；`stage-a-summary.md`、`fieldless-directions.svg` 一起保存後，以 `stage-a.sha256` 凍結 CSV：`772054123db5d6c1a19bb3061c2baa8b10959e79d8ab31e4ec602ce488cdda2c`。Stage B 隨後只讀 candidate XYZ，輸出 `stage-b-projection.csv`、`stage-b-summary.md`、`field-projection.svg`，前後核對相同 hash，不回算或校正 Stage A。`REVIEW.md` 列出原生與離線分析命令。SVG 為 offline rays，不是 runtime／actual-app evidence。
+
+主要 Stage A 量測（角度以相鄰最短角差 unwrap；最大跳變只算相鄰有效 tick，不跨 invalid 缺口）：
+
+| 訊號 | 範圍 | 全幅 | 單調性／相鄰最大角差 |
+|---|---|---|---|
+| Bat axis azimuth | −207.769030～−28.211780° | 179.557250° | 不增；27下降、4持平；14.682091° |
+| Centerline material velocity azimuth | −90.636484～71.259691° | 161.896175° | 大致下降，461→462反轉約0.739°；15.112076° |
+| Fieldless reflection deflection | −89.022959～172.357547° | 261.380506° | 非單調，有效相鄰3增加／11下降；442→443跳變149.665373° |
+
+Normal 退化0/32；non-closing **16/32（50%）**，candidate 僅442～448及454～462有效。Effective time 在 raw envelope 內 **2/32（6.25%）**，但整個 temporal search 曾有 raw contact **11/32（34.375%）**；其餘21/32沒有 raw contact。Separation=0.011411100～1.330840220 m，raw envelope=0.070000000 m；30/32超出 envelope，25/32超過2倍（僅描述門檻）。不能把「曾 raw contact」誤認為「effective time 上 physical contact」。
+
+436與444都在1.983233717173114 s產生 Gameplay Contact，但 local phase 分別166.567050506／133.233717173 ms；axis為−44.005336／−81.617190°，material velocity azimuth為53.123081／15.689959°，speed為17.659103／24.106565 m/s。436 closing=−45.548135 m/s，沒有合法 reflection；444 closing=65.190427 m/s、deflection=15.341545°。有真實 motion 方向差異，不代表此 collision probe 已可信。446～450剛好都取125 ms local phase，axis／material velocity 出現 plateau，但球與棒的相對幾何仍會變動。
+
+Stage B 的 frozen world angle=−91.297045～170.083461°；16個有效方向中，+X六個、−X十個，±45°幾何 sector 內／外各八個。與現行 production spray 同號15/16，446異號（candidate −0.421050°、production +5.115448°）；其餘16個沒有可比較 candidate。Production 全32 rows spray=−30.781988～35°且單調不增（含 clamp），mechanical range更大、有局部反轉／缺口。Straight-return reference 本身相對+Z約−2.274086°，Stage A deflection與Stage B world angle不混用。不用場地分布修正公式；目前 evidence 不支持直接 promotion。
+
+Native study 對同一 live preview 做量測前後 object-byte snapshot，涵蓋 authoritative tick／attempts／pitch／batter pose與geometry／flight／outcome；重複 sampling 及30／120 cadence的完整 sweep CSV逐字相同，既有30／60／120 replay regressions保留。既有 response CSV與ground／flight輸出另與編輯前baseline比對，baseline副本在同目錄 `baseline/`。
+
+離線工具紀錄：`exec_command`／PowerShell 的 PATH 沒有 `python`；改用已配置 bundled Python，未安裝或修復環境。首次 optional matplotlib import 回報 ModuleNotFoundError，改成標準函式庫 SVG diagram；stdout 原 cp950 無法編碼數學負號，命令加 `-X utf8` 後成功。一次 PowerShell 文件／比對命令的 `$cfg:` interpolation 在 parse 階段失敗，改 `${cfg}` 後成功，該失敗未執行寫入。均非 Native compiler／test failure，未降低驗證要求。
+
+完整 `cmake --build build/<config>`／`ctest --test-dir build/<config> --output-on-failure -j 4`：**Debug build 成功，CTest23/23（338.51 s）；Release build 成功，CTest23/23（20.05 s）**。兩組各自的 sweep replay一致，Debug／Release study CSV也與frozen Stage A逐字相同。三份既有 response CSV及GROUND／held flight metrics與baseline完全相同，紀錄在 `gameplay-invariants.txt`；沒有Native compiler／test failure或容差調整。完整logs在同目錄 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`。SVG XML檢查與 `git diff --check` 通過。Study結果不支持直接promotion；提交後停止，等待Michael＋Julia review，不更新checkpoint或實作新response。

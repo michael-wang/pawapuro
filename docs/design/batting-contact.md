@@ -756,3 +756,15 @@ Pawapuro Native 的 `ball_response` 僅將 `energy_transfer` 從 temporal×spati
 Power 仍決定 exit-speed ceiling，q／spatial transfer 曲線、ey vertical topology 與 quality-weighted Trajectory 原樣保留。Contact time／launch origin、ground response、multi-swing 與 presentation 契約不變；初速提高造成的飛行及落地結果差異是本候選的直接效果。這不定義 pull-hitter／opposite-field-hitter archetype，也不引入 timing energy weight、額外 plateau／taper 或 hitter bias。
 
 使用現有 BattingReviewFixture、Michael／75／85／3、ey=0，production TimingInteraction 搜尋最接近 −30／0／+30 ms 且有 overlap 的 tick，得到 441／448／455；各跑 ex=0 與 +0.7。Baseline／candidate 數值、驗證及實機 evidence 由 [開發環境紀錄](../development/environment.md#timing-responsibility-split-s0-2026-09-20) 保存。六個 CLI fixture 是人工 review 的固定輸入，測試通過不代表手感已接受。
+
+## Fieldless Bat Kinematics Study S0 (2026-09-20)
+
+**Study-only，等待 Michael＋Julia review，不接受新的 horizontal response。** Michael 已 human-accepted Timing Decision Timeline S1.2，本輪完全不改其實作。動機是停止從期望的 pull／opposite／foul 場地結果倒推角度；Stage A 刻意移除場地，只問 production 來球、authored bat motion、accepted commit 與 effective Gameplay Contact time 中有什麼方向訊號。
+
+保留 Swing Intent → Temporal Match → Spatial Match → Gameplay Contact → Ball Response → Flight。Raw sphere/capsule overlap 仍為 diagnostic，不是 veto 或必要條件。Study 只連入既有 BallResponse test，以正常 BattingReviewFixture 的 Compact／Normal、ex=ey=0、Michael 75/85/3 消費 intent；由 live-input domain 與 TimingInteraction 篩選每個合法 integer commit，不沿用舊 authoring bounds。現有 sample_manual_contact／IngameMotion::sample_barrel 已足夠，沒有新增 production API 或 bat representation。
+
+Stage A 記錄 accepted tick／time、offset／efficiency、effective time／local phase、immutable pitch position／velocity、barrel／tip／barrel_world、normalized axis 與 XZ azimuth、closest centerline u／point／distance／raw-envelope boolean。固定 closest point 的 barrel-local material coordinates，以既有 ±0.0001 s convention 中央差分求 material velocity，不微分 sliding closest-point locus。由 centerline 指向球的 geometric n、relative velocity 與 closing=-dot(v_ball−v_bat,n) 都只作診斷。Raw solver 若有 BatContact，另存其 time／normal／surface material velocity／relative velocity；沒有 raw contact 的 gameplay rows 仍保留。
+
+只在 n 非退化且 closing>0 時計算 `v_candidate=v_ball−2 dot(v_ball−v_bat,n)n`。這是 infinite-mass moving-surface、e=1 的 mechanical probe，不是 accepted physics、校準 COR 或 production speed。Fieldless deflection 以 `normalize(−horizontal(v_ball))` 為零，用 `atan2(ref.z*out.x−ref.x*out.z, ref.x*out.x+ref.z*out.z)` 定正負；數值退化或 non-closing 留 NaN／invalid，不翻 normal 或補方向。Axis／velocity azimuth 僅是座標角，不叫 spray。
+
+Stage A CSV／摘要先保存並以 SHA-256 凍結，Stage B 才讀取同一 candidate XYZ，投影到 field-center +Z／±45° 幾何，並與現行 production spray 比較；不回饋公式、不放大／clamp／換 normal。本輪測到 bat-axis 有序變化，但 reflection 有 invalid 缺口、大角差及多數 effective-time geometry 不在 raw envelope 的落差，證據不足以直接升為 gameplay authority。量測數值、可重現命令與限制見 [開發環境](../development/environment.md#fieldless-bat-kinematics-study-s0-2026-09-20)。Production BallResponse、時間軸、Data、flight／ground 全部不變。

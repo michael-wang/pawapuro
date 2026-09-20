@@ -9,6 +9,7 @@
 #include <sstream>
 #include <stdexcept>
 using namespace pawapuro;
+void fieldless_bat_kinematics_study(const std::filesystem::path&,const BattingStaging&,const std::filesystem::path&);
 void require(bool b,const char* m){if(!b)throw std::runtime_error(m);}
 bool close_enough(double a,double b,double e=1e-6){return std::abs(a-b)<=e;}
 bool same(DirectX::XMFLOAT3 a,DirectX::XMFLOAT3 b){return a.x==b.x&&a.y==b.y&&a.z==b.z;}
@@ -102,6 +103,7 @@ int main(int argc,char** argv){try{
  const auto s=load_batting_staging(d/"staging.toml");
  require(s.batter_profile.contact==75&&s.batter_profile.power==85&&s.batter_profile.trajectory==3,"Michael baseline");
  timing_responsibility_matrix(d,s,temp);
+ fieldless_bat_kinematics_study(d,s,temp);
  auto region=normal_authorization_region(s);require(region.normal_radius_x_m==.26f&&region.normal_radius_y_m==.13f,"Contact75 anchor changed");
  float prior_q=100;for(int contact:{0,75,120}){
   auto other=s;other.batter_profile.contact=contact;const auto r=normal_authorization_region(other);

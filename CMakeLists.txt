@@ -84,7 +84,7 @@ if(BUILD_TESTING)
     target_include_directories(batter_profile_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(batter_profile_test PRIVATE mesh_glb tomlplusplus::tomlplusplus gdi32)
     add_test(NAME batter_profile COMMAND batter_profile_test "${CMAKE_CURRENT_SOURCE_DIR}/pawapuro/batting" "${CMAKE_CURRENT_BINARY_DIR}/profile-test")
-    add_executable(ball_response_test pawapuro/batting/ball_response_test.cpp pawapuro/batting/player_aim.cpp pawapuro/batting/reference_scene.cpp
+    add_executable(ball_response_test pawapuro/batting/ball_response_test.cpp pawapuro/batting/fieldless_bat_kinematics_study.cpp pawapuro/batting/player_aim.cpp pawapuro/batting/reference_scene.cpp
         pawapuro/batting/contact_probe.cpp pawapuro/batting/batter/batter_motion.cpp pawapuro/batting/manual_swing.cpp
         pawapuro/batting/batter/ingame_s0/ingame_motion.cpp pawapuro/batting/pitcher/pitch_delivery.cpp
         pawapuro/batting/pitcher/pitcher_motion.cpp pawapuro/batting/reference_pitch.cpp pawapuro/batting/staging.cpp)
