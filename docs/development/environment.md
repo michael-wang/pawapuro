@@ -1207,3 +1207,53 @@ Native study 對同一 live preview 做量測前後 object-byte snapshot，涵�
 離線工具紀錄：`exec_command`／PowerShell 的 PATH 沒有 `python`；改用已配置 bundled Python，未安裝或修復環境。首次 optional matplotlib import 回報 ModuleNotFoundError，改成標準函式庫 SVG diagram；stdout 原 cp950 無法編碼數學負號，命令加 `-X utf8` 後成功。一次 PowerShell 文件／比對命令的 `$cfg:` interpolation 在 parse 階段失敗，改 `${cfg}` 後成功，該失敗未執行寫入。均非 Native compiler／test failure，未降低驗證要求。
 
 完整 `cmake --build build/<config>`／`ctest --test-dir build/<config> --output-on-failure -j 4`：**Debug build 成功，CTest23/23（338.51 s）；Release build 成功，CTest23/23（20.05 s）**。兩組各自的 sweep replay一致，Debug／Release study CSV也與frozen Stage A逐字相同。三份既有 response CSV及GROUND／held flight metrics與baseline完全相同，紀錄在 `gameplay-invariants.txt`；沒有Native compiler／test failure或容差調整。完整logs在同目錄 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`。SVG XML檢查與 `git diff --check` 通過。Study結果不支持直接promotion；提交後停止，等待Michael＋Julia review，不更新checkpoint或實作新response。
+
+## Normal-Free Bat Direction Basis Study S1 (2026-09-20)
+
+Baseline `aa7bba17bf65f4410c890abacdb5270ef6f230f8`（Study fieldless bat kinematics without changing gameplay）。Agent 先讀 AGENTS.md、fetch／ff-only pull，確認 HEAD=origin/main 與 clean tree。只延伸既有 test-only study caller，新增具體離線 report；沒有 production source、Data、Timeline、BallResponse、flight／ground 改動。沒有 helper API 或 Engine 變更。
+
+Production live-input domain 重新推導，再由 Temporal Match／正常 fixture authorization／BallResponse 篩選，得到 **431～462，32/32 Gameplay Contact**，ex=ey=0，Michael 75/85/3、Compact/Normal。不是先拿431～462當搜尋範圍；推導完才以expected baseline範圍作regression gate。S1 orientation固定ordered axis的cross(world_up,axis)，三個固定u點velocity使用±0.0001 s；S0 CSV保持原樣作對照，新訊號不讀closest point／normal。
+
+Ignored evidence：`build/normal-free-bat-direction-s1/`。`direction-basis.csv`（17-digit輸出）、`stage-a-summary.md`、`stage-a-directions.svg`先生成，SHA-256凍結為 **`829e21c7263ad823e4c88474d74f6db88bb4cd2c06f7ea2715b6a91db3536e46`**（`stage-a.sha256`），之後獨立Stage B只讀frozen vectors，生成`stage-b-summary.md`、`stage-b-projection.csv`、`stage-b-projection.svg`並核對hash。`REVIEW.md`提供完整Native／Python與build/test命令；沒有新增production review mode或圖表功能。
+
+Stage A零度只取incoming水平反向，正號沿用`atan2(ref.z*v.x-ref.x*v.z, ref.x*v.x+ref.z*v.z)`；以下range經report-only unwrap：
+
+| 訊號 | 最小～最大 ° | 全幅 ° | 相鄰增加／下降／持平 | 最大相鄰角差 ° |
+|---|---|---|---|---|
+| Bat-axis azimuth | −207.769030～−28.211780 | 179.557250 | 0/27/4 | 14.682091（460→461） |
+| Axis-derived deflection | −115.494945～64.062306 | 179.557251 | 0/27/4 | 14.682091（460→461） |
+| u=0 velocity deflection | −88.362398～73.533777 | 161.896175 | 1/26/4 | 15.112076（459→460） |
+| u=0.5 velocity deflection | −93.274799～72.488165 | 165.762963 | 0/27/4 | 15.066536（459→460） |
+| u=1 velocity deflection | −97.216595～71.675842 | 168.892436 | 0/27/4 | 15.017638（459→460） |
+
+四個direction訊號在446～450同為125 ms local phase而平台，不能解讀為每個commit都產生不同方向。u0在461→462反轉+0.738874°；其餘direction單調不增。有限240 Hz取樣不是數學連續性證明。三點全32 rows同號、沒有退化水平速度；pairwise spread median=1.829281°、max=9.593070°（462）。Axis對mid velocity的absolute shortest angular difference min/median/max=3.224877/6.565813/22.220146°；最大在462，早端431～433約8～10°，兩端不對稱。
+
+| tick | local phase ms | axis deflection ° | mid velocity deflection ° | mid total/horizontal speed m/s | point spread ° |
+|---|---|---|---|---|---|
+| 436 | 166.567051 | 48.268752 | 54.692289 | 19.653440/19.237097 | 1.627954 |
+| 441 | 145.733717 | 25.956002 | 31.834045 | 26.691105/26.445692 | 1.660357 |
+| 444 | 133.233717 | 10.656896 | 17.392608 | 26.116523/26.071945 | 1.933128 |
+| 448 | 125.000000 | 0.555726 | 6.696530 | 30.950481/30.950371 | 1.817143 |
+| 455 | 106.600231 | −37.733825 | −29.076926 | 43.365612/43.103645 | 2.655171 |
+| 460 | 85.766897 | −93.009227 | −84.404629 | 63.589459/62.968998 | 3.211117 |
+| 461 | 81.600231 | −107.691318 | −92.095435 | 34.962615/33.655834 | 6.346746 |
+| 462 | 77.433564 | −115.494945 | −93.274799 | 25.382673/23.451668 | 9.593070 |
+
+436／444共有effective contact time=1.983233717173114 s，但axis相差37.611856°、mid velocity相差37.299681°，保留明顯phase方向訊號。460～462的速度驟降伴隨選點spread擴大；全域mid總速最小16.769867 m/s、三點水平速度最小14.086246 m/s，沒有接近數值退化。這些late commits取到較早local phase，仍在190 ms protected interval內，不能誤稱recovery／settling，也沒有新增速度cutoff。
+
+Stage B僅解讀frozen world angles：
+
+| 訊號 | World angle range ° | ±45°內／外 | 進入／離開sector | 與production同號／異號 |
+|---|---|---|---|---|
+| Axis | −117.769031～61.788220 | 19/13 | 436→437／455→456 | 29/3（異號446～448） |
+| u0 | −90.636484～71.259691 | 19/13 | 437→438／456→457 | 29/3（異號449～451） |
+| u0.5 | −95.548885～70.214079 | 19/13 | 437→438／456→457 | 29/3（異號449～451） |
+| u1 | −99.490681～69.401755 | 19/13 | 437→438／456→457 | 30/2（異號449～450） |
+
+Production spray仍是−30.781988～35°（全幅65.781988°），全32 rows在sector內；431／432 clamp在+35°但kinematics仍改變，446～450 production持續改變但kinematics平台。符號比較使用同一world frame；Stage A的return-reference零度不與+Z混用。不以sector比例挑basis或調整向量。
+
+Axis在此域單調、單一ordered branch、不必選material point或數值微分，因此技術上比velocity乾淨；但平台、相鄰大角差、單一pitch／tempo的驗證範圍與未建立的gameplay authority契約，都阻止直接promotion。Velocity晚端spread／u0反轉使它更不適合目前直接採用。等待Michael＋Julia review，不更新checkpoint、不實作下一slice。
+
+驗證完成：完整 `cmake --build build/<config>` 成功；完整 `ctest --test-dir build/<config> --output-on-failure -j 4` **Debug 23/23（331.05 s）、Release 23/23（17.78 s）**。Native在同一live object量測前後檢查tick、attempts、pitch、authoritative pose／geometry、flight／result的bytes；重複sampling及30／120 cadence sweep逐字一致，原60 Hz／replay／lifecycle／panel coverage全部通過。Debug／Release S1 CSV與frozen Stage A逐字相同；四份既有CSV（含S0）與編輯前保留baseline逐字相同，兩組各33行GROUND／held-flight metrics也完全相同。`gameplay-invariants.txt`保存結果，`baseline/`保存編輯前artifact；production source與S1.2沒有diff，raw overlap未成為authority。
+
+同目錄保存debug／release build及CTest logs、`verify-evidence.py`。另以CSV components核對ordered cross-product與signed deflection，所有32 rows方向有效；SVG XML與`git diff --check`通過。離線比對首次以UTF-8讀baseline LastTest.log時，因舊log的本地化日期bytes產生UnicodeDecodeError（exec_command／PowerShell，repo cwd，Python報告階段，非compiler/test失敗）；改為直接比較ASCII metric行的原始bytes後成功，沒有忽略或改寫metric。未安裝繪圖依賴；沿用具體standard-library SVG離線產圖。未調整容差，沒有production行為變更。提交後停止於Michael＋Julia review。

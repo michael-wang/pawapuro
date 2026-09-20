@@ -768,3 +768,15 @@ Stage A 記錄 accepted tick／time、offset／efficiency、effective time／loc
 只在 n 非退化且 closing>0 時計算 `v_candidate=v_ball−2 dot(v_ball−v_bat,n)n`。這是 infinite-mass moving-surface、e=1 的 mechanical probe，不是 accepted physics、校準 COR 或 production speed。Fieldless deflection 以 `normalize(−horizontal(v_ball))` 為零，用 `atan2(ref.z*out.x−ref.x*out.z, ref.x*out.x+ref.z*out.z)` 定正負；數值退化或 non-closing 留 NaN／invalid，不翻 normal 或補方向。Axis／velocity azimuth 僅是座標角，不叫 spray。
 
 Stage A CSV／摘要先保存並以 SHA-256 凍結，Stage B 才讀取同一 candidate XYZ，投影到 field-center +Z／±45° 幾何，並與現行 production spray 比較；不回饋公式、不放大／clamp／換 normal。本輪測到 bat-axis 有序變化，但 reflection 有 invalid 缺口、大角差及多數 effective-time geometry 不在 raw envelope 的落差，證據不足以直接升為 gameplay authority。量測數值、可重現命令與限制見 [開發環境](../development/environment.md#fieldless-bat-kinematics-study-s0-2026-09-20)。Production BallResponse、時間軸、Data、flight／ground 全部不變。
+
+## Normal-Free Bat Direction Basis Study S1 (2026-09-20)
+
+**Study-only，等待 Michael＋Julia review，沒有接受或實作新的 horizontal response。** S0 reflection probe 未升為 gameplay authority：Gameplay Contact 是刻意的 gameplay abstraction，effective time 的球棒幾何通常不重合。S1 因此移除虛構的 contact normal，獨立量測 authored orientation 與固定 material-point velocity，完全不改 production BallResponse 或已接受的 Timing Decision Timeline S1.2。
+
+沿用正常 ManualSwingPreview／BattingReviewFixture、Michael 75/85/3、ex=ey=0 與 attempt snapshot 的 Compact/Normal tempo。每個 production 推導出的有效 integer commit，都以 BallResponse.contact_time_s 呼叫 IngameMotion::sample_barrel。Orientation 使用 ordered barrel→tip 的 normalized axis，固定取 cross(world_up, axis) 的水平 normalized branch，不逐 row 翻向、不選較靠近來球反向的一側。Velocity 分別在 u=0／0.5／1 取固定 lerp(barrel,tip,u)，以相同 commit／tempo、±0.0001 s 中央差分；不使用球位置決定的 closest point，也不使用 raw contact。
+
+Stage A 的零度只來自 normalize(−horizontal(incoming velocity))；正負沿用 S0 的 atan2 convention。記錄 axis／raw perpendicular／fixed-point velocity XYZ、azimuth、relative deflection、speed、三點最大 pairwise spread、同號性，以及 axis 對 mid velocity 的 signed shortest angular difference。退化方向標 invalid；unwrap 僅用於報告，不改向量。u=0.5 只是三點完整記錄後的具名代表，不混合、不加權。
+
+CSV 先保存、SHA-256 凍結，Stage B 才讀取 frozen 向量投影到 +Z／±45° 幾何 sector，另與 current production spray 比較；場地不是 Stage A 輸入，sector 分布不回饋計算。既有 S0 輸出保持原樣作回歸對照，S1 沒有新增 reflection。Raw sphere/capsule overlap 仍只作診斷；Temporal Match＋Spatial Match→Gameplay Contact 的架構不變。
+
+此 sweep 的 axis basis 單調不增且不依賴 material-point 選擇，是技術上較乾淨的未來研究候選；但 446～450 有相同 effective local phase 平台，有限240 Hz取樣不能證明數學連續性，也未驗證其他 pitch／motion。Velocity 晚端選點差異增大，u=0 有局部反轉。這些證據不構成 promotion；完整數值、速度限制、freeze hash 及重現命令見 [開發環境紀錄](../development/environment.md#normal-free-bat-direction-basis-study-s1-2026-09-20)。沒有 runtime alternate mode、Data 或 Engine 變更。

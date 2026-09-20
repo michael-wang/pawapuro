@@ -93,13 +93,59 @@ std::string row(const ManualSwingPreview& p){
     vector(s,p.flight->sample(p.flight->ground_s).position_m);vector(s,p.flight->sample(p.flight->stop_s).position_m);
     return s.str()+'\n';
 }
-std::string sweep(const std::filesystem::path& directory,const BattingStaging& tuning,std::uint64_t cadence){
+// S1: independent ordered orientation and fixed-u velocities; no contact geometry.
+std::string direction_basis_row(const ManualSwingPreview& p){
+    const auto& a=*p.latest();const auto& r=*a.response;const auto commit=a.command.consumed_tick;
+    const double time=r.contact_time_s,commit_s=double(commit)/pitch_hz;
+    const auto ball=sample_reference_pitch(p.delivery.pitch.initial,time-double(p.delivery.motion.release_tick)/pitch_hz);
+    const double incoming=std::hypot(ball.velocity_mps.x,ball.velocity_mps.z);
+    const double rx=incoming>1e-8?-ball.velocity_mps.x/incoming:missing,rz=incoming>1e-8?-ball.velocity_mps.z/incoming:missing;
+    const auto deflection=[&](XMFLOAT3 v){return incoming>1e-8&&std::hypot(v.x,v.z)>1e-8
+        ?std::atan2(rz*v.x-rx*v.z,rx*v.x+rz*v.z)*180/3.141592653589793:missing;};
+    const auto angle_difference=[](double left,double right){return std::remainder(left-right,360.);};
+    engine::GlbPose scratch;
+    const auto bat=p.batter.sample_barrel(time,commit,scratch,a.command.tempo);
+    const auto axis=unit(subtract(bat.tip,bat.barrel));
+    const XMFLOAT3 raw{axis.z,0,-axis.x}; // cross(world_up, ordered barrel -> tip). Never flip.
+    const double magnitude=std::hypot(raw.x,raw.z);
+    const bool valid=magnitude>1e-8;
+    const XMFLOAT3 direction=valid?XMFLOAT3{float(raw.x/magnitude),0,float(raw.z/magnitude)}:XMFLOAT3{float(missing),0,float(missing)};
+    constexpr double epsilon=.0001;
+    const auto before=p.batter.sample_barrel(time-epsilon,commit,scratch,a.command.tempo);
+    const auto after=p.batter.sample_barrel(time+epsilon,commit,scratch,a.command.tempo);
+    std::ostringstream s;s<<std::setprecision(17);
+    s<<commit<<','<<commit_s<<','<<a.timing.offset_ms<<','<<time<<','<<(time-commit_s)*1000;
+    vector(s,ball.velocity_mps);s<<','<<rx<<','<<rz;vector(s,axis);s<<','<<azimuth(axis);
+    vector(s,raw);vector(s,direction);s<<','<<valid<<','<<azimuth(direction)<<','<<deflection(direction);
+    std::array<double,3> angles{};bool all_valid=true;unsigned index=0;
+    for(const double u:{0.,.5,1.}){
+        // Same authored material coordinate at both times, independent of the ball.
+        const auto point=[&](const BatBarrelSample& b){return XMFLOAT3{
+            float(std::lerp(double(b.barrel.x),double(b.tip.x),u)),float(std::lerp(double(b.barrel.y),double(b.tip.y),u)),
+            float(std::lerp(double(b.barrel.z),double(b.tip.z),u))};};
+        const auto lo=point(before),hi=point(after);
+        const XMFLOAT3 velocity{float((double(hi.x)-lo.x)/(2*epsilon)),float((double(hi.y)-lo.y)/(2*epsilon)),float((double(hi.z)-lo.z)/(2*epsilon))};
+        const double horizontal=std::hypot(velocity.x,velocity.z),angle=deflection(velocity);
+        const bool point_valid=horizontal>1e-8&&incoming>1e-8;all_valid&=point_valid;angles[index++]=angle;
+        vector(s,velocity);s<<','<<length(velocity)<<','<<horizontal<<','<<azimuth(velocity)<<','<<angle<<','<<point_valid;
+    }
+    const auto sign=[](double v){return (v>0)-(v<0);};
+    double spread=missing;
+    if(all_valid)spread=std::max({std::abs(angle_difference(angles[0],angles[1])),std::abs(angle_difference(angles[0],angles[2])),std::abs(angle_difference(angles[1],angles[2]))});
+    s<<','<<spread<<','<<(all_valid?int(sign(angles[0])==sign(angles[1])&&sign(angles[1])==sign(angles[2])):-1)
+        <<','<<!all_valid<<','<<angle_difference(deflection(direction),angles[1])<<','<<r.spray_angle_deg<<'\n';
+    return s.str();
+}
+struct StudyRows {std::string reflection,basis;bool operator==(const StudyRows&) const = default;};
+StudyRows sweep(const std::filesystem::path& directory,const BattingStaging& tuning,std::uint64_t cadence){
     ManualSwingPreview p(directory,tuning);PlayerAim aim(tuning);p.start();
     std::vector<std::uint64_t> commits;
     // Current live input supports every positive tick before passage exit, not the old authoring 432..496 bounds.
     for(std::uint64_t tick=1;p.intent_live(tick);++tick)
         if(timing_interaction(double(tick)/pitch_hz,p.ball_passage,tuning.swing_phase_potential).overlap)commits.push_back(tick);
-    p.reset();std::string result;
+    // Baseline regression assertion only AFTER deriving the domain from production.
+    check(commits.size()==32&&commits.front()==431&&commits.back()==462,"S1 domain changed; stop interpretation");
+    p.reset();StudyRows result;
     for(const auto commit:commits){
         const BattingReviewFixture fixture{commit,0,0};check(fixture.start(p,aim),"study fixture start");
         while(!p.latest()||p.latest()->gameplay==GameplayResult::Pending||p.geometry()==ManualGeometry::Pending)p.advance(cadence);
@@ -110,9 +156,11 @@ std::string sweep(const std::filesystem::path& directory,const BattingStaging& t
         const auto saved=state(p);const auto measured=row(p);
         check(saved==state(p),"study mutated authoritative preview/attempt/pitch/pose/flight");
         check(measured==row(p)&&saved==state(p),"repeated study sampling changed results/state");
-        result+=measured;
+        const auto basis=direction_basis_row(p);
+        check(saved==state(p)&&basis==direction_basis_row(p)&&saved==state(p),"S1 sampling changed state/results");
+        result.reflection+=measured;result.basis+=basis;
     }
-    check(!result.empty(),"empty kinematics sweep");return result;
+    check(!result.reflection.empty(),"empty kinematics sweep");return result;
 }
 }
 void fieldless_bat_kinematics_study(const std::filesystem::path& directory,const pawapuro::BattingStaging& tuning,const std::filesystem::path& output){
@@ -121,7 +169,12 @@ void fieldless_bat_kinematics_study(const std::filesystem::path& directory,const
     std::ostringstream csv;
     csv<<"commit_tick,commit_time_s,offset_ms,efficiency,contact_time_s,local_phase_ms,ball_x,ball_y,ball_z,ball_vx,ball_vy,ball_vz,barrel_x,barrel_y,barrel_z,tip_x,tip_y,tip_z";
     for(unsigned i=0;i<16;++i)csv<<",barrel_world_"<<i;
-    csv<<",axis_x,axis_y,axis_z,axis_azimuth_deg,u,closest_x,closest_y,closest_z,separation_m,envelope_m,inside_envelope,bat_vx,bat_vy,bat_vz,bat_speed,bat_velocity_azimuth_deg,normal_valid,nx,ny,nz,normal_azimuth_deg,relative_vx,relative_vy,relative_vz,relative_speed,closing,reflection_valid,candidate_vx,candidate_vy,candidate_vz,candidate_horizontal_speed,direction_valid,fieldless_deflection_deg,return_ref_x,return_ref_z,raw_contact_exists,raw_time_s,raw_nx,raw_ny,raw_nz,raw_bat_vx,raw_bat_vy,raw_bat_vz,raw_relative_vx,raw_relative_vy,raw_relative_vz,authorized,q,temporal_transfer,energy_transfer,production_speed,production_spray_deg,production_longitudinal_deg,ground_s,stop_s,ground_x,ground_y,ground_z,stop_x,stop_y,stop_z\n"<<first;
+    csv<<",axis_x,axis_y,axis_z,axis_azimuth_deg,u,closest_x,closest_y,closest_z,separation_m,envelope_m,inside_envelope,bat_vx,bat_vy,bat_vz,bat_speed,bat_velocity_azimuth_deg,normal_valid,nx,ny,nz,normal_azimuth_deg,relative_vx,relative_vy,relative_vz,relative_speed,closing,reflection_valid,candidate_vx,candidate_vy,candidate_vz,candidate_horizontal_speed,direction_valid,fieldless_deflection_deg,return_ref_x,return_ref_z,raw_contact_exists,raw_time_s,raw_nx,raw_ny,raw_nz,raw_bat_vx,raw_bat_vy,raw_bat_vz,raw_relative_vx,raw_relative_vy,raw_relative_vz,authorized,q,temporal_transfer,energy_transfer,production_speed,production_spray_deg,production_longitudinal_deg,ground_s,stop_s,ground_x,ground_y,ground_z,stop_x,stop_y,stop_z\n"<<first.reflection;
     std::ofstream file(output/"fieldless-kinematics.csv");file<<csv.str();check(bool(file),"study CSV write failed");
+    std::ofstream basis(output/"direction-basis.csv");
+    basis<<"commit_tick,commit_time_s,offset_ms,contact_time_s,local_phase_ms,ball_vx,ball_vy,ball_vz,return_ref_x,return_ref_z,axis_x,axis_y,axis_z,axis_azimuth_deg,axis_raw_x,axis_raw_y,axis_raw_z,axis_direction_x,axis_direction_y,axis_direction_z,axis_valid,axis_direction_azimuth_deg,axis_deflection_deg";
+    for(const auto name:{"u0","u05","u1"})for(const auto column:{"vx","vy","vz","speed","horizontal_speed","azimuth_deg","deflection_deg","valid"})basis<<','<<name<<'_'<<column;
+    basis<<",point_spread_deg,point_sign_agreement,any_point_invalid,axis_minus_mid_deg,production_spray_deg\n"<<first.basis;
+    check(bool(basis),"S1 CSV write failed");
     std::cout<<"PASS fieldless study: dense production sweep, byte-identical replay CSV, immutable sampling\n";
 }
