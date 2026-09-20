@@ -1155,3 +1155,27 @@ Production passage 為 [1.983233717173114, 2.0024335639448165] s，duration=19.1
 Release 實機證據同目錄 `contact-early.jpg`（441）、`contact-center.jpg`（448）、`contact-late.jpg`（455）、`swing-miss.jpg`（80）、`no-swing.jpg`（一般啟動 Ready），各附 window title JSON／log；`REVIEW.md` 提供完整命令，`timeline-metrics.txt` 保存 production 測量。三張 Contact 使用相同視窗／panel 尺寸且為 Complete hold，畫面可見上緣／中間附近／下緣的實心球；miss 空心球在上端，NoSwing 無球。這是實際 app 擷取，沒有新增 capture mode 或離線重建。初次 sandbox 啟動未出現可擷取視窗，逐命令核准 interactive app launch 後成功；被其他視窗遮蔽的圖已重新 activate 並擷取。關閉 review 程序時 PowerShell Stop-Process 回報 null-reference；確認五個本輪 process ID 仍存活後，以核准 taskkill 指定相同 ID 成功結束，未更動環境設定。
 
 使用既有 x64 VsDevCmd／UTF-8 code page，完整 `cmake --build build/<config>` 與 `ctest --test-dir build/<config> --output-on-failure -j 4`：**Debug build 成功、CTest 23/23（377.02 s）；Release build 成功、CTest 23/23（19.67 s）**。同目錄保存 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`。`git diff --check` 通過；沒有編譯／測試失敗或容差調整。完成後停止，候選仍等待 Michael＋Julia human review，未更新 checkpoint 或宣告接受。
+
+## Timing Decision Timeline S1.2 (2026-09-20)
+
+Agent `exec_command`／PowerShell、cwd `C:\astra-dev\pawapuro` 讀取 AGENTS.md，核准 fetch／`pull --ff-only origin main` 後確認 HEAD／origin/main 均為 `3040797aafd519ef5ed8c960cebd2ff2ebf9e9dd` 且工作樹乾淨。範圍限 `contact_panel.cpp/.hpp`、既有 panel test 與兩份文件；Native gameplay、Data、Engine 皆未改。局部顯示欄位同步改名為 decision_start/end、SwingWithoutContact，以免名稱仍暗示 passage／peak。
+
+實測 ball passage=[1.983233717173114, 2.0024335639448165] s；由現有 swing potential 推導 decision window=[1.7932337171731141, 1.9274335639448166] s，duration=134.19984677170249 ms。Display=[1.7596837554801885, 1.9609835256377421] s，span=201.2997701575536 ms。Normalized yellow fraction=0.66666666666666696，上下留白各 1/6。既有 144 logical px 軌道、layout／marker 樣式未修改。
+
+| Fixture | Accepted commit s | Marker normalized position |
+|---|---:|---:|
+| 436／0／0 | 1.8166666666666667 | 0.283074894432 |
+| 444／0／0 | 1.8500000000000001 | 0.448665413026 |
+| 441／0／0 | 1.8374999999999999 | 0.386568968553 |
+| 448／0／0 | 1.8666666666666667 | 0.531460672323 |
+| 455／0／0 | 1.8958333333333333 | 0.676352376094 |
+| 448／0.6／1 | 1.8666666666666667 | 0.531460672323 |
+| 80／0／0 | 0.3333333333333333 | 0（clamp） |
+
+436／444 保持 Contact，actual contact time 都是 1.983233717173114 s，但 commit 相差 33.333333 ms，現在 marker 分離為 track 的 16.55905%（約 23.845 logical px）。448 Contact 與 spatial Miss 的位置完全相同，樣式分別實心／空心。80 的文字仍為 −1534.5 ms（authoritative −1534.5001171032588 ms）；480 在 Native test clamp 至底端，offset 保留 +132.1665495634079 ms。448 位置不是精確中央，是既有 potential peak 前後不對稱的結果，不加入置中補償。
+
+既有 panel test 驗證 decision derivation、finite positive duration、2/3／1/6 framing、線性映射、accepted consumed_tick 來源、436／444 相同 contact time 不再合併位置、441／448／455 排序、同 commit 不同 outcome、上下 clamp 與完整 ms。原 NoSwing／reset、Pending／dispatch、replay／cadence、geometry／capacity、flight／ground regressions 保留，沒有放寬容差。編輯前既有三份 response CSV 與 LastTest.log 保存在 ignored `build/timing-decision-timeline-s12/baseline/`，供 before／after 比對；測量在 `timeline-metrics.txt`。
+
+Release 實機 evidence 使用原 fixture CLI，截圖為 `436.jpg`、`444.jpg`、`441.jpg`、`448-contact.jpg`、`455.jpg`、`448-miss.jpg`、`80.jpg`，各附 window title JSON／app log，同目錄 `REVIEW.md` 有完整指令與比較重點。相同視窗／panel 尺寸；Contact／Miss 圖使用既有結果保留。部分圖右上有系統圖示，不遮左上時間軸，影像未加工；沒有新增 production capture mode。NoSwing／Space 由既有 Native lifecycle test 驗證。所有 capture 沿用 computer-use，未改環境或 app 設定。
+
+沿用 x64 VsDevCmd／UTF-8 code page，完整 `cmake --build build/<config>` 與 `ctest --test-dir build/<config> --output-on-failure -j 4`：**Debug build 成功、CTest 23/23（337.62 s）；Release build 成功、CTest 23/23（18.78 s）**。未遇到 compiler／test failure，沒有放寬容差。Debug／Release 的 `timing-responsibility.csv`、`current-response-table.csv`、`central-basin-table.csv` 與 baseline 逐字相同；既有 panel 測試的 GROUND／held flight metrics 輸出亦完全相同，紀錄在 `gameplay-invariants.txt`。完整 build／CTest logs 同目錄，`git diff --check` 通過。交付後停止，仍待 Michael＋Julia human review；不更新 checkpoint 或宣告 S1.2 接受。

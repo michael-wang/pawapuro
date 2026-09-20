@@ -10,16 +10,19 @@ BattingInfo batting_info(const ManualSwingPreview& p) {
     BattingInfo result;
     const auto& ball=p.ball_passage;
     // Fixed for this pitch, never fitted to the latest swing; extremes clamp at the track ends.
-    const double duration=ball.exit_s-ball.enter_s;
-    if(!std::isfinite(duration)||duration<=0)throw std::runtime_error("Batting timeline needs positive finite passage duration");
-    const double display_start=ball.enter_s-.25*duration,display_end=ball.exit_s+.25*duration;
+    const auto& potential=p.tuning.swing_phase_potential;
+    const double decision_start=ball.enter_s-potential.normal_end_ms/1000.;
+    const double decision_end=ball.exit_s-potential.normal_start_ms/1000.;
+    const double duration=decision_end-decision_start;
+    if(!std::isfinite(duration)||duration<=0)throw std::runtime_error("Batting timeline needs positive finite decision duration");
+    const double display_start=decision_start-.25*duration,display_end=decision_end+.25*duration;
     const auto position=[&](double time){return std::clamp((time-display_start)/(display_end-display_start),0.,1.);};
-    result.timeline.passage_enter=position(ball.enter_s);result.timeline.passage_exit=position(ball.exit_s);
+    result.timeline.decision_start=position(decision_start);result.timeline.decision_end=position(decision_end);
     if(const auto* timing=p.timing()) {
         result.offset_ms=timing->offset_ms;
         const bool contact=p.latest()->gameplay==GameplayResult::Contact;
-        result.timeline.marker=contact?TimingMarker::Contact:TimingMarker::SwingPeak;
-        result.timeline.marker_position=position(contact?p.latest()->response->contact_time_s:timing->peak_s);
+        result.timeline.marker=contact?TimingMarker::Contact:TimingMarker::SwingWithoutContact;
+        result.timeline.marker_position=position(double(p.committed()->consumed_tick)/pitch_hz);
     }
     if(p.flight) {
         result.exit_speed_kmh=double(p.latest()->response->exit_speed_mps)*3.6;
@@ -111,7 +114,7 @@ void ContactResultPanel::append(std::vector<engine::Vertex>& target,const Manual
     const auto info=batting_info(p);const auto values=format_batting_info(info);
     const auto add=[&](const auto& vertices){target.insert(target.end(),vertices.begin(),vertices.end());};
     add(base);
-    const float top=timeline_top+timeline_height*float(info.timeline.passage_enter),bottom=timeline_top+timeline_height*float(info.timeline.passage_exit);
+    const float top=timeline_top+timeline_height*float(info.timeline.decision_start),bottom=timeline_top+timeline_height*float(info.timeline.decision_end);
     const auto point=[&](float x,float y){return DirectX::XMFLOAT3{x*x_scale-1,1-y*y_scale,0};};
     const DirectX::XMFLOAT3 yellow{1,.85f,.2f};
     const auto band_a=point(timeline_x-3,top),band_b=point(timeline_x+3,top),band_c=point(timeline_x+3,bottom),band_d=point(timeline_x-3,bottom);

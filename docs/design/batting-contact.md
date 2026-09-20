@@ -677,13 +677,21 @@ P 暫停語意不變；Playing 且暫停時，`.` 推進 1 個 authoritative sim
 
 ## Timing Timeline S1 (2026-09-20)
 
-**候選，等待 Michael＋Julia human review。** 本節取代 Batting Info timing 區原本「太早／剛好／太晚」及 ±10 ms 顯示分類。主要回饋改為垂直時間軌道，上方較早、下方較晚；黃色線段直接對應 authoritative `ball_passage.enter_s → exit_s`，不表達好／壞時機或能量品質。其餘飛行時間、距離、最大高度與擊球初速的來源、hold／reset 契約保留，只為 timing 圖增加局部高度並將數值列下移。
+### S1／S1.1 human review
 
-讀取最近一次 consumed SwingAttempt：Gameplay Contact **實際 dispatch 後**才顯示實心白色棒球，以 `BallResponse.contact_time_s` 定位；已有 swing 但尚未 Contact（含 Pending／Miss）顯示空心灰色棒球，以 `timing.peak_s` 定位，不提前把 planned response 畫成已接觸。NoSwing／reset 無 marker。旁邊較小的 signed ms 繼續讀取 `timing.offset_ms`，未出棒為 `--`；它是 swing peak 相對 reference 的原有 offset，不是將 contact marker 位置反算成另一個 offset。
+Michael 接受簡單的垂直視覺方向：上方較早、下方較晚、主導畫面的黃色區段、棒球 marker 與次要 signed ms。S1 原以 reference ±40 ms framing；S1.1 改用 literal ball passage 前後各 0.25 duration 留白，保留 144 px 軌道及 panel layout。
 
-**Timing Timeline Focus S1.1 (2026-09-20)，候選待 Michael＋Julia human review。** Michael 喜歡目前簡單的垂直時間軸方向；人工 review 指出原 ±40 ms framing 把太多畫面留給明顯極端的 miss，壓縮了有用的 passage。現在令 `duration=exit_s−enter_s`（必須 finite 且正值），顯示範圍固定由 `enter_s−0.25×duration` 至 `exit_s+0.25×duration`。144 px 高軌道仍採線性、由上至下的時間投影；authoritative 黄色 passage 原封不動，僅因顯示範圍收緊而佔軌道 2/3，上下各留 1/6。此比例是本輪 review 候選，沒有 timeline Data，不跟著 attempt 自動縮放。超出範圍的 peak 僅在畫面上 clamp 至端點，ms 保留完整符號與大小。Filled／hollow marker geometry 與字形在 startup 快取，每幀只依既有 state 定位，沒有第二個 clock、history、Data tuning 或通用 chart／icon 系統。
+**S1.1 marker 語意未被接受。** Contact 原以 `BallResponse.contact_time_s` 定位、未 Contact 以 `timing.peak_s` 定位。人工 review 發現 commit436（約 −51.2 ms）與 commit444（約 −17.8 ms）雖然玩家決策相差約 33 ms，實際接觸卻同樣落在 passage 上緣，marker 因而重疊。Contact time 是有效的 simulation truth，但不適合作為玩家下一球可主動調整的 coaching 變數。以下 S1.2 取代該 marker／黃色 interval 語意，不改其視覺方向。
 
-這是 presentation-only：Temporal Match、spatial-only energy、timing→spray、q、ey／Trajectory、球路與 ground response 完全不變。Pause／單步／十步讀取同一 state，Contact／Miss 保留至既有 reset／下一次 attempt，不增加新的生命週期。技術與實機紀錄見 [開發環境](../development/environment.md#timing-timeline-s1-2026-09-20)；測試通過不代表 human acceptance。
+### Timing Decision Timeline S1.2 candidate
+
+**候選，等待 Michael＋Julia human review。** 每次最近的 consumed SwingAttempt 都以既有 immutable `command.consumed_tick / pitch_hz` 定位 marker，不論 Contact、Miss 或 Pending，位置只有「玩家何時提交揮棒」一種意義。Gameplay Contact 實際 dispatch 後為實心棒球；尚未 Contact（含 Pending／Miss）為空心灰色棒球；NoSwing／reset 無 marker。樣式表達 outcome，位置表達決策，不讀 contact time、peak time、OS timestamp 或 render clock。
+
+黃色區段表示可形成非空 Temporal Match 的 **commit-time window**：`decision_start=ball.enter_s−normal_end_ms/1000`，`decision_end=ball.exit_s−normal_start_ms/1000`。Start／end 直接讀取 production `swing_phase_potential`，不重複 authored 數值。數學端點為零寬 overlap 邊界；實際 gameplay 仍依原本非空 overlap 規則，不新增含端點判定或 gameplay gate。
+
+令 `duration=decision_end−decision_start`（finite 且正值），display bounds 為 `decision_start−0.25×duration` 至 `decision_end+0.25×duration`。線性向下映射讓黃色佔 2/3、上下各留 1/6；超出 bounds 的 commit 僅視覺 clamp 至頂／底，不依 attempt 縮放。旁邊小字原樣讀 `timing.offset_ms`（peak−reference），保留完整 signed 大小；未出棒為 `--`。不新增第二個時機數字、timeline Data、history、clock 或 chart 系統。
+
+Track、黃色／棒球 artwork、早晚 labels、字形、panel 尺寸與其他四項 metrics 完全保留。這是 presentation-only：Temporal Match、Contact、contact time、spatial-only energy、timing→spray、q、ey／Trajectory、球路與 ground response 均不變。Pause／單步／十步、hold／Space 及最近一次 attempt 的生命週期不變。技術與實機證據見 [開發環境](../development/environment.md#timing-decision-timeline-s12-2026-09-20)；測試通過不代表 human acceptance。
 
 ## Central Contact Basin + Quality-Weighted Trajectory S1
 

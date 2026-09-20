@@ -2,9 +2,9 @@
 #include "manual_swing.hpp"
 namespace pawapuro {
 // Player-facing presentation only; never participates in hit acceptance or response.
-enum class TimingMarker { None, SwingPeak, Contact };
+enum class TimingMarker { None, SwingWithoutContact, Contact };
 struct TimingTimeline {
-    double passage_enter=0,passage_exit=0,marker_position=0;
+    double decision_start=0,decision_end=0,marker_position=0;
     TimingMarker marker=TimingMarker::None;
     bool operator==(const TimingTimeline&) const = default;
 };
