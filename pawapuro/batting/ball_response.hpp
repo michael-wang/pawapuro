@@ -34,7 +34,8 @@ inline std::optional<BallResponse> ball_response(const TimingInteraction& timing
     const BallState& incoming,double release_s) {
     if(!timing.overlap||!aim.authorized)return std::nullopt;
     const float temporal=static_cast<float>(timing.efficiency),spatial=spatial_transfer(aim.q,tuning);
-    const float energy=temporal*spatial;
+    // S0 candidate: timing gates contact and steers spray; spatial quality transfers energy.
+    const float energy=spatial;
     const float ideal=std::lerp(tuning.ideal_exit_speed_min_mps,tuning.ideal_exit_speed_max_mps,float(batter.power)/120.f);
     const float speed=ideal*(tuning.minimum_exit_speed_factor+(1-tuning.minimum_exit_speed_factor)*std::sqrt(std::clamp(energy,0.f,1.f)));
     const float base=vertical_contact_longitudinal_angle(aim.normalized_error.y,tuning);

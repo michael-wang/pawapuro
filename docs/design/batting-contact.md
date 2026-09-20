@@ -728,3 +728,13 @@ Batting Info 仍只計首次觸地前的時間／距離／最高高度與初速�
 人類 playtest 拒絕 S0／S1 暫時的初始 vy<0 限制：低角度正向起飛球首次落地即黏住。現在所有擊出球都在首次 descending ground contact 進入同一 ground response；此前的重力飛行、首次觸地時間／位置與 Batting Info 定義不變，不按 ey／角度分類。
 
 rebound_vertical_ratio 候選由 0.35 改為 0.50，後續 apex 保留率由 12.25% 改為 25%，首跳高度約為前版的 2.0408 倍。水平仍是首次 impact 保留 0.85，之後持續以 5.5 m/s² 有效減速，不在後續 impact 再扣乘數。無限幾何反彈保留低快 hop，無高度／tick cutoff、固定跳數或高飛球特例／上限。未來不平地形／spin 可能把能量重新導向垂直，但本輪沒有地形、旋轉、表面差異或能量轉移模型；Ball Response launch angle／speed、Power、Trajectory、timing／spray 均未調整。
+
+## Timing Responsibility Split S0 (2026-09-20)
+
+**候選，等待 Michael＋Julia human review，尚未接受。** 本輪測試「成立 Gameplay Contact 後，signed timing 主要決定水平方向，spatial quality 主要決定能量傳遞」。Temporal Match 仍是必要條件：非空 temporal overlap **且** spatial authorization 才能產生 BallResponse；沒有 overlap 的 Early／Late 仍為 Miss，raw physical overlap 仍只作診斷。
+
+Pawapuro Native 的 `ball_response` 僅將 `energy_transfer` 從 temporal×spatial 改為 `spatial_transfer`。`temporal_transfer` 繼續保存原 TimingInteraction efficiency；不改名稱、timing window、potential、signed offset 或任何 tuning。Signed timing 仍以既有 `clamp(-offset_ms/65,-1,1)*35` 決定 spray；目前左打 early 朝 +X pull，late 朝 −X opposite。
+
+Power 仍決定 exit-speed ceiling，q／spatial transfer 曲線、ey vertical topology 與 quality-weighted Trajectory 原樣保留。Contact time／launch origin、ground response、multi-swing 與 presentation 契約不變；初速提高造成的飛行及落地結果差異是本候選的直接效果。這不定義 pull-hitter／opposite-field-hitter archetype，也不引入 timing energy weight、額外 plateau／taper 或 hitter bias。
+
+使用現有 BattingReviewFixture、Michael／75／85／3、ey=0，production TimingInteraction 搜尋最接近 −30／0／+30 ms 且有 overlap 的 tick，得到 441／448／455；各跑 ex=0 與 +0.7。Baseline／candidate 數值、驗證及實機 evidence 由 [開發環境紀錄](../development/environment.md#timing-responsibility-split-s0-2026-09-20) 保存。六個 CLI fixture 是人工 review 的固定輸入，測試通過不代表手感已接受。

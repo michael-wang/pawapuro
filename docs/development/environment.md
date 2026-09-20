@@ -1106,3 +1106,28 @@ Runtime evidence 全部在 ignored `build/pitcher-s3/`，review 入口由 pitche
 `.git` 為何、何時變成該 owner 仍未知；不宣稱已查明某版本的 Codex bug 成因。本次恢復只證明 agent shell／Git 路徑可用，不代表 Node runner、build、GPU 或 capture 已同時重新通過，也不保證工具永久正常。
 
 Owner 修改不是例行 preflight 或通用自動修法。本案是必要 execution 能力失效的案例，不表示任一個別工具失敗都必須停止所有工作；是否能繼續，須依必要能力與替代工具實際提供的同等證據判斷。
+
+## Timing Responsibility Split S0 (2026-09-20)
+
+Agent 以 `exec_command`／PowerShell、cwd `C:\astra-dev\pawapuro` 讀取 AGENTS.md，經逐命令核准執行 `git pull --ff-only origin main`；HEAD／origin/main 均確認為 `d793f264959d7904c1b3d192fd1f51c944dae82b`，工作樹乾淨。先只在既有 `ball_response_test` 加入六組 production BattingReviewFixture 數據擷取，build／執行 Release test 成功並保存 baseline，之後才改 production energy。設計與候選狀態由 [batting-contact](../design/batting-contact.md#timing-responsibility-split-s0-2026-09-20) 擁有。
+
+所有數據使用 Michael／Contact75／Power85／Trajectory3。Requested ex 為 0／+0.7，actual 分別為 0／0.699999988079；requested／actual ey 全為 0。中心列 q=0、spatial=1；偏心列 q=0.489999979734、spatial=0.684748768806。六組 baseline 與 candidate 都是 Gameplay Contact。下表為 production 實測的四捨五入摘要；箭頭為 baseline → candidate。
+
+| Tick | ex | offset ms | temporal_transfer | spray ° | energy | speed m/s | speed km/h |
+|---|---|---|---|---|---|---|---|
+| 441 | 0 | −30.333450 | 0.548464894 | +16.333397 | 0.548464894 → 1 | 35.495930 → 44.791664 | 127.785347 → 161.249991 |
+| 448 | 0 | −1.166784 | 0.974447250 | +0.628268 | 0.974447250 → 1 | 44.330883 → 44.791664 | 159.591179 → 161.249991 |
+| 455 | 0 | +27.999883 | 0.414864242 | −15.076859 | 0.414864242 → 1 | 32.038567 → 44.791664 | 115.338840 → 161.249991 |
+| 441 | +0.7 | −30.333450 | 0.548464894 | +16.333397 | 0.375560671 → 0.684748769 | 30.918076 → 38.610252 | 111.305072 → 138.996909 |
+| 448 | +0.7 | −1.166784 | 0.974447250 | +0.628268 | 0.667251527 → 0.684748769 | 38.228958 → 38.610252 | 137.624249 → 138.996909 |
+| 455 | +0.7 | +27.999883 | 0.414864242 | −15.076859 | 0.284077793 → 0.684748769 | 28.057121 → 38.610252 | 101.005637 → 138.996909 |
+
+Double timing efficiency 依 tick 為 0.548464895834／0.974447238051／0.414864240438；temporal_transfer 是其既有 float 轉換。A/B 的 requested／actual ex、ey、offset、efficiency、temporal、q、spatial、spray、Gameplay outcome 等 12 個 CSV 欄位逐字相等。候選每列三球的 energy／speed 相同；完整數據與比對結果保存於 ignored `build/timing-responsibility-s0/{baseline,candidate}/timing-responsibility.csv`、`before-after.csv` 與 `ab-invariants.txt`，未提交為 product data。
+
+驗證使用既有 x64 `VsDevCmd.bat`、`chcp 65001`，對 Debug／Release 執行完整 `cmake --build build/<config>` 與 `ctest --test-dir build/<config> --output-on-failure -j 4`。首輪兩組態皆由正常 CTest 執行回報 `ball_response` 的 `rebound-before-pitcher-completion fixture` 失敗，非 runner／compiler failure：spatial-only 初速使舊 commit433／ey0 的首次落地晚於投手收勢。將這兩個 ground/lifecycle 檢查的輸入改為既有 ey=−0.25 低角度接觸，保留原斷言與容差；未修改地面算法。原 Atari 固定初速斷言依本輪授權改驗 spatial-only ceiling，其 timing／spray 常數及容差保留。六組新 regression 涵蓋效率不同、同 q 的等能量／等初速、偏心減速、原 spray 公式與 30／60／120 FPS／backlog replay；既有 Early／Late miss 另明確要求無 overlap 且 spatial authorized，仍不得出球。
+
+實機透過現有 Release `pawapuro.exe --batting-fixture <tick> <ex> 0`，逐一執行 441／448／455 × ex0／0.7。Screenshot／title JSON 保存為同 evidence 目錄的 `441-center`、`448-center`、`455-center`、`441-offcenter`、`448-offcenter`、`455-offcenter`，另有 app logs 與列出六個完整 CLI 指令的 `REVIEW.md`。這些是實際 app 的不同觀察時刻，非同 tick 比較、離線重建影片或延遲證據；本輪沒有 Debug GPU validation 宣稱。
+
+實機擷取限制：sandbox 啟動的程序有正常 Contact／Complete log，但未出現在 computer-use `list_windows`；以既有逐命令核准流程於可見桌面啟動後才取得截圖，沒有修改 sandbox／ACL。曾有另一個同名 app 遮住 late fixture，已 activate 正確 window 並重擷取，PNG 與 title 核對一致。HUD 仍顯示「太早／剛好／太晚」，並不因 energy 解耦而改寫 timing 診斷。ey0 的兩個 spatial 列仰角仍略不同（約 9.573°／8.804°），是原 quality-weighted Trajectory 的 q 效果；不將其視為本輪新規則。實機數值與截圖不代表 Michael＋Julia 已接受手感。
+
+最終完整 Debug／Release build 均成功，完整 CTest **Debug 23/23（393.15 s）、Release 23/23（14.51 s）** 通過，包含既有 vertical-contact／Trajectory／ground response、multi-swing、fixture／replay 與 presentation regressions。六組 CSV 在 Debug／Release 逐字相同，紀錄為 `config-invariants.txt`。最終 logs 位於同目錄 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`；初輪失敗保留為 `debug-initial-ctest.log`／`release-initial-ctest.log`。完成技術驗證後停在 Michael＋Julia human review gate，未宣告候選接受。

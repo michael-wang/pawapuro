@@ -13,6 +13,61 @@ void require(bool b,const char* m){if(!b)throw std::runtime_error(m);}
 bool close_enough(double a,double b,double e=1e-6){return std::abs(a-b)<=e;}
 bool same(DirectX::XMFLOAT3 a,DirectX::XMFLOAT3 b){return a.x==b.x&&a.y==b.y&&a.z==b.z;}
 void finish(ManualSwingPreview& p){while(p.phase==PreviewPhase::Playing)p.advance(16'666'667);}
+// Six production fixture cases for the timing responsibility human-review slice.
+void timing_responsibility_matrix(const std::filesystem::path& directory,const BattingStaging& staging,
+ const std::filesystem::path& output_directory) {
+ ManualSwingPreview preview(directory,staging);PlayerAim aim(staging);
+ std::array<std::uint64_t,3> commits{};
+ const std::array<double,3> targets{-30,0,30};
+ for(std::size_t i=0;i<targets.size();++i){
+  double nearest=1e9;
+  for(std::uint64_t tick=1;double(tick)/pitch_hz<preview.ball_passage.exit_s;++tick){
+   const auto timing=timing_interaction(double(tick)/pitch_hz,preview.ball_passage,staging.swing_phase_potential);
+   const double error=std::abs(timing.offset_ms-targets[i]);
+   if(timing.overlap&&error<nearest){nearest=error;commits[i]=tick;}
+  }
+  require(commits[i]!=0,"no matching timing fixture");
+ }
+ std::ostringstream table;table<<std::setprecision(12)
+  <<"commit_tick,requested_ex,requested_ey,actual_ex,actual_ey,offset_ms,timing_efficiency,temporal_transfer,q,spatial_transfer,energy_transfer,speed_mps,speed_kmh,spray_deg,gameplay\n";
+ std::array<BallResponse,6> responses{};std::size_t index=0;
+ for(float ex:{0.f,.7f})for(const auto tick:commits){
+  const BattingReviewFixture fixture{tick,ex,0};
+  require(fixture.start(preview,aim),"timing matrix start");finish(preview);fixture.verify(*preview.latest());
+  const auto& attempt=*preview.latest();const auto& h=attempt.authorization;
+  require(attempt.timing.overlap&&h.authorized&&attempt.response&&preview.gameplay_result()==GameplayResult::Contact,"timing matrix Contact");
+  const auto& r=*attempt.response;
+  require(r.temporal_transfer==static_cast<float>(attempt.timing.efficiency),"timing diagnostic changed");
+  require(r.energy_transfer==r.spatial_transfer,"timing still penalizes energy");
+  const float spray=static_cast<float>(std::clamp(-attempt.timing.offset_ms/staging.ball_response.full_spray_offset_ms,-1.,1.))*staging.ball_response.max_spray_degrees;
+  require(r.spray_angle_deg==spray,"timing spray mapping changed");
+  responses[index++]=r;
+  table<<tick<<','<<ex<<",0,"<<h.normalized_error.x<<','<<h.normalized_error.y<<','<<attempt.timing.offset_ms<<','<<attempt.timing.efficiency<<','
+   <<r.temporal_transfer<<','<<h.q<<','<<r.spatial_transfer<<','<<r.energy_transfer<<','<<r.exit_speed_mps<<','<<r.exit_speed_mps*3.6<<','<<r.spray_angle_deg<<",Contact\n";
+  const auto expected=r;const auto expected_q=h.q;const auto expected_tick=preview.tick;
+  for(const std::uint64_t cadence:{33'333'333ULL,8'333'333ULL,250'000'000ULL}){
+   require(fixture.start(preview,aim),"timing matrix replay");
+   while(preview.phase==PreviewPhase::Playing)preview.advance(cadence);
+   fixture.verify(*preview.latest());const auto& replay=*preview.latest()->response;
+   require(preview.gameplay_result()==GameplayResult::Contact&&preview.tick==expected_tick&&preview.latest()->authorization.q==expected_q
+    &&replay.temporal_transfer==expected.temporal_transfer&&replay.spatial_transfer==expected.spatial_transfer&&replay.energy_transfer==expected.energy_transfer
+    &&replay.exit_speed_mps==expected.exit_speed_mps&&replay.spray_angle_deg==expected.spray_angle_deg&&replay.longitudinal_angle_deg==expected.longitudinal_angle_deg
+    &&replay.contact_time_s==expected.contact_time_s&&same(replay.launch_position_m,expected.launch_position_m)&&same(replay.launch_velocity_mps,expected.launch_velocity_mps),"timing matrix replay/cadence changed");
+  }
+ }
+ for(std::size_t row:{0u,3u}){
+  const auto& early=responses[row];const auto& center=responses[row+1];const auto& late=responses[row+2];
+  require(early.temporal_transfer!=center.temporal_transfer&&center.temporal_transfer!=late.temporal_transfer&&early.temporal_transfer!=late.temporal_transfer,"matrix lacks distinct efficiencies");
+  require(early.spray_angle_deg>center.spray_angle_deg&&center.spray_angle_deg>late.spray_angle_deg&&early.spray_angle_deg>0&&late.spray_angle_deg<0,"matrix lacks pull/center/opposite");
+  require(close_enough(early.energy_transfer,center.energy_transfer)&&close_enough(late.energy_transfer,center.energy_transfer)
+   &&close_enough(early.exit_speed_mps,center.exit_speed_mps,1e-5)&&close_enough(late.exit_speed_mps,center.exit_speed_mps,1e-5),"equal q energy/speed depends on timing");
+ }
+ for(std::size_t i=0;i<3;++i)require(responses[i+3].spatial_transfer<responses[i].spatial_transfer&&responses[i+3].exit_speed_mps<responses[i].exit_speed_mps
+  &&responses[i+3].temporal_transfer==responses[i].temporal_transfer&&responses[i+3].spray_angle_deg==responses[i].spray_angle_deg,"off-center spatial penalty or spray changed");
+ std::filesystem::create_directories(output_directory);
+ std::ofstream output(output_directory/"timing-responsibility.csv");output<<table.str();require(bool(output),"timing matrix write");
+ std::cout<<"TIMING RESPONSIBILITY\n"<<table.str();
+}
 // Diagnostic of today's model, not accepted future vertical-contact balance.
 std::string vertical_contact_study(const ManualSwingPreview& p) {
  const auto& s=p.tuning;const auto& tuning=s.ball_response;const auto& timing=p.latest()->timing;
@@ -46,6 +101,7 @@ int main(int argc,char** argv){try{
  require(argc==3,"expected batting/fixture directories");const std::filesystem::path d=argv[1],temp=argv[2];
  const auto s=load_batting_staging(d/"staging.toml");
  require(s.batter_profile.contact==75&&s.batter_profile.power==85&&s.batter_profile.trajectory==3,"Michael baseline");
+ timing_responsibility_matrix(d,s,temp);
  auto region=normal_authorization_region(s);require(region.normal_radius_x_m==.26f&&region.normal_radius_y_m==.13f,"Contact75 anchor changed");
  float prior_q=100;for(int contact:{0,75,120}){
   auto other=s;other.batter_profile.contact=contact;const auto r=normal_authorization_region(other);
@@ -65,7 +121,7 @@ int main(int argc,char** argv){try{
  std::cout<<std::setprecision(12);
  BallResponse peak{};
  for(auto c:{80ull,433ull,448ull,456ull,460ull,480ull}){
-  const auto a=run(c);if(c==80||c==480){require(!a.response&&!p.flight&&a.gameplay==GameplayResult::Miss,"no-overlap launched");continue;}
+  const auto a=run(c);if(c==80||c==480){require(!a.timing.overlap&&a.authorization.authorized&&!a.response&&!p.flight&&a.gameplay==GameplayResult::Miss,"no-overlap launched");continue;}
   require(a.response&&p.flight&&a.gameplay==GameplayResult::Contact,"authorized overlap failed to launch");const auto& r=*a.response;
   if(c==456)require(a.geometry==ManualGeometry::NoContactInWindow&&!a.contact,"456 raw-NoContact premise changed");
   if(c==448){require(a.contact&&r.temporal_transfer>.97f&&r.spatial_transfer==1&&r.longitudinal_angle_deg==trajectory_airborne_angle(8,0,3,s.ball_response)&&std::abs(r.spray_angle_deg)<1,"peak fixture");peak=r;}
@@ -129,7 +185,7 @@ int main(int argc,char** argv){try{
   }
   const auto& r=response;const auto& tuning=s.ball_response;
   const float expected_ideal=std::lerp(tuning.ideal_exit_speed_min_mps,tuning.ideal_exit_speed_max_mps,85.f/120);
-  require(r.temporal_transfer==static_cast<float>(a.timing.efficiency)&&r.energy_transfer==r.temporal_transfer*r.spatial_transfer&&r.exit_speed_mps==expected_ideal*(tuning.minimum_exit_speed_factor+(1-tuning.minimum_exit_speed_factor)*std::sqrt(r.energy_transfer))&&r.contact_time_s==a.response->contact_time_s&&same(r.launch_position_m,a.response->launch_position_m),"direction changed quality/speed/effective time/origin");
+  require(r.temporal_transfer==static_cast<float>(a.timing.efficiency)&&r.energy_transfer==r.spatial_transfer&&r.exit_speed_mps==expected_ideal*(tuning.minimum_exit_speed_factor+(1-tuning.minimum_exit_speed_factor)*std::sqrt(r.energy_transfer))&&r.contact_time_s==a.response->contact_time_s&&same(r.launch_position_m,a.response->launch_position_m),"direction changed quality/speed/effective time/origin");
  }
  { // Concrete q-weighted slope candidate, independent formula and strict eligibility.
  require(s.ball_response.trajectory_airborne_slope_multiplier==std::array<float,4>{.8f,1.f,1.2f,1.4f},"authored slope Data");
@@ -151,7 +207,7 @@ int main(int argc,char** argv){try{
  auto baseline=s.ball_response;baseline.vertical_contact_longitudinal_degrees[4]=0;
  const auto old=*ball_response(a.timing,a.authorization,s.batter_profile,baseline,p.delivery.pitch.initial,1.6);
  require(peak.exit_speed_mps==old.exit_speed_mps&&peak.spray_angle_deg==old.spray_angle_deg&&peak.contact_time_s==old.contact_time_s&&same(peak.launch_position_m,old.launch_position_m)&&peak.temporal_transfer==old.temporal_transfer&&peak.spatial_transfer==old.spatial_transfer&&peak.energy_transfer==old.energy_transfer,"Atari non-direction regression");
- require(peak.exit_speed_mps==44.3308830261f&&peak.spray_angle_deg==.628268182278f&&close_enough(a.timing.efficiency,.974447238051,1e-12)&&close_enough(a.timing.offset_ms,-1.16678376993,1e-9),"pre-change Atari values");
+ require(peak.exit_speed_mps==ideal&&peak.spray_angle_deg==.628268182278f&&close_enough(a.timing.efficiency,.974447238051,1e-12)&&close_enough(a.timing.offset_ms,-1.16678376993,1e-9),"spatial-only Atari speed and preserved timing/spray");
  }
  // Backward flight uses the same analytic sampler and render/backlog clock contract.
  const DirectX::XMFLOAT2 backward_aim{center.x,center.y-.95f*(region.normal_radius_y_m+s.gameplay_ball.radius_m)};
@@ -248,7 +304,9 @@ int main(int argc,char** argv){try{
   else p.advance(100'000'001); // Also reset nonzero backlog and fractional credit.
   clean_restart();
  }
- p.reset();p.start();p.record_command(433,center);until(477);require(p.flight.has_value(),"433 contact fixture");
+ // Use a low launch to keep first impact before pitcher recovery at spatial-only speed.
+ const DirectX::XMFLOAT2 low_launch_aim{center.x,center.y+.25f*(region.normal_radius_y_m+s.gameplay_ball.radius_m)};
+ p.reset();p.start();p.record_command(433,low_launch_aim);until(477);require(p.flight.has_value(),"433 contact fixture");
  until(static_cast<std::uint64_t>(std::ceil(p.flight->ground_s*240)));
  require(p.phase==PreviewPhase::Playing&&!p.flight->complete(double(p.tick)/240)&&p.delivery.phase!=DeliveryPhase::Complete,"rebound-before-pitcher-completion fixture");clean_restart();
  p.reset();p.start();until(100);require(!p.start()&&p.tick==100,"ordinary Playing restarted");
@@ -338,7 +396,7 @@ int main(int argc,char** argv){try{
  require(p.attempts.size()==1&&p.latest()->command.aim_center.x==adjusted.x&&p.latest()->command.aim_center.y==adjusted.y,"next input did not snapshot adjusted aim");
  finish(p);p.start();
  // First ground impact now rebounds before overall completion; both cue styles persist.
- p.record_command(433,center);until(735);
+ p.record_command(433,low_launch_aim);until(735);
  require(p.phase==PreviewPhase::Playing&&p.flight&&!p.flight->complete(double(p.tick)/240)&&double(p.tick)/240>=p.flight->ground_s&&batting_practice_pitch_marker_visible(p),"rebound-before-completion cue fixture");check_cue();
  live.move(-1,-1,.05);live.recenter();const auto recentered=live.center();p.start();check_live();
  require(live.center().x==recentered.x&&live.center().y==recentered.y,"Space undid post-contact R");
