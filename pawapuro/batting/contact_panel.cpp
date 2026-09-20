@@ -10,8 +10,10 @@ BattingInfo batting_info(const ManualSwingPreview& p) {
     BattingInfo result;
     const auto& ball=p.ball_passage;
     // Fixed for this pitch, never fitted to the latest swing; extremes clamp at the track ends.
-    const double half_range=std::max({.040,ball.reference_s-ball.enter_s,ball.exit_s-ball.reference_s});
-    const auto position=[&](double time){return std::clamp(.5+(time-ball.reference_s)/(2*half_range),0.,1.);};
+    const double duration=ball.exit_s-ball.enter_s;
+    if(!std::isfinite(duration)||duration<=0)throw std::runtime_error("Batting timeline needs positive finite passage duration");
+    const double display_start=ball.enter_s-.25*duration,display_end=ball.exit_s+.25*duration;
+    const auto position=[&](double time){return std::clamp((time-display_start)/(display_end-display_start),0.,1.);};
     result.timeline.passage_enter=position(ball.enter_s);result.timeline.passage_exit=position(ball.exit_s);
     if(const auto* timing=p.timing()) {
         result.offset_ms=timing->offset_ms;

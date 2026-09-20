@@ -1143,3 +1143,15 @@ Panel regression 以正常 fixture intent 驗證 441／448／455 Contact 的 mar
 Release 實機由既有 CLI 啟動，透過 computer-use 擷取 `contact-early`（441／0／0）、`contact-center`（448／0／0）、`contact-late`（455／0／0）、`swing-miss`（80／0／0）及一般啟動 `no-swing`，各附 JPEG／title JSON／app log，全部留在 ignored `build/timing-timeline-s1/`，同目錄 `REVIEW.md` 列出完整 CLI 指令。Contact 圖為實心白球，miss 的空心灰球 clamp 至軌道上端但小字仍保留 −1534.5 ms。這些是不同觀察時刻的真實 app 圖，不是同步影片或 latency 證據；有被其他視窗遮蔽的 capture 已 activate 正確 app 後重擷取。沒有新增 production capture mode、camera 或 HUD tuning Data；本輪未宣稱 Debug GPU validation 或 human acceptance。
 
 最終完整 Debug／Release build 均成功，完整 CTest **Debug 23/23（419.44 s）、Release 23/23（18.40 s）** 通過，沒有放寬既有容差。Logs 為同目錄 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`。技術驗證與實機畫面交付後停止，等待 Michael＋Julia human review。
+
+## Timing Timeline Focus S1.1 (2026-09-20)
+
+以 agent `exec_command`／PowerShell、cwd `C:\astra-dev\pawapuro` 讀取 AGENTS.md，確認工作樹乾淨。初次 fetch 在 Git 寫入 `.git/FETCH_HEAD` 時回報 Permission denied；逐命令核准後 fetch／`pull --ff-only origin main` 成功，HEAD／origin/main 均為指定 `b90f8d9af8aa656032e94090f9b1555080dc0188`。沒有修改 ACL、owner 或 sandbox。改動限於 `contact_panel.cpp` 的時間投影、既有 panel tests 與兩份文件；設計由既有 [Timing Timeline](../design/batting-contact.md#timing-timeline-s1-2026-09-20) section 維護。
+
+Production passage 為 [1.983233717173114, 2.0024335639448165] s，duration=19.1998467717025 ms。Display bounds=[1.9784337554801885, 2.007233525637742] s，span=28.7997701575535 ms。實測 normalized 黃色長度=0.66666666666667185，上下留白各約 1/6；原 144 logical px 軌道保留，黃色長 96 px、留白各 24 px。441／448／455 authoritative contact marker 分別為 0.166666666667／0.459479749807／0.833333333333，1080 基準 y=124／166.165083972／220；相鄰距離是舊 ±40 ms 映射的約 2.78 倍，沒有硬編 fixture 位置。Tick80 peak=0.4583333333333333 s，marker clamp 至 0，但 signed offset 保留 −1534.5001171032588 ms（文字 −1534.5 ms），不改變 passage 尺度。
+
+既有 panel regression 新增 2/3 與 1/6 數學關係、與舊映射比較的 contact 分離、極端 peak 的完整 ms 文字檢查；保留 authoritative event source、NoSwing `--`／無 marker、Pending、hold／Space、replay／cadence、固定 geometry／allocation 與 flight／ground 回歸。Debug／Release 六組 Timing Responsibility Split production CSV 與編輯前 baseline 逐字相同，記錄在 ignored `build/timing-timeline-focus-s11/gameplay-invariants.txt`；無 gameplay source／Data 修改，也未放寬容差。
+
+Release 實機證據同目錄 `contact-early.jpg`（441）、`contact-center.jpg`（448）、`contact-late.jpg`（455）、`swing-miss.jpg`（80）、`no-swing.jpg`（一般啟動 Ready），各附 window title JSON／log；`REVIEW.md` 提供完整命令，`timeline-metrics.txt` 保存 production 測量。三張 Contact 使用相同視窗／panel 尺寸且為 Complete hold，畫面可見上緣／中間附近／下緣的實心球；miss 空心球在上端，NoSwing 無球。這是實際 app 擷取，沒有新增 capture mode 或離線重建。初次 sandbox 啟動未出現可擷取視窗，逐命令核准 interactive app launch 後成功；被其他視窗遮蔽的圖已重新 activate 並擷取。關閉 review 程序時 PowerShell Stop-Process 回報 null-reference；確認五個本輪 process ID 仍存活後，以核准 taskkill 指定相同 ID 成功結束，未更動環境設定。
+
+使用既有 x64 VsDevCmd／UTF-8 code page，完整 `cmake --build build/<config>` 與 `ctest --test-dir build/<config> --output-on-failure -j 4`：**Debug build 成功、CTest 23/23（377.02 s）；Release build 成功、CTest 23/23（19.67 s）**。同目錄保存 `debug-build.log`、`release-build.log`、`debug-ctest.log`、`release-ctest.log`。`git diff --check` 通過；沒有編譯／測試失敗或容差調整。完成後停止，候選仍等待 Michael＋Julia human review，未更新 checkpoint 或宣告接受。

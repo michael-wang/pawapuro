@@ -122,10 +122,16 @@ int main(int argc,char** argv){try {
     for(const auto* label:batting_info_labels)require(std::wstring(label)!=L"擊球成立"&&std::wstring(label)!=L"揮空"&&std::wstring(label)!=L"未出棒","old result list remains primary");
     const auto empty=batting_info(p);require(!empty.offset_ms&&!empty.exit_speed_kmh&&!empty.flight&&empty.timeline.marker==TimingMarker::None,"Ready values");
     for(const auto& row:format_batting_info(empty))require(std::strcmp(row.data(),"--")==0,"empty placeholder");
-    const auto timeline_position=[&](double time){return std::clamp(.5+(time-p.ball_passage.reference_s)/.080,0.,1.);};
+    const double duration=p.ball_passage.exit_s-p.ball_passage.enter_s;
+    const double display_start=p.ball_passage.enter_s-.25*duration,display_end=p.ball_passage.exit_s+.25*duration;
+    const auto timeline_position=[&](double time){return std::clamp((time-display_start)/(display_end-display_start),0.,1.);};
+    require(std::abs(empty.timeline.passage_enter-1./6)<1e-12&&std::abs(1-empty.timeline.passage_exit-1./6)<1e-12
+        &&std::abs(empty.timeline.passage_exit-empty.timeline.passage_enter-2./3)<1e-12,"passage dominance and equal margins");
+    std::cout<<std::setprecision(17)<<"TIMELINE duration="<<duration<<" start="<<display_start<<" end="<<display_end
+        <<" yellow_fraction="<<empty.timeline.passage_exit-empty.timeline.passage_enter<<'\n';
     require(empty.timeline.passage_enter==timeline_position(p.ball_passage.enter_s)&&empty.timeline.passage_exit==timeline_position(p.ball_passage.exit_s)
         &&empty.timeline.passage_enter>0&&empty.timeline.passage_enter<empty.timeline.passage_exit&&empty.timeline.passage_exit<1,"visible authoritative yellow interval");
-    std::array<double,3> contact_positions{};unsigned contact_index=0;
+    std::array<double,3> contact_positions{},old_positions{};unsigned contact_index=0;
     for(const BattingReviewFixture fixture:{BattingReviewFixture{441,0,0},{448,0,0},{455,0,0},{80,0,0},{480,0,0},{448,.6f,1}}){
         std::optional<BattingInfo> control;
         for(const std::uint64_t cadence:{4'166'667ULL,33'333'333ULL,8'333'333ULL,250'000'000ULL}){
@@ -134,15 +140,24 @@ int main(int argc,char** argv){try {
             fixture.verify(*p.latest());const auto info=batting_info(p);const bool contact=p.latest()->gameplay==GameplayResult::Contact;
             require(info.timeline.marker==(contact?TimingMarker::Contact:TimingMarker::SwingPeak),"timeline marker kind");
             const double event=contact?p.latest()->response->contact_time_s:p.timing()->peak_s;
+            if(!control){
+                std::cout<<"TIMELINE tick="<<fixture.commit_tick<<" event="<<event<<" position="<<info.timeline.marker_position<<" ms="<<*info.offset_ms<<'\n';
+                if(contact_index<3)old_positions[contact_index]=std::clamp(.5+(event-p.ball_passage.reference_s)/.080,0.,1.);
+            }
             require(info.timeline.marker_position==timeline_position(event)&&info.offset_ms==p.timing()->offset_ms,"timeline event time or secondary offset");
             require(info.timeline.passage_enter==empty.timeline.passage_enter&&info.timeline.passage_exit==empty.timeline.passage_exit,"attempt moved interval");
             if(control)require(info.timeline==control->timeline&&info.offset_ms==control->offset_ms,"timeline replay/cadence changed");else control=info;
-            if(fixture.commit_tick==80)require(info.timeline.marker_position==0,"early peak clamp");
+            if(fixture.commit_tick==80){
+                require(info.timeline.marker_position==0&&*info.offset_ms<-1000,"early peak clamp preserves full offset");
+                char expected[32];std::snprintf(expected,sizeof(expected),"%+.1f ms",p.timing()->offset_ms);
+                require(std::strcmp(format_batting_info(info)[0].data(),expected)==0,"clamped peak changed ms text");
+            }
             if(fixture.commit_tick==480)require(info.timeline.marker_position==1,"late peak clamp");
         }
         if(contact_index<3)contact_positions[contact_index++]=control->timeline.marker_position;
     }
     require(contact_positions[0]<contact_positions[1]&&contact_positions[1]<contact_positions[2],"early/center/late vertical ordering");
+    for(unsigned i=1;i<3;++i)require(contact_positions[i]-contact_positions[i-1]>old_positions[i]-old_positions[i-1],"focus did not increase contact separation");
     p.reset();ground_response_checks(p);
     std::vector<engine::Vertex> marker;
     marker.reserve(ground_projection_vertex_count);
